@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String                   @id @default(uuid())
+  email             String                   @unique
+  passwordHash      String
+  fullName          String
+  role              String                   @default("ADMIN") // SUPER_ADMIN, ADMIN, MANAGER, AUDITOR
+  status            String                   @default("ACTIVE") // ACTIVE, SUSPENDED
+  twoFactorEnabled  Boolean                  @default(false)
+  twoFactorSecret   String?
+  lastLoginAt       DateTime?
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+  sessions          Session[]
+  recoveryCodes     TwoFactorRecoveryCode[]
+  auditLogs         AuditLog[]               @relation("ActorAuditLogs")
+  uploadedAssets    StorageAsset[]
+  createdCampaigns  EmailCampaign[]
+}
+
+model TwoFactorRecoveryCode {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  isUsed    Boolean   @default(false)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+  @@index([sessionToken])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  actorEmail String?
+  actor      User?    @relation("ActorAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
+  action     String   // AUTH_LOGIN, MFA_ENROLLED, ASSET_UPLOADED, CAMPAIGN_SENT, USER_UPDATED, etc.
+  entity     String   // User, StorageAsset, EmailCampaign, System
+  entityId   String?
+  ipAddress  String?
+  userAgent  String?
+  metadata   String?  // JSON stringified details
+  createdAt  DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+  @@index([actorId])
+}
+
+model StorageAsset {
+  id           String   @id @default(uuid())
+  bucket       String
+  key          String   @unique
+  fileName     String
+  fileSize     Int
+  mimeType     String
+  url          String
+  folder       String   @default("general")
+  uploadedById String?
+  uploader     User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([folder])
+  @@index([createdAt])
+}
+
+model EmailCampaign {
+  id             String    @id @default(uuid())
+  title          String
+  subject        String
+  contentHtml    String
+  status         String    @default("DRAFT") // DRAFT, SCHEDULED, SENDING, SENT, FAILED
+  recipientCount Int       @default(0)
+  openCount      Int       @default(0)
+  clickCount     Int       @default(0)
+  sentAt         DateTime?
+  createdById    String?
+  creator        User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+}
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  subject     String
+  bodyHtml    String
+  variables   String   @default("[]") // JSON string of available tokens like ["firstName", "portalUrl"]
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AudienceSubscriber {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  firstName String?
+  lastName  String?
+  status    String   @default("SUBSCRIBED") // SUBSCRIBED, UNSUBSCRIBED, BOUNCED
+  tags      String   @default("[]") // JSON string of tags e.g. ["beta", "investor", "client"]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+model ApiEndpoint {
+  id           String    @id @default(uuid())
+  name         String
+  baseUrl      String
+  authType     String    @default("BEARER") // NONE, BEARER, API_KEY, HMAC
+  status       String    @default("ACTIVE") // ACTIVE, INACTIVE
+  healthStatus String    @default("UNKNOWN") // HEALTHY, DEGRADED, DOWN, UNKNOWN
+  lastLatencyMs Int?
+  lastPingAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Webhook {
+  id              String    @id @default(uuid())
+  url             String
+  secret          String
+  events          String    @default("[\"*\"]") // JSON list of events
+  isActive        Boolean   @default(true)
+  lastTriggeredAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
+
