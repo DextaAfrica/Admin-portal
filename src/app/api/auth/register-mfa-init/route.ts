@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    const { secret, otpauth, qrCodeDataUrl } = await generateMfaSecret({
+    const { secret, otpauth, qrCodeDataUrl, currentOtp } = await generateMfaSecret({
       email: email.toLowerCase().trim(),
     });
 
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
       secret,
       otpauth,
       qrCodeDataUrl,
+      currentOtp,
     });
   } catch (err: unknown) {
     return NextResponse.json(

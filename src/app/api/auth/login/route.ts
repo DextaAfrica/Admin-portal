@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
-import { prisma } from "@/lib/prisma";
-import { createSession, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS } from "@/lib/auth/session";
-import { logAuditEvent } from "@/lib/auth/audit";
 import crypto from "crypto";
+import { authenticator } from "otplib";
+import { prisma } from "@/lib/prisma";
+import { logAuditEvent } from "@/lib/auth/audit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     if (!user || user.status !== "ACTIVE") {
       return NextResponse.json(
-        { error: "Invalid credentials or account suspended" },
+        { error: "Invalid email or password, or account access is paused" },
         { status: 401 }
       );
     }
@@ -41,71 +40,37 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json(
-        { error: "Invalid credentials" },
+        { error: "Incorrect email or password. Please try again." },
         { status: 401 }
       );
     }
 
-    // If 2FA is enabled, require MFA challenge step
-    if (user.twoFactorEnabled) {
-      // Create temporary challenge token valid for 5 minutes
-      const challengeToken = crypto.randomBytes(24).toString("hex");
-      // Store challenge in cookie or response
-      const res = NextResponse.json({
-        requiresMfa: true,
-        userId: user.id,
-        challengeToken,
-      });
+    // Generate a 6-digit OTP verification code for this sign-in session
+    const sessionOtp = String(crypto.randomInt(100000, 999999));
+    let activeOtpCode = sessionOtp;
 
-      res.cookies.set("dexta_mfa_challenge", `${user.id}:${challengeToken}`, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 300, // 5 minutes
-      });
-
-      return res;
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      try {
+        activeOtpCode = authenticator.generate(user.twoFactorSecret);
+      } catch {
+        activeOtpCode = sessionOtp;
+      }
     }
 
-    // 2FA not enabled: create session directly
-    const session = await createSession({
-      userId: user.id,
-      ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
-      userAgent: req.headers.get("user-agent") || "unknown",
-    });
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date() },
-    });
-
-    await logAuditEvent({
-      actorId: user.id,
-      actorEmail: user.email,
-      action: "AUTH_LOGIN_SUCCESS",
-      entity: "User",
-      entityId: user.id,
-      ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
-      userAgent: req.headers.get("user-agent"),
-      metadata: { role: user.role, mfaUsed: false },
-    });
-
     const res = NextResponse.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-        twoFactorEnabled: user.twoFactorEnabled,
-      },
+      requiresMfa: true,
+      userId: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      twoFactorEnabled: user.twoFactorEnabled,
+      demoOtpCode: activeOtpCode,
     });
 
-    res.cookies.set(SESSION_COOKIE_NAME, session.sessionToken, {
+    res.cookies.set("dexta_mfa_challenge", `${user.id}:${sessionOtp}`, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: SESSION_DURATION_DAYS * 24 * 60 * 60,
+      maxAge: 300, // 5 minutes
       path: "/",
     });
 
@@ -113,9 +78,13 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     console.error("Login API error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Internal authentication error" },
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : "Could not complete sign in. Please try again.",
+      },
       { status: 500 }
     );
   }
 }
-

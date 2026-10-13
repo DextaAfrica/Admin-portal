@@ -26,12 +26,6 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect authenticated users away from /login and /register to /dashboard
-  if (token && (pathname === "/login" || pathname === "/register")) {
-    const url = new URL("/dashboard", req.url);
-    return NextResponse.redirect(url);
-  }
-
   return NextResponse.next();
 }
 

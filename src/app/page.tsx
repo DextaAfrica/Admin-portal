@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   ArrowRight,
@@ -13,7 +14,7 @@ import {
   ShieldCheck,
   LogIn,
   UserPlus,
-  LayoutDashboard,
+  Lock,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 import { cn } from "@/lib/utils";
@@ -76,13 +77,14 @@ const CORE_PILLARS = [
   },
   {
     icon: ShieldCheck,
-    title: "Unified Workspace",
+    title: "Protected Team Workspace",
     description:
-      "One organized home for company media, branded client emails, team collaboration, and account protection.",
+      "Restricted to verified Dexta Africa team members with two-step verification and organized tools.",
   },
 ];
 
 export default function LandingPage() {
+  const router = useRouter();
   const [activeSlide, setActiveSlide] = React.useState(0);
   const [zoomToggle, setZoomToggle] = React.useState(false);
   const { theme, setTheme } = useTheme();
@@ -121,12 +123,13 @@ export default function LandingPage() {
             <DextaLogo className="h-8 sm:h-10 w-auto" />
           </Link>
 
-          <div className="flex items-center gap-2.5 sm:gap-3.5">
+          <div className="flex items-center gap-3 sm:gap-4">
             {mounted && (
               <button
+                type="button"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200/80 dark:border-white/10 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.08] dark:hover:text-white transition-all cursor-pointer"
-                title="Switch appearance"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 dark:border-white/15 text-slate-600 hover:border-[#ED2618] hover:text-[#ED2618] dark:text-slate-300 dark:hover:border-[#ED2618] dark:hover:text-white transition-all cursor-pointer"
+                title="Switch light or dark appearance"
               >
                 {theme === "dark" ? (
                   <Sun className="h-4 w-4" />
@@ -136,21 +139,23 @@ export default function LandingPage() {
               </button>
             )}
 
-            <Link
-              href="/login"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-full border border-slate-300 dark:border-white/15 bg-white dark:bg-white/[0.05] px-4 sm:px-5 text-xs sm:text-sm font-bold text-slate-800 dark:text-white hover:border-[#ED2618] hover:text-[#ED2618] dark:hover:border-[#ED2618] transition-all shadow-sm"
+            <button
+              type="button"
+              onClick={() => router.push("/login")}
+              className="btn-crimson-exec h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm cursor-pointer"
             >
               <LogIn className="h-3.5 w-3.5" />
               <span>Sign In</span>
-            </Link>
+            </button>
 
-            <Link
-              href="/register"
-              className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-[#ED2618] hover:bg-red-700 px-4 sm:px-5 text-xs sm:text-sm font-bold text-white shadow-md shadow-red-600/20 hover:shadow-lg hover:shadow-red-600/30 transition-all"
+            <button
+              type="button"
+              onClick={() => router.push("/register")}
+              className="btn-fill-up h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm cursor-pointer"
             >
-              <UserPlus className="h-3.5 w-3.5" />
+              <UserPlus className="h-3.5 w-3.5 text-[#ED2618] transition-colors" />
               <span>Create Account</span>
-            </Link>
+            </button>
           </div>
         </div>
       </header>
@@ -161,10 +166,10 @@ export default function LandingPage() {
         <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Left Column: Clean Executive Introduction */}
           <div className="lg:col-span-5 space-y-6 animate-fade-in">
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-red-200/80 dark:border-red-500/25 bg-red-50/80 dark:bg-red-500/10 px-3.5 py-1.5">
+            <div className="inline-flex items-center gap-2.5 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1.5">
               <span className="h-2 w-2 rounded-full bg-[#ED2618]" />
               <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400">
-                Dexta Africa Workspace
+                Dexta Africa Team Portal
               </span>
             </div>
 
@@ -173,39 +178,42 @@ export default function LandingPage() {
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-              Welcome to the official Dexta Africa portal. Manage project documents,
-              design branded client communications, and coordinate with your team in
-              one simple, organized workspace.
+              Welcome to the official Dexta Africa team workspace. Sign in with
+              your verified work account or create your team profile to manage
+              project media, design branded client emails, and collaborate
+              securely.
             </p>
 
-            {/* Primary & Secondary Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
-              <Link
-                href="/login"
-                className="inline-flex h-12 items-center justify-center gap-2.5 rounded-xl bg-[#ED2618] hover:bg-red-700 px-7 text-sm sm:text-base font-bold text-white shadow-lg shadow-red-600/20 hover:shadow-xl hover:shadow-red-600/30 transition-all hover:-translate-y-0.5"
-              >
-                <span>Sign In to Workspace</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
+            {/* Framed Executive Action Bar (Sign In + Fill-Up Create Account) */}
+            <div className="pt-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => router.push("/login")}
+                  className="btn-crimson-exec h-13 rounded-2xl px-7 py-3.5 text-sm sm:text-base cursor-pointer"
+                >
+                  <span>Sign In to Workspace</span>
+                  <ArrowRight className="h-4 w-4" />
+                </button>
 
-              <Link
-                href="/register"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border-2 border-slate-200 dark:border-white/15 bg-white dark:bg-[#14151C] hover:border-[#ED2618] hover:text-[#ED2618] dark:hover:border-red-500 px-6 text-sm sm:text-base font-bold text-slate-800 dark:text-white transition-all shadow-sm"
-              >
-                <UserPlus className="h-4 w-4 text-[#ED2618]" />
-                <span>Create Team Account</span>
-              </Link>
+                <button
+                  type="button"
+                  onClick={() => router.push("/register")}
+                  className="btn-fill-up h-13 rounded-2xl px-7 py-3.5 text-sm sm:text-base cursor-pointer"
+                >
+                  <UserPlus className="h-4 w-4 text-[#ED2618] transition-colors" />
+                  <span>Create Team Account</span>
+                </button>
+              </div>
             </div>
 
-            {/* Clean Quick-Access Link to Dashboard if already signed in */}
-            <div className="pt-2 flex items-center gap-6 text-xs text-slate-500 dark:text-slate-400">
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300 hover:text-[#ED2618] transition-colors"
-              >
-                <LayoutDashboard className="h-3.5 w-3.5 text-[#ED2618]" />
-                <span>Go directly to Dashboard →</span>
-              </Link>
+            {/* Security Notice: Only Verified Signed-In Users Gain Access */}
+            <div className="pt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+              <Lock className="h-3.5 w-3.5 text-[#ED2618] shrink-0" />
+              <span>
+                Workspace access is restricted to signed-in Dexta Africa team
+                members with two-step OTP verification.
+              </span>
             </div>
           </div>
 
@@ -263,7 +271,7 @@ export default function LandingPage() {
                     type="button"
                     onClick={prevSlide}
                     aria-label="Previous portrait"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white hover:bg-[#ED2618] hover:border-[#ED2618] transition-all cursor-pointer"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 backdrop-blur-md text-white hover:bg-[#ED2618] hover:border-[#ED2618] transition-all cursor-pointer"
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </button>
@@ -271,7 +279,7 @@ export default function LandingPage() {
                     type="button"
                     onClick={nextSlide}
                     aria-label="Next portrait"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/10 backdrop-blur-md text-white hover:bg-[#ED2618] hover:border-[#ED2618] transition-all cursor-pointer"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 backdrop-blur-md text-white hover:bg-[#ED2618] hover:border-[#ED2618] transition-all cursor-pointer"
                   >
                     <ArrowRight className="h-4 w-4" />
                   </button>

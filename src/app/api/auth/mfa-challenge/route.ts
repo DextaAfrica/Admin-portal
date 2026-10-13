@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import {
   verifyTotpToken,
@@ -18,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     if (!userId || !code) {
       return NextResponse.json(
-        { error: "User ID and code are required" },
+        { error: "Verification code is required" },
         { status: 400 }
       );
     }
@@ -27,31 +26,38 @@ export async function POST(req: NextRequest) {
       where: { id: userId },
     });
 
-    if (!user || user.status !== "ACTIVE" || !user.twoFactorEnabled) {
+    if (!user || user.status !== "ACTIVE") {
       return NextResponse.json(
-        { error: "Invalid authentication state" },
+        { error: "Account not found or access is paused" },
         { status: 400 }
       );
     }
 
+    const cleanCode = String(code).trim();
     let isValid = false;
 
     if (isRecoveryCode) {
       isValid = await verifyAndBurnRecoveryCode({
         userId: user.id,
-        code,
+        code: cleanCode,
       });
     } else {
-      if (!user.twoFactorSecret) {
-        return NextResponse.json(
-          { error: "2FA secret not found on account" },
-          { status: 400 }
-        );
+      // 1. Check session challenge OTP cookie
+      const challengeCookie = req.cookies.get("dexta_mfa_challenge")?.value;
+      if (challengeCookie) {
+        const [cookieUserId, cookieOtp] = challengeCookie.split(":");
+        if (cookieUserId === user.id && cookieOtp === cleanCode) {
+          isValid = true;
+        }
       }
-      isValid = verifyTotpToken({
-        token: code,
-        secret: user.twoFactorSecret,
-      });
+
+      // 2. Also check Authenticator TOTP secret if configured on the account
+      if (!isValid && user.twoFactorSecret) {
+        isValid = verifyTotpToken({
+          token: cleanCode,
+          secret: user.twoFactorSecret,
+        });
+      }
     }
 
     if (!isValid) {
@@ -69,14 +75,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: isRecoveryCode
-            ? "Invalid or previously used recovery code."
-            : "Invalid 6-digit code. Please verify the code on your device.",
+            ? "Invalid or previously used backup access code."
+            : "Incorrect 6-digit verification code. Please check the code and try again.",
         },
         { status: 400 }
       );
     }
 
-    // Success: create session
+    // Success: create authenticated workspace session
     const session = await createSession({
       userId: user.id,
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
@@ -96,7 +102,7 @@ export async function POST(req: NextRequest) {
       entityId: user.id,
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent"),
-      metadata: { method: isRecoveryCode ? "RECOVERY_CODE" : "TOTP" },
+      metadata: { method: isRecoveryCode ? "RECOVERY_CODE" : "OTP" },
     });
 
     const res = NextResponse.json({
@@ -117,15 +123,13 @@ export async function POST(req: NextRequest) {
       path: "/",
     });
 
-    // Clear challenge cookie
     res.cookies.delete("dexta_mfa_challenge");
 
     return res;
   } catch (err: unknown) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "MFA challenge error" },
+      { error: err instanceof Error ? err.message : "Verification error" },
       { status: 500 }
     );
   }
 }
-
