@@ -6,16 +6,11 @@ import {
   Plus,
   Send,
   Eye,
-  Cake,
-  CalendarHeart,
-  Newspaper,
-  Building2,
-  Sparkles,
   RefreshCw,
-  CheckCircle2,
-  Clock,
   User,
-  ArrowLeft,
+  Pencil,
+  Trash2,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -42,7 +37,7 @@ interface EmailCampaign {
 }
 
 const STATUS_LABELS: Record<EmailCampaign["status"], string> = {
-  DRAFT: "Ready to Send",
+  DRAFT: "Editable Draft",
   SCHEDULED: "Scheduled",
   SENDING: "Sending Now",
   SENT: "Delivered",
@@ -55,6 +50,7 @@ export default function CampaignsPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [activeView, setActiveView] = React.useState<"list" | "compose">("compose");
   const [selectedPreset, setSelectedPreset] = React.useState<EmailOccasionId>("birthday");
+  const [editingCampaign, setEditingCampaign] = React.useState<EmailCampaign | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [previewCampaign, setPreviewCampaign] = React.useState<EmailCampaign | null>(null);
   const [dispatchingId, setDispatchingId] = React.useState<string | null>(null);
@@ -77,6 +73,7 @@ export default function CampaignsPage() {
   }, [fetchCampaigns]);
 
   const handleSaveCampaign = async (payload: {
+    id?: string;
     title: string;
     subject: string;
     contentHtml: string;
@@ -84,10 +81,12 @@ export default function CampaignsPage() {
   }) => {
     setIsSaving(true);
     try {
+      const isUpdating = Boolean(payload.id);
       const res = await fetch("/api/marketing/campaigns", {
-        method: "POST",
+        method: isUpdating ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: payload.id,
           title: payload.title,
           subject: payload.subject,
           contentHtml: payload.contentHtml,
@@ -95,9 +94,12 @@ export default function CampaignsPage() {
       });
       if (res.ok) {
         toastSuccess(
-          "Email Campaign Saved",
-          "Your formatted email is ready to preview or send to your audience."
+          isUpdating ? "Campaign Draft Updated" : "Campaign Draft Saved",
+          isUpdating
+            ? "Your latest design and content edits have been saved."
+            : "Your custom email is saved in Drafts & Campaigns."
         );
+        setEditingCampaign(null);
         await fetchCampaigns();
         setActiveView("list");
       } else {
@@ -107,6 +109,41 @@ export default function CampaignsPage() {
       toastError("Connection Error", "Please check your connection and try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleEditDraft = (camp: EmailCampaign) => {
+    setPreviewCampaign(null);
+    setEditingCampaign(camp);
+    setActiveView("compose");
+  };
+
+  const handleDuplicateDraft = (camp: EmailCampaign) => {
+    setPreviewCampaign(null);
+    setEditingCampaign({
+      ...camp,
+      id: "", // Creates a new draft copy on save
+      title: `${camp.title} (Copy)`,
+      status: "DRAFT",
+    });
+    setActiveView("compose");
+  };
+
+  const handleDeleteCampaign = async (campaignId: string) => {
+    try {
+      const res = await fetch("/api/marketing/campaigns", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: campaignId }),
+      });
+      if (res.ok) {
+        toastSuccess("Campaign Removed", "The campaign draft has been deleted.");
+        fetchCampaigns();
+      } else {
+        toastError("Delete Error", "Could not delete this campaign.");
+      }
+    } catch {
+      toastError("Connection Error", "Please check your connection and try again.");
     }
   };
 
@@ -133,6 +170,7 @@ export default function CampaignsPage() {
   };
 
   const openStudioWithPreset = (presetId: EmailOccasionId) => {
+    setEditingCampaign(null);
     setSelectedPreset(presetId);
     setActiveView("compose");
   };
@@ -150,7 +188,7 @@ export default function CampaignsPage() {
             Email Studio & Campaigns
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Design branded birthday wishes, invitations, newsletters, and project updates visually — no technical skills needed.
+            Design, customize, edit drafts, and send branded emails with full visual & HTML control.
           </p>
         </div>
 
@@ -165,7 +203,7 @@ export default function CampaignsPage() {
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
               }`}
             >
-              Visual Composer
+              {editingCampaign?.id ? "Editing Draft" : "Visual & HTML Studio"}
             </button>
             <button
               type="button"
@@ -176,7 +214,7 @@ export default function CampaignsPage() {
                   : "text-slate-600 dark:text-slate-300 hover:text-slate-900"
               }`}
             >
-              <span>Saved & Sent</span>
+              <span>Drafts & Sent</span>
               <span
                 className={`rounded-full px-1.5 py-0.2 text-[10px] ${
                   activeView === "list"
@@ -200,16 +238,29 @@ export default function CampaignsPage() {
         </div>
       </div>
 
-      {/* Main Content Area: Visual Composer vs Saved Campaigns */}
+      {/* Main Content Area: Visual Composer vs Saved Drafts & Campaigns */}
       {activeView === "compose" ? (
         <div className="space-y-6">
           <EmailComposerStudio
-            key={selectedPreset}
+            key={editingCampaign ? `edit_${editingCampaign.id}_${editingCampaign.title}` : `preset_${selectedPreset}`}
             mode="campaign"
             initialPreset={selectedPreset}
+            initialData={
+              editingCampaign
+                ? {
+                    id: editingCampaign.id || undefined,
+                    title: editingCampaign.title,
+                    subject: editingCampaign.subject,
+                    contentHtml: editingCampaign.contentHtml,
+                  }
+                : null
+            }
             isSubmitting={isSaving}
             onSaveDraft={handleSaveCampaign}
-            onCancel={campaigns.length > 0 ? () => setActiveView("list") : undefined}
+            onCancel={() => {
+              setEditingCampaign(null);
+              setActiveView("list");
+            }}
           />
         </div>
       ) : (
@@ -219,23 +270,26 @@ export default function CampaignsPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Start a New Email Broadcast
+                  Create a New Customizable Email
                 </h2>
                 <p className="text-xs text-slate-500">
-                  Pick an occasion below to open the visual designer with pre-filled Dexta Africa branding
+                  Start from any occasion preset or a blank canvas and customize every detail
                 </p>
               </div>
               <Button
                 size="sm"
                 variant="primary"
-                onClick={() => setActiveView("compose")}
+                onClick={() => {
+                  setEditingCampaign(null);
+                  setActiveView("compose");
+                }}
                 leftIcon={<Plus className="h-4 w-4" />}
               >
-                Open Visual Composer
+                New Blank / Custom Email
               </Button>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
               {EMAIL_OCCASION_PRESETS.map((preset) => {
                 const Icon = preset.icon;
                 return (
@@ -252,7 +306,7 @@ export default function CampaignsPage() {
                       <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                         {preset.label}
                       </p>
-                      <p className="text-[10px] text-slate-500 truncate">Use template →</p>
+                      <p className="text-[10px] text-slate-500 truncate">Customize →</p>
                     </div>
                   </button>
                 );
@@ -260,23 +314,23 @@ export default function CampaignsPage() {
             </div>
           </div>
 
-          {/* Saved & Dispatched Campaigns List */}
+          {/* Saved Drafts & Dispatched Campaigns List */}
           {isLoading ? (
             <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#121318] p-12 text-center text-sm text-slate-500">
-              Loading your email campaigns...
+              Loading your email drafts and campaigns...
             </div>
           ) : campaigns.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 dark:border-white/10 p-12 text-center bg-white dark:bg-[#121318]">
               <Mail className="mx-auto h-9 w-9 text-red-600/70" />
               <h4 className="mt-3 text-base font-bold text-slate-900 dark:text-white">
-                No email campaigns saved yet
+                No email drafts or campaigns saved yet
               </h4>
               <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
-                Use the Visual Composer to create birthday messages, invitations, or monthly newsletters with your official logo and photography.
+                Open the Visual & HTML Studio to design and save your first custom email draft.
               </p>
               <div className="mt-5">
                 <Button size="md" variant="primary" onClick={() => setActiveView("compose")}>
-                  Compose Your First Email
+                  Open Email Studio
                 </Button>
               </div>
             </div>
@@ -312,13 +366,13 @@ export default function CampaignsPage() {
                       </span>
                     </p>
                     <p className="text-xs text-slate-400">
-                      Prepared on {formatDate(camp.createdAt)}
+                      Saved on {formatDate(camp.createdAt)}
                       {camp.sentAt ? ` • Delivered on ${formatDate(camp.sentAt)}` : ""}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-3">
-                    <div className="text-right pr-4 border-r border-slate-100 dark:border-white/10">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-right pr-3 border-r border-slate-100 dark:border-white/10">
                       <p className="text-base font-bold text-slate-900 dark:text-white tabular-nums">
                         {camp.recipientCount}
                       </p>
@@ -326,17 +380,37 @@ export default function CampaignsPage() {
                     </div>
 
                     <Button
-                      size="sm"
+                      size="xs"
                       variant="secondary"
                       onClick={() => setPreviewCampaign(camp)}
                       leftIcon={<Eye className="h-3.5 w-3.5" />}
                     >
-                      Preview Email
+                      Preview
                     </Button>
+
+                    {camp.status === "DRAFT" ? (
+                      <Button
+                        size="xs"
+                        variant="secondary"
+                        onClick={() => handleEditDraft(camp)}
+                        leftIcon={<Pencil className="h-3.5 w-3.5 text-red-600" />}
+                      >
+                        Edit Design
+                      </Button>
+                    ) : (
+                      <Button
+                        size="xs"
+                        variant="secondary"
+                        onClick={() => handleDuplicateDraft(camp)}
+                        leftIcon={<Copy className="h-3.5 w-3.5" />}
+                      >
+                        Duplicate & Edit
+                      </Button>
+                    )}
 
                     {camp.status === "DRAFT" && (
                       <Button
-                        size="sm"
+                        size="xs"
                         variant="primary"
                         isLoading={dispatchingId === camp.id}
                         onClick={() => handleDispatch(camp.id)}
@@ -345,6 +419,15 @@ export default function CampaignsPage() {
                         Send Now
                       </Button>
                     )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteCampaign(camp.id)}
+                      className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
+                      title="Delete Campaign"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -353,13 +436,46 @@ export default function CampaignsPage() {
         </div>
       )}
 
-      {/* Email Envelope Preview Modal */}
+      {/* Email Envelope Preview Modal with Instant "Edit Design in Studio" Button */}
       <Modal
         isOpen={Boolean(previewCampaign)}
         onClose={() => setPreviewCampaign(null)}
         title={previewCampaign?.title || "Email Preview"}
-        description="Formatted email preview as seen by your recipients"
+        description="Preview your email or click 'Edit Design in Studio' to customize any part of it"
         maxWidth="xl"
+        footer={
+          previewCampaign ? (
+            <div className="flex items-center justify-between w-full">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handleEditDraft(previewCampaign)}
+                leftIcon={<Pencil className="h-3.5 w-3.5 text-red-600" />}
+              >
+                Edit Design & Content in Studio
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" onClick={() => setPreviewCampaign(null)}>
+                  Close
+                </Button>
+                {previewCampaign.status === "DRAFT" && (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => {
+                      const id = previewCampaign.id;
+                      setPreviewCampaign(null);
+                      handleDispatch(id);
+                    }}
+                    leftIcon={<Send className="h-3.5 w-3.5" />}
+                  >
+                    Send Campaign Now
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : undefined
+        }
       >
         {previewCampaign && (
           <div className="space-y-4">
@@ -379,7 +495,7 @@ export default function CampaignsPage() {
             </div>
 
             <div
-              className="rounded-2xl bg-slate-100/70 dark:bg-[#0d0e12] p-4 sm:p-6 border border-slate-200/80 dark:border-white/10 max-h-[65vh] overflow-y-auto"
+              className="rounded-2xl bg-slate-100/70 dark:bg-[#0d0e12] p-4 sm:p-6 border border-slate-200/80 dark:border-white/10 max-h-[60vh] overflow-y-auto"
               dangerouslySetInnerHTML={{ __html: previewCampaign.contentHtml }}
             />
           </div>

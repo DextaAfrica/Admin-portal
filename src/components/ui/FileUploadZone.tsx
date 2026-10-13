@@ -3,7 +3,7 @@
 import * as React from "react";
 import { UploadCloud, File, CheckCircle2, AlertCircle, X, Loader2 } from "lucide-react";
 import { Button } from "./Button";
-import { formatBytes, cn } from "@/lib/utils";
+import { formatBytes, formatFileCategory, cn } from "@/lib/utils";
 
 export interface FileUploadZoneProps {
   onFileSelect?: (file: File) => void;
@@ -86,7 +86,7 @@ export function FileUploadZone({
         }, 2000);
       } else {
         setStatus("error");
-        setErrorMessage("Upload failed. Check storage credentials.");
+        setErrorMessage("Could not save file. Please try again.");
       }
     } catch (err: unknown) {
       setStatus("error");
@@ -95,6 +95,8 @@ export function FileUploadZone({
       setIsUploading(false);
     }
   };
+
+  const folderLabel = folder.charAt(0).toUpperCase() + folder.slice(1);
 
   return (
     <div className="w-full space-y-3">
@@ -106,7 +108,7 @@ export function FileUploadZone({
         className={cn(
           "group relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition-all cursor-pointer",
           isDragging
-            ? "border-red-500 bg-red-50/60 dark:bg-rose-500/10 scale-[1.01]"
+            ? "border-red-500 bg-red-50/60 dark:bg-red-500/10 scale-[1.01]"
             : "border-slate-200/90 dark:border-white/10 bg-slate-50/40 dark:bg-[#121217]/50 hover:border-red-500/40 hover:bg-slate-50/80 dark:hover:bg-white/[0.02]"
         )}
       >
@@ -118,43 +120,43 @@ export function FileUploadZone({
           accept={acceptedMimeTypes.join(",")}
         />
 
-        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-red-600 dark:text-rose-400 group-hover:scale-110 transition-transform">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform">
           <UploadCloud className="h-7 w-7" />
         </div>
 
-        <h4 className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">
-          Drop your files here to upload to S3, or{" "}
-          <span className="text-red-600 dark:text-rose-400 underline">browse</span>
+        <h4 className="mt-3 text-sm font-bold text-slate-900 dark:text-white">
+          Drag and drop a file here, or{" "}
+          <span className="text-red-600 dark:text-red-400 underline">browse your computer</span>
         </h4>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Folder: <code className="font-mono text-red-600 dark:text-rose-400">/{folder}</code> &bull; Up to {maxSizeMB}MB
+          Saving to <span className="font-semibold text-slate-700 dark:text-slate-200">{folderLabel}</span> collection • Maximum file size {maxSizeMB}MB
         </p>
       </div>
 
       {selectedFile && (
-        <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#15161c] p-3.5 shadow-sm animate-fade-in">
+        <div className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#15161c] p-3.5 shadow-xs animate-fade-in">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 dark:bg-white/[0.05] text-slate-600 dark:text-slate-300">
               <File className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-slate-900 dark:text-white truncate max-w-xs">
+              <p className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-xs">
                 {selectedFile.name}
               </p>
-              <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
-                {formatBytes(selectedFile.size)} &bull; {selectedFile.type || "file"}
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {formatBytes(selectedFile.size)} • {formatFileCategory(selectedFile.type, selectedFile.name)}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {status === "success" && (
-              <span className="flex items-center gap-1 text-xs font-medium text-emerald-600">
-                <CheckCircle2 className="h-4 w-4" /> Uploaded
+              <span className="flex items-center gap-1 text-xs font-semibold text-emerald-600">
+                <CheckCircle2 className="h-4 w-4" /> Saved to Library
               </span>
             )}
             {status === "error" && (
-              <span className="flex items-center gap-1 text-xs font-medium text-red-600">
+              <span className="flex items-center gap-1 text-xs font-semibold text-red-600">
                 <AlertCircle className="h-4 w-4" /> {errorMessage || "Failed"}
               </span>
             )}
@@ -168,7 +170,7 @@ export function FileUploadZone({
                     handleUploadClick();
                   }}
                 >
-                  Upload to S3
+                  Save to Library
                 </Button>
                 <button
                   onClick={(e) => {
@@ -184,7 +186,7 @@ export function FileUploadZone({
             {isUploading && (
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin text-red-600" />
-                <span className="font-mono text-xs text-slate-500">{progress}%</span>
+                <span className="text-xs font-semibold text-slate-500">{progress}%</span>
               </div>
             )}
           </div>
@@ -193,4 +195,3 @@ export function FileUploadZone({
     </div>
   );
 }
-

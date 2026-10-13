@@ -9,25 +9,25 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-600/20 hover:shadow-md hover:shadow-red-600/25",
+          "bg-[#ED2618] hover:bg-red-700 text-white shadow-md shadow-red-600/20 hover:shadow-lg hover:shadow-red-600/30 border border-transparent",
         secondary:
-          "bg-white dark:bg-[#15161c] border border-slate-200/90 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/[0.05] text-slate-800 dark:text-white shadow-xs",
+          "bg-white dark:bg-[#161821] border border-slate-200 dark:border-white/15 hover:border-slate-300 dark:hover:border-white/25 hover:bg-slate-50 dark:hover:bg-white/[0.06] text-slate-800 dark:text-white shadow-sm",
         outline:
-          "border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400 hover:bg-red-50/70 dark:hover:bg-red-500/10",
+          "border-2 border-red-200 dark:border-red-500/30 bg-white/80 dark:bg-transparent text-[#ED2618] dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:border-[#ED2618]",
         danger:
-          "bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-600/25",
+          "bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-600/25 border border-transparent",
         ghost:
           "hover:bg-slate-100 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300",
         glass:
-          "bg-white/80 dark:bg-white/[0.06] backdrop-blur-md border border-slate-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/[0.1] text-slate-900 dark:text-white shadow-xs",
+          "bg-white/85 dark:bg-white/[0.08] backdrop-blur-md border border-slate-200/80 dark:border-white/15 hover:bg-white dark:hover:bg-white/[0.14] text-slate-900 dark:text-white shadow-sm",
       },
       size: {
-        xs: "h-7 px-2.5 text-xs rounded-lg",
-        sm: "h-8.5 px-3.5 text-xs rounded-lg",
-        md: "h-10 px-4 text-sm rounded-xl",
-        lg: "h-11 px-6 text-sm sm:text-base rounded-xl",
+        xs: "h-8 px-3 text-xs rounded-lg",
+        sm: "h-9 px-4 text-xs sm:text-sm rounded-xl",
+        md: "h-10 px-5 text-sm rounded-xl",
+        lg: "h-12 px-7 text-sm sm:text-base font-bold rounded-xl",
         icon: "h-9 w-9 p-0 rounded-xl",
-        "icon-sm": "h-7.5 w-7.5 p-0 rounded-lg",
+        "icon-sm": "h-8 w-8 p-0 rounded-lg",
       },
     },
     defaultVariants: {

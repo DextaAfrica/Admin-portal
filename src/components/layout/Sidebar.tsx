@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   HardDrive,
@@ -61,7 +61,7 @@ const navSections: NavSection[] = [
     label: "Team & Protection",
     items: [
       { title: "Team Members", href: "/users", icon: UserCheck },
-      { title: "Account Security", href: "/security", icon: ShieldCheck },
+      { title: "Account Protection", href: "/security", icon: ShieldCheck },
       { title: "Activity History", href: "/audit-logs", icon: FileText },
     ],
   },
@@ -73,9 +73,9 @@ export function Sidebar({
   user?: { fullName: string; email: string; role: string };
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   // Listen for mobile menu toggle triggered from Header
   React.useEffect(() => {
@@ -90,9 +90,13 @@ export function Sidebar({
   }, [pathname]);
 
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/");
-    router.refresh();
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      window.location.href = "/login";
+    }
   };
 
   return (
@@ -134,7 +138,7 @@ export function Sidebar({
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={cn(
-              "hidden lg:inline-flex rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05] hover:text-slate-600 dark:hover:text-white transition-colors",
+              "hidden lg:inline-flex rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05] hover:text-slate-600 dark:hover:text-white transition-colors cursor-pointer",
               isCollapsed && "lg:hidden"
             )}
             title="Collapse sidebar"
@@ -145,7 +149,7 @@ export function Sidebar({
           {/* Mobile Close Drawer Button */}
           <button
             onClick={() => setMobileOpen(false)}
-            className="lg:hidden rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05] hover:text-slate-700 dark:hover:text-white"
+            className="lg:hidden rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05] hover:text-slate-700 dark:hover:text-white cursor-pointer"
             aria-label="Close navigation menu"
           >
             <X className="h-5 w-5" />
@@ -156,7 +160,7 @@ export function Sidebar({
           <div className="hidden lg:flex justify-center py-2 border-b border-slate-200/60 dark:border-white/[0.05]">
             <button
               onClick={() => setIsCollapsed(false)}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05] cursor-pointer"
               title="Expand sidebar"
             >
               <ChevronRight className="h-4 w-4" />
@@ -188,7 +192,7 @@ export function Sidebar({
                     className={cn(
                       "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-xs font-medium transition-all",
                       isActive
-                        ? "bg-rose-50 dark:bg-rose-500/10 text-[#ED2618] dark:text-rose-400 font-semibold"
+                        ? "bg-red-50 dark:bg-red-500/10 text-[#ED2618] dark:text-red-400 font-semibold"
                         : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-white",
                       isCollapsed && "lg:justify-center lg:px-0"
                     )}
@@ -202,7 +206,7 @@ export function Sidebar({
                       className={cn(
                         "h-4 w-4 shrink-0 transition-colors",
                         isActive
-                          ? "text-[#ED2618] dark:text-rose-400"
+                          ? "text-[#ED2618] dark:text-red-400"
                           : "text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200"
                       )}
                     />
@@ -216,7 +220,7 @@ export function Sidebar({
                         className={cn(
                           "rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
                           isActive
-                            ? "bg-red-200/60 text-red-700 dark:bg-rose-500/20 dark:text-rose-300"
+                            ? "bg-red-200/60 text-red-700 dark:bg-red-500/20 dark:text-red-300"
                             : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-400"
                         )}
                       >
@@ -230,38 +234,39 @@ export function Sidebar({
           ))}
         </div>
 
-        {/* User Profile & Logout Footer */}
-        <div className="border-t border-slate-200/80 dark:border-white/[0.08] p-3">
-          <div
+        {/* User Profile & Full-Width Sign Out Button Footer */}
+        <div className="border-t border-slate-200/80 dark:border-white/[0.08] p-3 space-y-2">
+          {(!isCollapsed || mobileOpen) && (
+            <div className="flex items-center gap-2.5 rounded-xl bg-slate-50/80 dark:bg-white/[0.03] px-3 py-2 overflow-hidden">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-500/15 text-[#ED2618] dark:text-red-400 font-bold text-xs border border-red-200 dark:border-red-500/20">
+                {user?.fullName?.charAt(0) || "A"}
+              </div>
+              <div className="overflow-hidden">
+                <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                  {user?.fullName || "Team Member"}
+                </p>
+                <p className="truncate text-[10px] text-slate-400">
+                  {user?.email || "Dexta Africa"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isSigningOut}
+            title="Sign Out of Workspace"
             className={cn(
-              "flex items-center justify-between rounded-xl p-2",
-              isCollapsed && "lg:justify-center lg:p-1"
+              "flex w-full items-center justify-center gap-2 rounded-xl border border-red-200/80 dark:border-red-500/20 bg-red-50/70 dark:bg-red-500/10 px-3 py-2.5 text-xs font-bold text-[#ED2618] dark:text-red-400 hover:bg-[#ED2618] hover:text-white dark:hover:bg-[#ED2618] dark:hover:text-white transition-all cursor-pointer disabled:opacity-50",
+              isCollapsed && !mobileOpen && "px-0"
             )}
           >
+            <LogOut className="h-4 w-4 shrink-0" />
             {(!isCollapsed || mobileOpen) && (
-              <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-500/15 text-[#ED2618] dark:text-rose-400 font-bold text-xs border border-rose-200 dark:border-rose-500/20">
-                  {user?.fullName?.charAt(0) || "A"}
-                </div>
-                <div className="overflow-hidden">
-                  <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">
-                    {user?.fullName || "Team Member"}
-                  </p>
-                  <p className="truncate text-[10px] text-slate-400">
-                    {user?.email || "Dexta Africa"}
-                  </p>
-                </div>
-              </div>
+              <span>{isSigningOut ? "Signing Out..." : "Sign Out"}</span>
             )}
-
-            <button
-              onClick={handleLogout}
-              title="Sign out"
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-[#ED2618] dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-            </button>
-          </div>
+          </button>
         </div>
       </aside>
     </>

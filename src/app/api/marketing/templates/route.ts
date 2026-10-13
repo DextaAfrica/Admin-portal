@@ -44,3 +44,55 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export async function PUT(req: NextRequest) {
+  try {
+    const { user } = await getCurrentSession();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id, name, subject, bodyHtml, variables } = await req.json();
+    if (!id) {
+      return NextResponse.json({ error: "Template ID is required" }, { status: 400 });
+    }
+
+    const template = await prisma.emailTemplate.update({
+      where: { id },
+      data: {
+        name,
+        subject,
+        bodyHtml,
+        ...(variables ? { variables: JSON.stringify(variables) } : {}),
+      },
+    });
+
+    return NextResponse.json({ success: true, template });
+  } catch (err: unknown) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to update template" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const { user } = await getCurrentSession();
+    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { id } = await req.json();
+    if (!id) {
+      return NextResponse.json({ error: "Template ID is required" }, { status: 400 });
+    }
+
+    await prisma.emailTemplate.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Failed to delete template" },
+      { status: 500 }
+    );
+  }
+}

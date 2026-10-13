@@ -1,13 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Radio, Plus, RefreshCw, Activity, Zap, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { Plus, RefreshCw, Zap, Globe } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { formatDate } from "@/lib/utils";
 
 interface ApiEndpoint {
   id: string;
@@ -20,6 +19,20 @@ interface ApiEndpoint {
   lastPingAt?: string | null;
 }
 
+const HEALTH_LABELS: Record<ApiEndpoint["healthStatus"], string> = {
+  HEALTHY: "Online & Active",
+  DEGRADED: "Slow Response",
+  DOWN: "Offline",
+  UNKNOWN: "Not Checked",
+};
+
+const ACCESS_LABELS: Record<string, string> = {
+  BEARER: "Protected Partner Access",
+  API_KEY: "Verified Partner Key",
+  HMAC: "Signed Partner Link",
+  NONE: "Public Website / Service",
+};
+
 export default function EndpointsPage() {
   const { success: toastSuccess, error: toastError } = useToast();
   const [endpoints, setEndpoints] = React.useState<ApiEndpoint[]>([]);
@@ -27,7 +40,6 @@ export default function EndpointsPage() {
   const [isAddOpen, setIsAddOpen] = React.useState(false);
   const [pingingId, setPingingId] = React.useState<string | null>(null);
 
-  // New endpoint form
   const [name, setName] = React.useState("");
   const [baseUrl, setBaseUrl] = React.useState("");
   const [authType, setAuthType] = React.useState("BEARER");
@@ -39,7 +51,7 @@ export default function EndpointsPage() {
       const data = await res.json();
       if (res.ok) setEndpoints(data.endpoints || []);
     } catch {
-      toastError("Error", "Could not load endpoints");
+      toastError("Unable to Load", "Could not load connected services.");
     } finally {
       setIsLoading(false);
     }
@@ -59,13 +71,13 @@ export default function EndpointsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toastSuccess("Ping Complete", `Round-trip latency: ${data.latencyMs}ms (${data.status})`);
+        toastSuccess("Connection Verified", "The service responded normally and is online.");
         fetchEndpoints();
       } else {
-        toastError("Ping Failed", data.error || "Probe failed");
+        toastError("Connection Notice", data.error || "Service did not respond.");
       }
     } catch {
-      toastError("Error", "Network ping error");
+      toastError("Connection Error", "Could not verify service status.");
     } finally {
       setPingingId(null);
     }
@@ -80,80 +92,97 @@ export default function EndpointsPage() {
         body: JSON.stringify({ name, baseUrl, authType }),
       });
       if (res.ok) {
-        toastSuccess("Endpoint Added", `${name} registered for gateway probing.`);
+        toastSuccess("Service Connected", `${name} has been added to your connected services.`);
         setIsAddOpen(false);
         setName("");
         setBaseUrl("");
         fetchEndpoints();
       } else {
-        toastError("Error", "Failed to add endpoint");
+        toastError("Save Error", "Could not add this connected service.");
       }
     } catch {
-      toastError("Error", "Network error");
+      toastError("Connection Error", "Please check your connection and try again.");
     }
   };
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-white/10 pb-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            API Endpoints & Gateways
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Connected Services & Websites
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Real-time latency monitoring, health probing, and external microservice connectivity
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Keep track of your company websites, partner platforms, and online tools in one place
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Button size="sm" variant="secondary" onClick={() => fetchEndpoints()} leftIcon={<RefreshCw className="h-3.5 w-3.5" />}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => fetchEndpoints()}
+            leftIcon={<RefreshCw className={isLoading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />}
+          >
             Refresh
           </Button>
-          <Button size="sm" variant="primary" onClick={() => setIsAddOpen(true)} leftIcon={<Plus className="h-3.5 w-3.5" />}>
-            Register Endpoint
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={() => setIsAddOpen(true)}
+            leftIcon={<Plus className="h-3.5 w-3.5" />}
+          >
+            Add Connected Service
           </Button>
         </div>
       </div>
 
-      {/* Endpoints Table */}
-      <div className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#121217] overflow-hidden shadow-sm">
+      {/* Connected Services List */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#121318] overflow-hidden shadow-xs">
         <table className="w-full text-left text-xs">
-          <thead className="border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] uppercase font-mono text-slate-400">
+          <thead className="border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] text-slate-500 font-bold">
             <tr>
-              <th className="px-4 py-3">Service Name</th>
-              <th className="px-4 py-3">Target Base URL</th>
-              <th className="px-4 py-3">Auth Type</th>
-              <th className="px-4 py-3">Health Status</th>
-              <th className="px-4 py-3">Latency</th>
-              <th className="px-4 py-3 text-right">Actions</th>
+              <th className="px-5 py-3.5">Service or Website Name</th>
+              <th className="px-5 py-3.5">Web Address</th>
+              <th className="px-5 py-3.5">Access Type</th>
+              <th className="px-5 py-3.5">Current Status</th>
+              <th className="px-5 py-3.5">Response Speed</th>
+              <th className="px-5 py-3.5 text-right">Check Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
             {endpoints.map((ep) => (
               <tr key={ep.id} className="hover:bg-slate-50 dark:hover:bg-white/[0.02]">
-                <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
-                  {ep.name}
+                <td className="px-5 py-4 font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                  <Globe className="h-4 w-4 text-red-600 shrink-0" />
+                  <span>{ep.name}</span>
                 </td>
-                <td className="px-4 py-3 font-mono text-slate-500">
-                  <code className="text-slate-700 dark:text-slate-300">{ep.baseUrl}</code>
+                <td className="px-5 py-4 text-slate-600 dark:text-slate-300">
+                  {ep.baseUrl}
                 </td>
-                <td className="px-4 py-3">
-                  <span className="rounded bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 font-mono text-[10px] text-slate-600 dark:text-slate-300">
-                    {ep.authType}
+                <td className="px-5 py-4">
+                  <span className="rounded-lg bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[11px] font-medium text-slate-700 dark:text-slate-300">
+                    {ACCESS_LABELS[ep.authType] || "Standard Access"}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-5 py-4">
                   <Badge
-                    variant={ep.healthStatus === "HEALTHY" ? "success" : ep.healthStatus === "DOWN" ? "danger" : "warning"}
+                    variant={
+                      ep.healthStatus === "HEALTHY"
+                        ? "success"
+                        : ep.healthStatus === "DOWN"
+                        ? "danger"
+                        : "warning"
+                    }
                     pulse={ep.healthStatus === "HEALTHY"}
                   >
-                    {ep.healthStatus}
+                    {HEALTH_LABELS[ep.healthStatus] || ep.healthStatus}
                   </Badge>
                 </td>
-                <td className="px-4 py-3 font-mono font-bold text-slate-700 dark:text-slate-300">
-                  {ep.lastLatencyMs ? `${ep.lastLatencyMs}ms` : "—"}
+                <td className="px-5 py-4 font-semibold text-slate-700 dark:text-slate-300">
+                  {ep.lastLatencyMs ? "Fast" : "—"}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-5 py-4 text-right">
                   <Button
                     size="xs"
                     variant="outline"
@@ -161,7 +190,7 @@ export default function EndpointsPage() {
                     onClick={() => handlePing(ep.id)}
                     leftIcon={<Zap className="h-3 w-3" />}
                   >
-                    Probe Health
+                    Check Connection
                   </Button>
                 </td>
               </tr>
@@ -170,54 +199,56 @@ export default function EndpointsPage() {
         </table>
       </div>
 
-      {/* Register Endpoint Modal */}
+      {/* Add Service Modal */}
       <Modal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
-        title="Register External API Endpoint"
-        description="Add a service or webhook target for automated latency and health probing."
+        title="Add Connected Service or Website"
+        description="Add a website or partner service to monitor its availability from your workspace."
       >
         <form onSubmit={handleAdd} className="space-y-4">
           <Input
-            label="Service Name"
+            label="Service or Website Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Identity Microservice"
+            placeholder="e.g., Dexta Africa Main Website"
             required
           />
 
           <Input
-            label="Target Health / Status URL"
+            label="Website Address (URL)"
             type="url"
             value={baseUrl}
             onChange={(e) => setBaseUrl(e.target.value)}
-            placeholder="https://api.dextaafrica.com/health"
+            placeholder="https://dextaafrica.com"
             required
           />
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-              Authentication Type
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Connection Access Type
             </label>
             <select
               value={authType}
               onChange={(e) => setAuthType(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 py-2 text-xs text-slate-900 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3.5 py-2.5 text-xs text-slate-900 dark:text-white"
             >
-              <option value="BEARER">Bearer Token (JWT)</option>
-              <option value="API_KEY">API Key Header</option>
-              <option value="HMAC">HMAC Signature</option>
-              <option value="NONE">Public / None</option>
+              <option value="NONE">Public Website / Service</option>
+              <option value="BEARER">Protected Partner Service</option>
+              <option value="API_KEY">Verified Partner Key</option>
             </select>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button size="sm" variant="ghost" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-            <Button size="sm" variant="primary" type="submit">Save Endpoint</Button>
+            <Button size="sm" variant="ghost" onClick={() => setIsAddOpen(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" variant="primary" type="submit">
+              Save Service
+            </Button>
           </div>
         </form>
       </Modal>
     </div>
   );
 }
-

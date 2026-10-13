@@ -30,16 +30,13 @@ export default function RegisterPage() {
   const router = useRouter();
   const { success: toastSuccess, error: toastError, copied } = useToast();
 
-  // Wizard step: 1 = Details, 2 = Two-Step Security, 3 = Backup Codes & Launch
   const [step, setStep] = React.useState<1 | 2 | 3>(1);
 
-  // Form State
   const [fullName, setFullName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [accessPasscode, setAccessPasscode] = React.useState("DEXTA-2026");
 
-  // 2FA State
   const [mfaSecret, setMfaSecret] = React.useState("");
   const [qrCodeUrl, setQrCodeUrl] = React.useState("");
   const [otpCode, setOtpCode] = React.useState("");
@@ -151,11 +148,11 @@ export default function RegisterPage() {
       {/* Dual-Image Zoom-In / Zoom-Out Motion Backdrop */}
       <BackgroundVideo />
 
-      {/* Top Floating Navigation Bar with Prominent Back Button */}
+      {/* Top Floating Navigation Bar */}
       <header className="relative z-20 mx-auto flex w-full max-w-5xl items-center justify-between pt-1">
         <Link
           href="/"
-          className="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl hover:bg-[#ED2618] hover:border-[#ED2618] transition-all duration-200 shadow-lg"
+          className="group inline-flex h-10 items-center gap-2 rounded-full border border-white/25 bg-black/55 px-4 sm:px-5 text-xs sm:text-sm font-bold text-white backdrop-blur-xl hover:bg-[#ED2618] hover:border-[#ED2618] transition-all duration-200 shadow-lg"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
           <span>Back to Home</span>
@@ -163,15 +160,15 @@ export default function RegisterPage() {
 
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl hover:bg-white/20 transition-all duration-200"
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-white/30 bg-white/95 hover:bg-white px-4 sm:px-5 text-xs sm:text-sm font-bold text-slate-900 shadow-lg transition-all duration-200"
         >
-          <LogIn className="h-3.5 w-3.5" />
+          <LogIn className="h-3.5 w-3.5 text-[#ED2618]" />
           <span>Sign In</span>
         </Link>
       </header>
 
       {/* Main Registration Card */}
-      <div className="relative z-10 my-auto mx-auto w-full max-w-lg rounded-3xl border border-white/20 dark:border-white/10 bg-white/95 dark:bg-[#121217]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl animate-reveal-up">
+      <div className="relative z-10 my-auto mx-auto w-full max-w-lg rounded-3xl border border-white/20 dark:border-white/10 bg-white/95 dark:bg-[#121217]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl animate-fade-in">
         {/* Brand Header with Back Action */}
         <div className="relative flex flex-col items-center text-center">
           <button
@@ -184,7 +181,7 @@ export default function RegisterPage() {
               }
             }}
             title={step === 2 ? "Back to Step 1" : "Back to Home Page"}
-            className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-500 hover:bg-red-50 hover:text-[#ED2618] dark:hover:bg-white/10 dark:hover:text-white transition-colors"
+            className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-500 hover:bg-red-50 hover:text-[#ED2618] dark:hover:bg-white/10 dark:hover:text-white transition-colors cursor-pointer"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -194,24 +191,24 @@ export default function RegisterPage() {
             title="Return to Dexta Africa Home"
             className="transition-transform hover:scale-105"
           >
-            <DextaLogo className="h-11 w-auto" />
+            <DextaLogo className="h-10 sm:h-11 w-auto" />
           </Link>
 
           <div className="mt-4 flex items-center gap-2">
-            <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">
-              Create Your Account
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+              Create Team Account
             </h1>
             <Badge variant="crimson" className="text-[10px]">
               Step {step} of 3
             </Badge>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
             {step === 1 &&
-              "Enter your details and company invite code to get started."}
+              "Enter your details and company invite code to join the workspace."}
             {step === 2 &&
-              "Scan the QR code below with your phone's authenticator app to protect your account."}
+              "Scan the QR code below with your phone's authenticator app."}
             {step === 3 &&
-              "Save your backup access codes in a safe place before entering the workspace."}
+              "Save your backup access codes in a safe place before entering."}
           </p>
         </div>
 
@@ -223,7 +220,7 @@ export default function RegisterPage() {
               className={cn(
                 "h-1.5 rounded-full transition-all duration-300",
                 step >= s
-                  ? "bg-red-600 shadow-[0_0_8px_rgba(225,29,72,0.6)]"
+                  ? "bg-[#ED2618]"
                   : "bg-slate-200 dark:bg-white/10"
               )}
             />
@@ -276,7 +273,7 @@ export default function RegisterPage() {
             />
 
             {errorMessage && (
-              <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3 border border-red-200 dark:border-red-500/20 text-xs font-medium text-red-600 dark:text-rose-400 text-center">
+              <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3 border border-red-200 dark:border-red-500/20 text-xs font-medium text-red-600 dark:text-red-400 text-center">
                 {errorMessage}
               </div>
             )}
@@ -284,23 +281,22 @@ export default function RegisterPage() {
             <Button
               type="submit"
               variant="primary"
-              className="w-full h-11 text-sm font-bold shadow-lg shadow-red-500/25 hover-lift"
+              size="lg"
+              className="w-full"
               isLoading={isLoading}
               rightIcon={<ArrowRight className="h-4 w-4" />}
             >
               Continue to Security Setup
             </Button>
 
-            <div className="space-y-2.5 text-center pt-3 border-t border-slate-200/80 dark:border-white/10">
-              <div>
-                <Link
-                  href="/login"
-                  className="text-xs font-medium text-slate-500 hover:text-red-600 dark:hover:text-rose-400 transition-colors"
-                >
-                  Already have an account?{" "}
-                  <span className="font-bold underline">Sign in</span>
-                </Link>
-              </div>
+            <div className="space-y-3 text-center pt-4 border-t border-slate-200/80 dark:border-white/10">
+              <Link
+                href="/login"
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-white/[0.04] px-4 text-xs font-bold text-slate-800 dark:text-white hover:border-[#ED2618] hover:text-[#ED2618] transition-all"
+              >
+                <LogIn className="h-3.5 w-3.5 text-[#ED2618]" />
+                <span>Already have an account? Sign In</span>
+              </Link>
               <div>
                 <Link
                   href="/"
@@ -318,12 +314,11 @@ export default function RegisterPage() {
         {step === 2 && (
           <div className="mt-6 space-y-5 animate-fade-in">
             <div className="flex flex-col items-center text-center space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-rose-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
                 1. Scan QR Code with Your Phone
               </span>
               {qrCodeUrl && (
                 <div className="w-44 h-44 rounded-2xl border border-slate-200 dark:border-white/10 p-2 bg-white flex items-center justify-center shadow-md">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={qrCodeUrl}
                     alt="Security QR Code"
@@ -334,16 +329,16 @@ export default function RegisterPage() {
 
               <div className="flex items-center gap-1.5 pt-1">
                 <span className="text-[11px] text-slate-400">Setup Key:</span>
-                <code className="rounded bg-slate-100 dark:bg-white/10 px-2 py-0.5 font-mono text-xs font-bold text-slate-900 dark:text-white">
+                <span className="rounded bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-xs font-bold text-slate-900 dark:text-white">
                   {mfaSecret}
-                </code>
+                </span>
                 <button
                   type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(mfaSecret);
                     copied("Setup key copied!");
                   }}
-                  className="text-slate-400 hover:text-red-600 p-1"
+                  className="text-slate-400 hover:text-red-600 p-1 cursor-pointer"
                   title="Copy Setup Key"
                 >
                   <Copy className="h-3.5 w-3.5" />
@@ -352,7 +347,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-3 text-center border-t border-slate-200/80 dark:border-white/10 pt-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-rose-400">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
                 2. Enter 6-Digit Code from App
               </span>
               <OTPInput
@@ -366,7 +361,7 @@ export default function RegisterPage() {
             </div>
 
             {errorMessage && (
-              <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3 border border-red-200 dark:border-red-500/20 text-xs font-medium text-red-600 dark:text-rose-400 text-center">
+              <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3 border border-red-200 dark:border-red-500/20 text-xs font-medium text-red-600 dark:text-red-400 text-center">
                 {errorMessage}
               </div>
             )}
@@ -383,7 +378,7 @@ export default function RegisterPage() {
               <Button
                 type="button"
                 variant="primary"
-                className="flex-1 h-10 font-bold"
+                className="flex-1"
                 isLoading={isLoading}
                 disabled={otpCode.length < 6}
                 onClick={() => handleCompleteRegistration()}
@@ -415,7 +410,7 @@ export default function RegisterPage() {
               {recoveryCodes.map((code, idx) => (
                 <div
                   key={idx}
-                  className="rounded-lg border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#15161c] py-1.5 px-2 text-center font-mono text-xs font-bold text-slate-900 dark:text-white tracking-widest"
+                  className="rounded-lg border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#15161c] py-1.5 px-2 text-center text-xs font-bold text-slate-900 dark:text-white tracking-widest"
                 >
                   {code}
                 </div>
@@ -451,7 +446,8 @@ export default function RegisterPage() {
             <Button
               type="button"
               variant="primary"
-              className="w-full h-11 text-sm font-bold shadow-lg shadow-red-500/25"
+              size="lg"
+              className="w-full"
               onClick={() => {
                 router.push("/dashboard");
                 router.refresh();
