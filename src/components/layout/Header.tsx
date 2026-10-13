@@ -13,8 +13,10 @@ import {
   Home,
   Menu,
   LogOut,
+  ShieldAlert,
 } from "lucide-react";
-import { Badge } from "../ui/Badge";
+import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
 import { CommandPalette } from "./CommandPalette";
 
 const PAGE_LABELS: Record<string, string> = {
@@ -39,6 +41,7 @@ export function Header({
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = React.useState(false);
+  const [signOutModalOpen, setSignOutModalOpen] = React.useState(false);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   React.useEffect(() => {
@@ -49,8 +52,14 @@ export function Header({
         setCommandPaletteOpen((prev) => !prev);
       }
     };
+    const handleOpenSignOutModal = () => setSignOutModalOpen(true);
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("dexta:prompt-signout", handleOpenSignOutModal);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("dexta:prompt-signout", handleOpenSignOutModal);
+    };
   }, []);
 
   const segments = pathname.split("/").filter(Boolean);
@@ -63,7 +72,7 @@ export function Header({
     window.dispatchEvent(new CustomEvent("dexta:toggle-sidebar"));
   };
 
-  const handleSignOut = async () => {
+  const confirmSignOut = async () => {
     if (isSigningOut) return;
     setIsSigningOut(true);
     try {
@@ -179,19 +188,60 @@ export function Header({
             </div>
           </div>
 
-          {/* Explicit Top-Bar Sign Out Button */}
+          {/* Explicit Top-Bar Sign Out Button -> Opens Confirmation Modal */}
           <button
             type="button"
-            onClick={handleSignOut}
-            disabled={isSigningOut}
+            onClick={() => setSignOutModalOpen(true)}
             title="Sign out of your workspace"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-white/[0.05] px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-600 hover:bg-red-600 hover:text-white dark:hover:border-red-600 dark:hover:bg-red-600 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-white/[0.05] px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-600 hover:bg-red-600 hover:text-white dark:hover:border-red-600 dark:hover:bg-red-600 transition-all shadow-sm cursor-pointer"
           >
             <LogOut className="h-3.5 w-3.5" />
-            <span>{isSigningOut ? "Signing Out..." : "Sign Out"}</span>
+            <span>Sign Out</span>
           </button>
         </div>
       </header>
+
+      {/* Sign Out Confirmation Modal */}
+      <Modal
+        isOpen={signOutModalOpen}
+        onClose={() => setSignOutModalOpen(false)}
+        title="Sign Out of Workspace?"
+        description="Please confirm that you want to end your current Dexta Africa workspace session."
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSignOutModalOpen(false)}
+              disabled={isSigningOut}
+            >
+              Stay Signed In
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              isLoading={isSigningOut}
+              onClick={confirmSignOut}
+              leftIcon={<LogOut className="h-3.5 w-3.5" />}
+            >
+              Yes, Sign Out
+            </Button>
+          </>
+        }
+      >
+        <div className="flex items-start gap-3 rounded-xl bg-red-50/70 dark:bg-red-500/10 p-3.5 border border-red-200/80 dark:border-red-500/20 text-xs text-slate-700 dark:text-slate-300">
+          <ShieldAlert className="h-4 w-4 text-[#ED2618] shrink-0 mt-0.5" />
+          <p className="leading-relaxed">
+            You are currently signed in as{" "}
+            <strong className="text-slate-900 dark:text-white">
+              {user?.fullName || "Team Member"}
+            </strong>
+            . Signing out will lock your workspace until you sign back in with
+            your password and 6-digit verification code.
+          </p>
+        </div>
+      </Modal>
 
       {/* Global Command Palette Dialog */}
       <CommandPalette

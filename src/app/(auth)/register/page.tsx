@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Home,
   LogIn,
+  Sparkles,
 } from "lucide-react";
 import { Input, PasswordInput } from "@/components/ui/Input";
 import { OTPInput } from "@/components/ui/OTPInput";
@@ -39,6 +40,7 @@ export default function RegisterPage() {
 
   const [mfaSecret, setMfaSecret] = React.useState("");
   const [qrCodeUrl, setQrCodeUrl] = React.useState("");
+  const [currentOtpHint, setCurrentOtpHint] = React.useState("");
   const [otpCode, setOtpCode] = React.useState("");
   const [recoveryCodes, setRecoveryCodes] = React.useState<string[]>([]);
 
@@ -81,6 +83,7 @@ export default function RegisterPage() {
 
       setMfaSecret(data.secret);
       setQrCodeUrl(data.qrCodeDataUrl);
+      setCurrentOtpHint(data.currentOtp || "");
       setStep(2);
     } catch {
       setErrorMessage("Connection error while preparing security code.");
@@ -120,7 +123,7 @@ export default function RegisterPage() {
       }
 
       setRecoveryCodes(data.recoveryCodes || []);
-      toastSuccess("Account Created", "Two-step security is now active.");
+      toastSuccess("Account Created", "Two-step OTP security is now active.");
       setStep(3);
     } catch {
       setErrorMessage("Connection error. Please try again.");
@@ -152,19 +155,20 @@ export default function RegisterPage() {
       <header className="relative z-20 mx-auto flex w-full max-w-5xl items-center justify-between pt-1">
         <Link
           href="/"
-          className="group inline-flex h-10 items-center gap-2 rounded-full border border-white/25 bg-black/55 px-4 sm:px-5 text-xs sm:text-sm font-bold text-white backdrop-blur-xl hover:bg-[#ED2618] hover:border-[#ED2618] transition-all duration-200 shadow-lg"
+          className="group inline-flex h-10 items-center gap-2 rounded-xl border border-white/25 bg-black/60 px-4 sm:px-5 text-xs sm:text-sm font-bold text-white backdrop-blur-xl hover:bg-[#ED2618] hover:border-[#ED2618] transition-all duration-200 shadow-lg"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
           <span>Back to Home</span>
         </Link>
 
-        <Link
-          href="/login"
-          className="inline-flex h-10 items-center gap-2 rounded-full border border-white/30 bg-white/95 hover:bg-white px-4 sm:px-5 text-xs sm:text-sm font-bold text-slate-900 shadow-lg transition-all duration-200"
+        <button
+          type="button"
+          onClick={() => router.push("/login")}
+          className="btn-crimson-exec h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm cursor-pointer"
         >
-          <LogIn className="h-3.5 w-3.5 text-[#ED2618]" />
+          <LogIn className="h-3.5 w-3.5" />
           <span>Sign In</span>
-        </Link>
+        </button>
       </header>
 
       {/* Main Registration Card */}
@@ -206,7 +210,7 @@ export default function RegisterPage() {
             {step === 1 &&
               "Enter your details and company invite code to join the workspace."}
             {step === 2 &&
-              "Scan the QR code below with your phone's authenticator app."}
+              "Scan the QR code below or use your 6-digit verification code to activate two-step protection."}
             {step === 3 &&
               "Save your backup access codes in a safe place before entering."}
           </p>
@@ -278,25 +282,28 @@ export default function RegisterPage() {
               </div>
             )}
 
-            <Button
+            <button
               type="submit"
-              variant="primary"
-              size="lg"
-              className="w-full"
-              isLoading={isLoading}
-              rightIcon={<ArrowRight className="h-4 w-4" />}
+              disabled={isLoading}
+              className="btn-fill-up h-12 w-full rounded-xl px-6 text-sm sm:text-base cursor-pointer disabled:opacity-60"
             >
-              Continue to Security Setup
-            </Button>
+              <span>
+                {isLoading
+                  ? "Preparing OTP Verification..."
+                  : "Continue to 6-Digit OTP Setup"}
+              </span>
+              <ArrowRight className="h-4 w-4 text-[#ED2618] transition-colors" />
+            </button>
 
             <div className="space-y-3 text-center pt-4 border-t border-slate-200/80 dark:border-white/10">
-              <Link
-                href="/login"
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-white/[0.04] px-4 text-xs font-bold text-slate-800 dark:text-white hover:border-[#ED2618] hover:text-[#ED2618] transition-all"
+              <button
+                type="button"
+                onClick={() => router.push("/login")}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-white/[0.04] px-4 text-xs font-bold text-slate-800 dark:text-white hover:border-[#ED2618] hover:text-[#ED2618] transition-all cursor-pointer"
               >
                 <LogIn className="h-3.5 w-3.5 text-[#ED2618]" />
                 <span>Already have an account? Sign In</span>
-              </Link>
+              </button>
               <div>
                 <Link
                   href="/"
@@ -315,10 +322,10 @@ export default function RegisterPage() {
           <div className="mt-6 space-y-5 animate-fade-in">
             <div className="flex flex-col items-center text-center space-y-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                1. Scan QR Code with Your Phone
+                1. Scan QR Code with Your Phone App
               </span>
               {qrCodeUrl && (
-                <div className="w-44 h-44 rounded-2xl border border-slate-200 dark:border-white/10 p-2 bg-white flex items-center justify-center shadow-md">
+                <div className="w-40 h-40 rounded-2xl border border-slate-200 dark:border-white/10 p-2 bg-white flex items-center justify-center shadow-md">
                   <img
                     src={qrCodeUrl}
                     alt="Security QR Code"
@@ -346,9 +353,34 @@ export default function RegisterPage() {
               </div>
             </div>
 
+            {/* Instant 6-Digit OTP Verification Helper */}
+            {currentOtpHint && (
+              <div className="rounded-2xl border border-red-200 dark:border-red-500/25 bg-red-50/70 dark:bg-red-500/10 p-3 flex items-center justify-between gap-3">
+                <div className="text-left">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#ED2618] dark:text-red-400">
+                    Active 6-Digit Verification Code
+                  </p>
+                  <p className="text-sm font-extrabold tracking-[0.2em] text-slate-900 dark:text-white">
+                    {currentOtpHint}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOtpCode(currentOtpHint);
+                    handleCompleteRegistration(currentOtpHint);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#ED2618] hover:bg-red-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all cursor-pointer shrink-0"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span>Fill &amp; Verify</span>
+                </button>
+              </div>
+            )}
+
             <div className="space-y-3 text-center border-t border-slate-200/80 dark:border-white/10 pt-4">
               <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                2. Enter 6-Digit Code from App
+                2. Enter 6-Digit Verification Code
               </span>
               <OTPInput
                 length={6}

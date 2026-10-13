@@ -142,19 +142,19 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => router.push("/login")}
-              className="btn-crimson-exec h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm cursor-pointer"
+              className="btn-crimson-exec h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <LogIn className="h-3.5 w-3.5" />
-              <span>Sign In</span>
+              <LogIn className="h-3.5 w-3.5 shrink-0" />
+              <span className="whitespace-nowrap">Sign In</span>
             </button>
 
             <button
               type="button"
               onClick={() => router.push("/register")}
-              className="btn-fill-up h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm cursor-pointer"
+              className="btn-fill-up h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <UserPlus className="h-3.5 w-3.5 text-[#ED2618] transition-colors" />
-              <span>Create Account</span>
+              <UserPlus className="h-3.5 w-3.5 shrink-0 text-[#ED2618] transition-colors" />
+              <span className="whitespace-nowrap">Create Account</span>
             </button>
           </div>
         </div>
@@ -165,19 +165,19 @@ export default function LandingPage() {
         {/* Hero Split Section */}
         <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Left Column: Clean Executive Introduction */}
-          <div className="lg:col-span-5 space-y-6 animate-fade-in">
+          <div className="lg:col-span-6 space-y-6 animate-fade-in">
             <div className="inline-flex items-center gap-2.5 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1.5">
               <span className="h-2 w-2 rounded-full bg-[#ED2618]" />
-              <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400 whitespace-nowrap">
                 Dexta Africa Team Portal
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
+            <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.14]">
               Putting People, Quality &amp; Partnerships First.
             </h1>
 
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
               Welcome to the official Dexta Africa team workspace. Sign in with
               your verified work account or create your team profile to manage
               project media, design branded client emails, and collaborate
@@ -186,23 +186,23 @@ export default function LandingPage() {
 
             {/* Framed Executive Action Bar (Sign In + Fill-Up Create Account) */}
             <div className="pt-2">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:flex-nowrap items-stretch sm:items-center gap-3.5">
                 <button
                   type="button"
                   onClick={() => router.push("/login")}
-                  className="btn-crimson-exec h-13 rounded-2xl px-7 py-3.5 text-sm sm:text-base cursor-pointer"
+                  className="btn-crimson-exec h-12 rounded-xl px-6 text-sm whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  <span>Sign In to Workspace</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <span className="whitespace-nowrap">Sign In to Workspace</span>
+                  <ArrowRight className="h-4 w-4 shrink-0" />
                 </button>
 
                 <button
                   type="button"
                   onClick={() => router.push("/register")}
-                  className="btn-fill-up h-13 rounded-2xl px-7 py-3.5 text-sm sm:text-base cursor-pointer"
+                  className="btn-fill-up h-12 rounded-xl px-6 text-sm whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  <UserPlus className="h-4 w-4 text-[#ED2618] transition-colors" />
-                  <span>Create Team Account</span>
+                  <UserPlus className="h-4 w-4 shrink-0 text-[#ED2618] transition-colors" />
+                  <span className="whitespace-nowrap">Create Team Account</span>
                 </button>
               </div>
             </div>
@@ -218,7 +218,7 @@ export default function LandingPage() {
           </div>
 
           {/* Right Column: Cinematic Portrait Showcase with Docked Caption Bar */}
-          <div className="lg:col-span-7 animate-fade-in delay-100">
+          <div className="lg:col-span-6 animate-fade-in delay-100">
             <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden rounded-3xl border border-slate-200/90 dark:border-white/10 bg-slate-950 shadow-2xl">
               {PORTRAITS.map((slide, index) => {
                 const isActive = index === activeSlide;

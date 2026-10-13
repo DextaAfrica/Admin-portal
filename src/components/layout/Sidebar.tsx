@@ -89,14 +89,9 @@ export function Sidebar({
     setMobileOpen(false);
   }, [pathname]);
 
-  const handleLogout = async () => {
-    if (isSigningOut) return;
-    setIsSigningOut(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } finally {
-      window.location.href = "/login";
-    }
+  const handleLogout = () => {
+    setMobileOpen(false);
+    window.dispatchEvent(new CustomEvent("dexta:prompt-signout"));
   };
 
   return (

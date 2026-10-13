@@ -26,6 +26,9 @@ export default function UsersPage() {
   const [users, setUsers] = React.useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAddOpen, setIsAddOpen] = React.useState(false);
+  const [statusConfirmUser, setStatusConfirmUser] =
+    React.useState<UserItem | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = React.useState(false);
 
   const [email, setEmail] = React.useState("");
   const [fullName, setFullName] = React.useState("");
@@ -73,6 +76,7 @@ export default function UsersPage() {
   };
 
   const handleToggleStatus = async (user: UserItem) => {
+    setIsUpdatingStatus(true);
     const nextStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
     try {
       const res = await fetch("/api/users", {
@@ -85,12 +89,15 @@ export default function UsersPage() {
           "Member Status Updated",
           `${user.fullName}'s access is now ${nextStatus === "ACTIVE" ? "Active" : "Paused"}.`
         );
+        setStatusConfirmUser(null);
         fetchUsers();
       } else {
         toastError("Update Failed", "Could not update member access.");
       }
     } catch {
       toastError("Connection Error", "Please check your connection and try again.");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -181,7 +188,7 @@ export default function UsersPage() {
                   <Button
                     size="xs"
                     variant={u.status === "ACTIVE" ? "ghost" : "primary"}
-                    onClick={() => handleToggleStatus(u)}
+                    onClick={() => setStatusConfirmUser(u)}
                   >
                     {u.status === "ACTIVE" ? "Pause Access" : "Restore Access"}
                   </Button>
@@ -249,6 +256,59 @@ export default function UsersPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Pause / Restore Member Access Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(statusConfirmUser)}
+        onClose={() => setStatusConfirmUser(null)}
+        title={
+          statusConfirmUser?.status === "ACTIVE"
+            ? "Pause Team Member Access?"
+            : "Restore Team Member Access?"
+        }
+        description={
+          statusConfirmUser?.status === "ACTIVE"
+            ? "Please confirm before temporarily pausing this colleague's workspace sign-in access."
+            : "Please confirm before restoring this colleague's workspace sign-in access."
+        }
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setStatusConfirmUser(null)}
+              disabled={isUpdatingStatus}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant={
+                statusConfirmUser?.status === "ACTIVE" ? "danger" : "primary"
+              }
+              isLoading={isUpdatingStatus}
+              onClick={() =>
+                statusConfirmUser && handleToggleStatus(statusConfirmUser)
+              }
+            >
+              {statusConfirmUser?.status === "ACTIVE"
+                ? "Yes, Pause Access"
+                : "Yes, Restore Access"}
+            </Button>
+          </>
+        }
+      >
+        {statusConfirmUser && (
+          <div className="rounded-xl bg-slate-50 dark:bg-white/[0.03] p-3.5 border border-slate-200 dark:border-white/10 text-xs text-slate-700 dark:text-slate-300">
+            Team Member:{" "}
+            <strong className="text-slate-900 dark:text-white">
+              {statusConfirmUser.fullName}
+            </strong>{" "}
+            ({statusConfirmUser.email})
+          </div>
+        )}
       </Modal>
     </div>
   );

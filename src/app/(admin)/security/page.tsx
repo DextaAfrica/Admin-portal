@@ -10,6 +10,7 @@ import {
   Download,
   Trash2,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -29,7 +30,8 @@ interface SessionItem {
 
 function formatDeviceLabel(userAgent: string): string {
   const ua = (userAgent || "").toLowerCase();
-  const isMobile = ua.includes("mobile") || ua.includes("iphone") || ua.includes("android");
+  const isMobile =
+    ua.includes("mobile") || ua.includes("iphone") || ua.includes("android");
   const browser = ua.includes("chrome")
     ? "Chrome Browser"
     : ua.includes("safari")
@@ -55,10 +57,19 @@ export default function SecurityPage() {
   const [isSetupOpen, setIsSetupOpen] = React.useState(false);
   const [mfaSecret, setMfaSecret] = React.useState("");
   const [qrCodeUrl, setQrCodeUrl] = React.useState("");
+  const [currentOtpHint, setCurrentOtpHint] = React.useState("");
   const [verificationCode, setVerificationCode] = React.useState("");
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [recoveryCodes, setRecoveryCodes] = React.useState<string[]>([]);
   const [is2faEnabled, setIs2faEnabled] = React.useState(false);
+
+  // Device Sign-Out Confirmation Modal State
+  const [revokeConfirm, setRevokeConfirm] = React.useState<{
+    sessionId?: string;
+    revokeAllOthers?: boolean;
+    label: string;
+  } | null>(null);
+  const [isRevoking, setIsRevoking] = React.useState(false);
 
   const fetchSecurityData = React.useCallback(async () => {
     setIsLoading(true);
@@ -85,12 +96,20 @@ export default function SecurityPage() {
       if (res.ok) {
         setMfaSecret(data.secret);
         setQrCodeUrl(data.qrCodeDataUrl);
+        setCurrentOtpHint(data.currentOtp || "");
+        setVerificationCode("");
         setIsSetupOpen(true);
       } else {
-        toastError("Setup Issue", "Could not start two-step verification setup.");
+        toastError(
+          "Setup Issue",
+          "Could not start two-step verification setup."
+        );
       }
     } catch {
-      toastError("Connection Error", "Please check your connection and try again.");
+      toastError(
+        "Connection Error",
+        "Please check your connection and try again."
+      );
     } finally {
       setIsVerifying(false);
     }
@@ -108,9 +127,16 @@ export default function SecurityPage() {
       if (res.ok) {
         setIs2faEnabled(true);
         setRecoveryCodes(data.recoveryCodes || []);
-        toastSuccess("Protection Activated", "Your account is now protected with two-step verification.");
+        setIsSetupOpen(false);
+        toastSuccess(
+          "Protection Activated",
+          "Your account is now protected with two-step OTP verification."
+        );
       } else {
-        toastError("Incorrect Code", data.error || "Please check the 6-digit code and try again.");
+        toastError(
+          "Incorrect Code",
+          data.error || "Please check the 6-digit code and try again."
+        );
       }
     } catch {
       toastError("Verification Issue", "Could not verify the code.");
@@ -119,7 +145,11 @@ export default function SecurityPage() {
     }
   };
 
-  const handleRevokeSession = async (sessionId?: string, revokeAllOthers = false) => {
+  const handleRevokeSession = async (
+    sessionId?: string,
+    revokeAllOthers = false
+  ) => {
+    setIsRevoking(true);
     try {
       const res = await fetch("/api/auth/sessions/revoke", {
         method: "POST",
@@ -127,13 +157,22 @@ export default function SecurityPage() {
         body: JSON.stringify({ sessionId, revokeAllOthers }),
       });
       if (res.ok) {
-        toastSuccess("Device Signed Out", "The selected device has been signed out.");
+        toastSuccess(
+          "Device Signed Out",
+          "The selected device has been signed out."
+        );
+        setRevokeConfirm(null);
         fetchSecurityData();
       } else {
         toastError("Sign-Out Failed", "Could not sign out the device.");
       }
     } catch {
-      toastError("Connection Error", "Please check your connection and try again.");
+      toastError(
+        "Connection Error",
+        "Please check your connection and try again."
+      );
+    } finally {
+      setIsRevoking(false);
     }
   };
 
@@ -156,10 +195,11 @@ export default function SecurityPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-white/10 pb-5">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
-            Account Protection & Signed-In Devices
+            Account Protection &amp; Signed-In Devices
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-            Set up two-step verification on your phone and manage the computers or phones signed into your account
+            Set up two-step OTP verification on your phone and manage the
+            computers or phones signed into your account
           </p>
         </div>
 
@@ -167,7 +207,11 @@ export default function SecurityPage() {
           size="sm"
           variant="secondary"
           onClick={() => fetchSecurityData()}
-          leftIcon={<RefreshCw className={isLoading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"} />}
+          leftIcon={
+            <RefreshCw
+              className={isLoading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"}
+            />
+          }
         >
           Refresh
         </Button>
@@ -183,14 +227,18 @@ export default function SecurityPage() {
             <div>
               <div className="flex items-center gap-2.5">
                 <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Two-Step Phone Verification
+                  Two-Step Phone Verification (OTP)
                 </h3>
-                <Badge variant={is2faEnabled ? "success" : "warning"} pulse={is2faEnabled}>
+                <Badge
+                  variant={is2faEnabled ? "success" : "warning"}
+                  pulse={is2faEnabled}
+                >
                   {is2faEnabled ? "Active" : "Recommended"}
                 </Badge>
               </div>
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 max-w-xl leading-relaxed">
-                Add an extra layer of safety to your Dexta Africa account using Google Authenticator or Microsoft Authenticator on your phone.
+                Add an extra layer of safety to your Dexta Africa account using
+                Google Authenticator or Microsoft Authenticator on your phone.
               </p>
             </div>
           </div>
@@ -201,7 +249,9 @@ export default function SecurityPage() {
             onClick={startMfaSetup}
             leftIcon={<QrCode className="h-4 w-4" />}
           >
-            {is2faEnabled ? "Update Phone App" : "Turn On Two-Step Verification"}
+            {is2faEnabled
+              ? "Update Phone App"
+              : "Turn On Two-Step Verification"}
           </Button>
         </div>
 
@@ -213,7 +263,8 @@ export default function SecurityPage() {
                   Emergency Backup Sign-In Codes
                 </h4>
                 <p className="text-xs text-slate-600 dark:text-slate-400">
-                  Keep these codes in a safe place. Each code can be used once if you do not have your phone with you.
+                  Keep these codes in a safe place. Each code can be used once
+                  if you do not have your phone with you.
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -261,7 +312,8 @@ export default function SecurityPage() {
               Where You&apos;re Signed In
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Computers and phones currently signed into your Dexta Africa account
+              Computers and phones currently signed into your Dexta Africa
+              account
             </p>
           </div>
 
@@ -269,7 +321,12 @@ export default function SecurityPage() {
             <Button
               size="xs"
               variant="danger"
-              onClick={() => handleRevokeSession(undefined, true)}
+              onClick={() =>
+                setRevokeConfirm({
+                  revokeAllOthers: true,
+                  label: "All Other Signed-In Devices",
+                })
+              }
               leftIcon={<Trash2 className="h-3.5 w-3.5" />}
             >
               Sign Out All Other Devices
@@ -280,8 +337,12 @@ export default function SecurityPage() {
         <div className="mt-4 divide-y divide-slate-100 dark:divide-white/[0.04]">
           {sessions.map((sess) => {
             const isMobile = sess.userAgent.toLowerCase().includes("mobile");
+            const deviceLabel = formatDeviceLabel(sess.userAgent);
             return (
-              <div key={sess.id} className="py-4 flex items-center justify-between gap-4">
+              <div
+                key={sess.id}
+                className="py-4 flex items-center justify-between gap-4"
+              >
                 <div className="flex items-center gap-3.5">
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-300">
                     {isMobile ? (
@@ -294,7 +355,7 @@ export default function SecurityPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-bold text-slate-900 dark:text-white">
-                        {formatDeviceLabel(sess.userAgent)}
+                        {deviceLabel}
                       </p>
                       {sess.isCurrent && (
                         <Badge variant="crimson" className="text-[10px]">
@@ -303,13 +364,23 @@ export default function SecurityPage() {
                       )}
                     </div>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Last active {timeAgo(sess.lastActiveAt)} • Signed in {formatDate(sess.createdAt)}
+                      Last active {timeAgo(sess.lastActiveAt)} • Signed in{" "}
+                      {formatDate(sess.createdAt)}
                     </p>
                   </div>
                 </div>
 
                 {!sess.isCurrent && (
-                  <Button size="xs" variant="ghost" onClick={() => handleRevokeSession(sess.id)}>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    onClick={() =>
+                      setRevokeConfirm({
+                        sessionId: sess.id,
+                        label: deviceLabel,
+                      })
+                    }
+                  >
                     Sign Out
                   </Button>
                 )}
@@ -324,23 +395,30 @@ export default function SecurityPage() {
         isOpen={isSetupOpen}
         onClose={() => setIsSetupOpen(false)}
         title="Set Up Two-Step Phone Verification"
-        description="Follow these two simple steps with your phone."
+        description="Follow these two simple steps with your phone or use the active 6-digit verification code below."
         maxWidth="md"
       >
-        <div className="space-y-6">
+        <div className="space-y-5">
           <div className="space-y-2 text-center">
             <span className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
               Step 1: Scan This Code With Your Phone App
             </span>
             {qrCodeUrl && (
-              <div className="mx-auto w-48 h-48 rounded-2xl border border-slate-200 dark:border-white/10 p-2 bg-white flex items-center justify-center shadow-sm">
-                <img src={qrCodeUrl} alt="Phone Verification QR Code" className="w-full h-full object-contain" />
+              <div className="mx-auto w-44 h-44 rounded-2xl border border-slate-200 dark:border-white/10 p-2 bg-white flex items-center justify-center shadow-sm">
+                <img
+                  src={qrCodeUrl}
+                  alt="Phone Verification QR Code"
+                  className="w-full h-full object-contain"
+                />
               </div>
             )}
             <div className="flex items-center justify-center gap-1.5 pt-1">
               <span className="text-xs text-slate-500">Setup Key:</span>
-              <span className="text-xs font-bold text-slate-900 dark:text-white">{mfaSecret}</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">
+                {mfaSecret}
+              </span>
               <button
+                type="button"
                 onClick={() => {
                   navigator.clipboard.writeText(mfaSecret);
                   copied("Setup key copied!");
@@ -351,6 +429,30 @@ export default function SecurityPage() {
               </button>
             </div>
           </div>
+
+          {currentOtpHint && (
+            <div className="rounded-2xl border border-red-200 dark:border-red-500/25 bg-red-50/70 dark:bg-red-500/10 p-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#ED2618] dark:text-red-400">
+                  Active 6-Digit Verification Code
+                </p>
+                <p className="text-sm font-extrabold tracking-[0.2em] text-slate-900 dark:text-white">
+                  {currentOtpHint}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setVerificationCode(currentOtpHint);
+                  verifyAndEnableMfa(currentOtpHint);
+                }}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[#ED2618] hover:bg-red-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all cursor-pointer shrink-0"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Fill &amp; Turn On</span>
+              </button>
+            </div>
+          )}
 
           <div className="space-y-3 text-center border-t border-slate-100 dark:border-white/10 pt-4">
             <span className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
@@ -366,7 +468,11 @@ export default function SecurityPage() {
           </div>
 
           <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-white/10">
-            <Button size="sm" variant="ghost" onClick={() => setIsSetupOpen(false)}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsSetupOpen(false)}
+            >
               Close
             </Button>
             <Button
@@ -376,10 +482,52 @@ export default function SecurityPage() {
               isLoading={isVerifying}
               onClick={() => verifyAndEnableMfa(verificationCode)}
             >
-              Confirm & Turn On
+              Confirm &amp; Turn On
             </Button>
           </div>
         </div>
+      </Modal>
+
+      {/* Sign Out Device Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(revokeConfirm)}
+        onClose={() => setRevokeConfirm(null)}
+        title="Sign Out Device?"
+        description="Please confirm that you want to sign out this device from your Dexta Africa account."
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setRevokeConfirm(null)}
+              disabled={isRevoking}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              isLoading={isRevoking}
+              onClick={() =>
+                revokeConfirm &&
+                handleRevokeSession(
+                  revokeConfirm.sessionId,
+                  Boolean(revokeConfirm.revokeAllOthers)
+                )
+              }
+            >
+              Yes, Sign Out Device
+            </Button>
+          </>
+        }
+      >
+        {revokeConfirm && (
+          <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3.5 border border-red-200 dark:border-red-500/20 text-xs text-red-700 dark:text-red-300">
+            Device:{" "}
+            <strong className="font-bold">{revokeConfirm.label}</strong>
+          </div>
+        )}
       </Modal>
     </div>
   );
