@@ -89,3 +89,39 @@
 .dark .glow-crimson {
   box-shadow: 0 0 25px -4px rgba(244, 63, 94, 0.35);
 }
+
+/* Smooth premium transitions */
+.hover-lift {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-3px);
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+@keyframes infinityFlow {
+  0% {
+    stroke-dashoffset: 280;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-infinity-flow {
+  animation: infinityFlow 2.2s linear infinite;
+}

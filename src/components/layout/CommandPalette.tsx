@@ -44,7 +44,7 @@ export function CommandPalette({
     () => [
       {
         id: "nav-dashboard",
-        title: "Go to Dashboard",
+        title: "Go to Workspace Overview",
         category: "Navigation",
         icon: LayoutDashboard,
         action: () => {
@@ -54,7 +54,7 @@ export function CommandPalette({
       },
       {
         id: "nav-storage",
-        title: "Go to S3 Cloud Storage",
+        title: "Go to Files & Media",
         category: "Navigation",
         icon: HardDrive,
         action: () => {
@@ -74,7 +74,7 @@ export function CommandPalette({
       },
       {
         id: "nav-endpoints",
-        title: "Go to API Endpoints & Health",
+        title: "Go to Connected Services",
         category: "Navigation",
         icon: Radio,
         action: () => {
@@ -84,7 +84,7 @@ export function CommandPalette({
       },
       {
         id: "nav-security",
-        title: "Go to 2FA / MFA Security Center",
+        title: "Go to Account Security",
         category: "Navigation",
         icon: ShieldCheck,
         action: () => {
@@ -94,7 +94,7 @@ export function CommandPalette({
       },
       {
         id: "nav-users",
-        title: "Go to Team & Access Control",
+        title: "Go to Team Members",
         category: "Navigation",
         icon: UserCheck,
         action: () => {
@@ -104,7 +104,7 @@ export function CommandPalette({
       },
       {
         id: "nav-audit",
-        title: "Go to Compliance Audit Trail",
+        title: "Go to Activity History",
         category: "Navigation",
         icon: FileText,
         action: () => {
@@ -114,7 +114,7 @@ export function CommandPalette({
       },
       {
         id: "act-theme",
-        title: `Toggle Theme (Current: ${theme})`,
+        title: `Switch Appearance (Current: ${theme})`,
         category: "Quick Actions",
         icon: theme === "dark" ? Sun : Moon,
         action: () => {

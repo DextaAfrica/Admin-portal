@@ -118,10 +118,10 @@ export function TelemetryChart({
       {/* Hover Tooltip */}
       {hoveredIdx !== null && (
         <div
-          className="absolute -top-2 rounded-lg bg-slate-900 text-white px-2 py-1 text-[10px] font-mono shadow-xl pointer-events-none -translate-x-1/2 border border-white/20 animate-fade-in"
+          className="absolute -top-2 rounded-lg bg-slate-900 text-white px-2.5 py-1 text-[10px] font-medium shadow-xl pointer-events-none -translate-x-1/2 border border-white/20 animate-fade-in"
           style={{ left: `${(points[hoveredIdx].x / width) * 100}%` }}
         >
-          {data[hoveredIdx].label}: {data[hoveredIdx].value} ops
+          {data[hoveredIdx].label}: {data[hoveredIdx].value} actions
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-type TypographyVariant =
+export type TypographyVariant =
   | "h1"
   | "h2"
   | "h3"
@@ -13,23 +13,23 @@ type TypographyVariant =
   | "stat"
   | "code";
 
-interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
+export interface TypographyProps extends React.HTMLAttributes<HTMLElement> {
   as?: React.ElementType;
   variant?: TypographyVariant;
   children: React.ReactNode;
 }
 
 const variantStyles: Record<TypographyVariant, string> = {
-  h1: "scroll-m-20 text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 dark:text-white",
-  h2: "scroll-m-20 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white",
-  h3: "scroll-m-20 text-lg font-semibold tracking-tight text-slate-900 dark:text-white",
-  h4: "scroll-m-20 text-base font-semibold tracking-tight text-slate-900 dark:text-white",
-  lead: "text-lg text-slate-600 dark:text-slate-300 font-normal leading-relaxed",
+  h1: "scroll-m-20 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white leading-tight",
+  h2: "scroll-m-20 text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white leading-snug",
+  h3: "scroll-m-20 text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white",
+  h4: "scroll-m-20 text-sm sm:text-base font-semibold tracking-tight text-slate-900 dark:text-white",
+  lead: "text-base sm:text-lg text-slate-600 dark:text-slate-300 font-normal leading-relaxed",
   p: "leading-relaxed text-sm text-slate-700 dark:text-slate-300",
-  muted: "text-xs text-slate-500 dark:text-slate-400 font-normal",
-  micro: "text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500",
-  stat: "font-mono text-3xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums",
-  code: "relative rounded bg-rose-50 dark:bg-rose-500/10 px-1.5 py-0.5 font-mono text-xs font-medium text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20",
+  muted: "text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-normal leading-relaxed",
+  micro: "text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500",
+  stat: "text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-white tabular-nums",
+  code: "relative rounded-md bg-red-50 dark:bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-700 dark:text-red-400 border border-red-200/70 dark:border-red-500/20",
 };
 
 const defaultTag: Record<TypographyVariant, React.ElementType> = {
@@ -42,7 +42,7 @@ const defaultTag: Record<TypographyVariant, React.ElementType> = {
   muted: "p",
   micro: "span",
   stat: "div",
-  code: "code",
+  code: "span",
 };
 
 export function Typography({
@@ -54,12 +54,8 @@ export function Typography({
 }: TypographyProps) {
   const Component = as || defaultTag[variant];
   return (
-    <Component
-      className={cn(variantStyles[variant], className)}
-      {...props}
-    >
+    <Component className={cn(variantStyles[variant], className)} {...props}>
       {children}
     </Component>
   );
 }
-

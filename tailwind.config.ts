@@ -41,12 +41,32 @@ const config: Config = {
       },
       animation: {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "fade-in": "fadeIn 0.2s ease-out forwards",
+        "fade-in": "fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "reveal-up": "revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "ken-burns": "kenBurns 10s ease-in-out forwards",
+        "float-slow": "floatSlow 7s ease-in-out infinite",
+        "slide-progress": "slideProgress 10s linear forwards",
       },
       keyframes: {
         fadeIn: {
-          from: { opacity: "0", transform: "translateY(4px)" },
+          from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
+        },
+        revealUp: {
+          from: { opacity: "0", transform: "translateY(18px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        kenBurns: {
+          from: { transform: "scale(1)" },
+          to: { transform: "scale(1.06)" },
+        },
+        floatSlow: {
+          "0%, 100%": { transform: "translateY(0px)" },
+          "50%": { transform: "translateY(-8px)" },
+        },
+        slideProgress: {
+          from: { width: "0%" },
+          to: { width: "100%" },
         },
       },
     },

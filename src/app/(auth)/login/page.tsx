@@ -3,11 +3,20 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Shield, ArrowRight, Construction, CheckCircle } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  Shield,
+  ArrowRight,
+  ArrowLeft,
+  Home,
+  UserPlus,
+} from "lucide-react";
 import { Input, PasswordInput } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { BackgroundVideo } from "@/components/ui/BackgroundVideo";
+import { DextaLogo } from "@/components/ui/DextaLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,73 +41,97 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || "Authentication failed");
-        toastError("Login Failed", data.error || "Invalid credentials");
+        setErrorMessage(data.error || "Sign in failed");
+        toastError("Sign In Failed", data.error || "Invalid email or password");
         setIsLoading(false);
         return;
       }
 
       if (data.requiresMfa) {
-        toastSuccess("Credentials Verified", "Please complete Multi-Factor Authentication.");
+        toastSuccess(
+          "Details Confirmed",
+          "Please enter your two-step verification code."
+        );
         router.push(`/mfa-challenge?userId=${encodeURIComponent(data.userId)}`);
         return;
       }
 
-      toastSuccess("Welcome Back", "Authentication successful.");
+      toastSuccess("Welcome Back", "Signed in successfully.");
       router.push("/dashboard");
       router.refresh();
     } catch {
-      setErrorMessage("Network error. Please try again.");
-      toastError("Error", "Could not connect to authentication server");
+      setErrorMessage("Connection error. Please try again.");
+      toastError("Error", "Could not connect to the server");
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 relative overflow-hidden select-none">
-      {/* Background Construction Video with Vignette */}
+    <div className="flex min-h-screen flex-col justify-between p-4 sm:p-6 relative overflow-hidden select-none">
+      {/* Dual-Image Zoom-In / Zoom-Out Motion Backdrop */}
       <BackgroundVideo />
 
-      {/* Glassmorphic Login Card */}
-      <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/20 dark:border-white/10 bg-white/90 dark:bg-[#121217]/90 p-8 shadow-2xl backdrop-blur-2xl">
-        {/* Brand Header */}
-        <div className="flex flex-col items-center text-center">
-          <div className="relative">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-red-600 via-rose-600 to-red-500 text-white font-extrabold text-2xl shadow-xl shadow-red-500/35">
-              D
-            </div>
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[9px] text-white font-bold ring-2 ring-white dark:ring-[#121217]">
-              ✓
-            </span>
-          </div>
+      {/* Top Floating Navigation Bar with Prominent Back Button */}
+      <header className="relative z-20 mx-auto flex w-full max-w-5xl items-center justify-between pt-1">
+        <Link
+          href="/"
+          className="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl hover:bg-[#ED2618] hover:border-[#ED2618] transition-all duration-200 shadow-lg"
+        >
+          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+          <span>Back to Home</span>
+        </Link>
 
-          <div className="mt-4 flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Dexta Africa
-            </h1>
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 dark:bg-rose-500/10 px-2 py-0.5 text-[10px] font-mono font-bold text-red-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20">
-              <Construction className="h-3 w-3" /> Ops v2.4
-            </span>
-          </div>
+        <Link
+          href="/register"
+          className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl hover:bg-white/20 transition-all duration-200"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          <span>Create Account</span>
+        </Link>
+      </header>
+
+      {/* Main Centered Login Card */}
+      <div className="relative z-10 my-auto mx-auto w-full max-w-md rounded-3xl border border-white/20 dark:border-white/10 bg-white/95 dark:bg-[#121217]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl animate-reveal-up">
+        {/* Card Top Row: Quick Back Icon + Logo */}
+        <div className="relative flex flex-col items-center text-center">
+          <Link
+            href="/"
+            title="Back to Home Page"
+            className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-500 hover:bg-red-50 hover:text-[#ED2618] dark:hover:bg-white/10 dark:hover:text-white transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+
+          <Link
+            href="/"
+            title="Return to Dexta Africa Home"
+            className="transition-transform hover:scale-105"
+          >
+            <DextaLogo className="h-11 sm:h-12 w-auto" />
+          </Link>
+
+          <h1 className="mt-4 text-lg sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            Welcome Back
+          </h1>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            Enterprise Management & Infrastructure Operations Hub
+            Sign in to access your Dexta Africa workspace
           </p>
         </div>
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="mt-7 space-y-4">
           <Input
-            label="Administrative Email"
+            label="Work Email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             leftIcon={<Mail className="h-4 w-4" />}
-            placeholder="admin@dextaafrica.com"
+            placeholder="name@dextaafrica.com"
             required
           />
 
           <PasswordInput
-            label="Master Password"
+            label="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             leftIcon={<Lock className="h-4 w-4" />}
@@ -115,38 +148,47 @@ export default function LoginPage() {
           <Button
             type="submit"
             variant="primary"
-            className="w-full h-11 text-sm font-bold shadow-lg shadow-red-500/25"
+            className="w-full h-11 text-sm font-bold shadow-lg shadow-red-500/25 hover-lift"
             isLoading={isLoading}
             rightIcon={<ArrowRight className="h-4 w-4" />}
           >
-            Access Operations Portal
+            Sign In
           </Button>
         </form>
 
-        {/* Register CTA */}
-        <div className="mt-5 text-center">
-          <Link
-            href="/register"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-rose-400 hover:underline"
-          >
-            <span>New Administrator?</span>
-            <span className="font-bold underline">Register Official Account</span>
-            <ArrowRight className="h-3 w-3" />
-          </Link>
+        {/* Bottom Navigation Links */}
+        <div className="mt-6 space-y-3 border-t border-slate-200/80 dark:border-white/[0.08] pt-4 text-center">
+          <div>
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ED2618] dark:text-rose-400 hover:underline"
+            >
+              <span>New team member?</span>
+              <span className="font-bold underline">Create your account</span>
+              <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          <div>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+            >
+              <Home className="h-3.5 w-3.5" />
+              <span>Return to Dexta Africa Home Page</span>
+            </Link>
+          </div>
         </div>
 
-        {/* Security Credentials Tip */}
-        <div className="mt-4 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03] p-2.5 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-          <span className="font-mono">Demo: admin@dextaafrica.com</span>
-          <span className="font-mono font-bold text-red-600 dark:text-rose-400">AdminPassword2026!</span>
-        </div>
-
-        {/* Security Assurance Badge */}
-        <div className="mt-5 flex items-center justify-center gap-1.5 border-t border-slate-200/80 dark:border-white/[0.08] pt-4 text-[11px] text-slate-400">
+        {/* Security Assurance Footer */}
+        <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
           <Shield className="h-3.5 w-3.5 text-emerald-500" />
-          <span>Zero Mock Data &bull; RFC 6238 TOTP Multi-Factor Secured</span>
+          <span>Protected by two-step verification</span>
         </div>
       </div>
+
+      {/* Bottom Spacer for Vertical Balance */}
+      <div className="h-6" />
     </div>
   );
 }
