@@ -1,0 +1,57 @@
+name: Pull Request Hygiene & Branch Policy
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+jobs:
+  branch-policy:
+    name: Verify Branch Flow Policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate Target Branch Rules
+        run: |
+          TARGET_BRANCH="${{ github.base_ref }}"
+          SOURCE_BRANCH="${{ github.head_ref }}"
+
+          echo "Target Branch: $TARGET_BRANCH"
+          echo "Source Branch: $SOURCE_BRANCH"
+
+          # Rule: PRs targeting main must originate from develop or release/* or hotfix/*
+          if [ "$TARGET_BRANCH" = "main" ]; then
+            case "$SOURCE_BRANCH" in
+              develop|release/*|hotfix/*)
+                echo "✅ Target branch policy satisfied ($SOURCE_BRANCH -> main)"
+                ;;
+              *)
+                echo "❌ Violation: Direct feature PRs must target 'develop', not 'main'."
+                echo "Workflow policy: feature/* -> develop -> main"
+                exit 1
+                ;;
+            esac
+          fi
+
+  title-check:
+    name: Conventional Commit Title Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate PR Title Format
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          echo "PR Title: $PR_TITLE"
+
+          # Regular expression for Conventional Commits
+          REGEX="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9_-]+\))?: .+"
+
+          if echo "$PR_TITLE" | grep -Eq "$REGEX"; then
+            echo "✅ PR title conforms to Conventional Commits format."
+          else
+            echo "❌ Invalid PR title: '$PR_TITLE'"
+            echo "Must follow Conventional Commits (e.g. 'feat(auth): add 2fa challenge' or 'fix(storage): resolve upload timeout')."
+            exit 1
+          fi
+
