@@ -122,6 +122,14 @@ export default function LoginPage() {
         return;
       }
 
+      if (data.mustChangePassword) {
+        toastSuccess("First-Time Sign In", "Please configure your preferred account password.");
+        setOtpModalOpen(false);
+        router.push("/setup/password");
+        router.refresh();
+        return;
+      }
+
       toastSuccess(
         "Identity Verified",
         `Welcome to the Dexta Africa Workspace, ${data.user?.fullName || "Team Member"}.`
@@ -235,8 +243,8 @@ export default function LoginPage() {
             onClick={() => router.push("/register")}
             className="btn-fill-up h-11 w-full rounded-xl px-4 text-xs sm:text-sm cursor-pointer"
           >
-            <UserPlus className="h-3.5 w-3.5 text-[#ED2618] transition-colors" />
-            <span>New team member? Create Team Account</span>
+            <KeyRound className="h-3.5 w-3.5 text-[#ED2618] transition-colors" />
+            <span>Staff Access: Activate IT-Provisioned Account</span>
           </button>
 
           <div>

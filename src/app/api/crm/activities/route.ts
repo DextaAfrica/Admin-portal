@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
+import type { CrmActivity } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 

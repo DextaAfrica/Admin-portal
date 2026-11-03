@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import { logAuditEvent } from "./audit";
+import type { PolicyAlert } from "@prisma/client";
 
 export interface LogPolicyAlertParams {
   severity?: "INFO" | "WARNING" | "CRITICAL" | "BREACH_ATTEMPT";
@@ -54,3 +55,4 @@ export async function logPolicyAlert(params: LogPolicyAlertParams) {
     return null;
   }
 }
+
