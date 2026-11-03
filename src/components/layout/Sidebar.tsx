@@ -47,6 +47,14 @@ const navSections: NavSection[] = [
     ],
   },
   {
+    label: "Internal Operations & CRM",
+    items: [
+      { title: "Client CRM & Deals", href: "/crm", icon: Briefcase, badge: "Pipeline" },
+      { title: "HR Department", href: "/hr", icon: Users, badge: "Staff" },
+      { title: "IT Access & Security", href: "/it", icon: ShieldCheck, badge: "Gov" },
+    ],
+  },
+  {
     label: "Real Estate & CMS",
     items: [
       { title: "Portfolio & Developments", href: "/portfolio", icon: Building2 },

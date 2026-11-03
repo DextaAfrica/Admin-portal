@@ -4,464 +4,463 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  User,
-  Mail,
-  Lock,
-  KeyRound,
   ShieldCheck,
-  Copy,
-  Download,
+  KeyRound,
   ArrowRight,
   ArrowLeft,
   CheckCircle2,
+  Lock,
+  Mail,
+  User,
+  Building2,
+  AlertCircle,
+  RefreshCw,
+  Send,
   Home,
-  LogIn,
-  Sparkles,
+  Info,
 } from "lucide-react";
 import { Input, PasswordInput } from "@/components/ui/Input";
-import { OTPInput } from "@/components/ui/OTPInput";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
-import { BackgroundVideo } from "@/components/ui/BackgroundVideo";
 import { DextaLogo } from "@/components/ui/DextaLogo";
-import { cn } from "@/lib/utils";
 
-export default function RegisterPage() {
+export default function AccountRegistrationPage() {
   const router = useRouter();
-  const { success: toastSuccess, error: toastError, copied } = useToast();
+  const { success: toastSuccess, error: toastError } = useToast();
 
-  const [step, setStep] = React.useState<1 | 2 | 3>(1);
+  const [activeTab, setActiveTab] = React.useState<"activate" | "request">("activate");
 
-  const [fullName, setFullName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [accessPasscode, setAccessPasscode] = React.useState("");
+  // Form for Activating IT-Provisioned Account
+  const [activationForm, setActivationForm] = React.useState({
+    email: "",
+    activationKey: "",
+    preferredPassword: "",
+    confirmPassword: "",
+  });
+  const [isActivating, setIsActivating] = React.useState(false);
+  const [activationError, setActivationError] = React.useState("");
 
-  const [mfaSecret, setMfaSecret] = React.useState("");
-  const [qrCodeUrl, setQrCodeUrl] = React.useState("");
-  const [otpCode, setOtpCode] = React.useState("");
-  const [recoveryCodes, setRecoveryCodes] = React.useState<string[]>([]);
+  // Form for Requesting Access from IT
+  const [requestForm, setRequestForm] = React.useState({
+    fullName: "",
+    email: "",
+    department: "Operations",
+    jobTitle: "",
+    reason: "",
+  });
+  const [isSubmittingRequest, setIsSubmittingRequest] = React.useState(false);
+  const [requestSubmittedTicket, setRequestSubmittedTicket] = React.useState<string | null>(null);
 
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [errorMessage, setErrorMessage] = React.useState("");
-
-  const handleProceedToMfa = async (e: React.FormEvent) => {
+  // Handle Account Activation & Password Setup
+  const handleActivateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage("");
+    setActivationError("");
 
-    if (!fullName || !email || !password || !accessPasscode) {
-      setErrorMessage("Please fill in all fields including the company invite code.");
+    if (
+      !activationForm.email ||
+      !activationForm.activationKey ||
+      !activationForm.preferredPassword
+    ) {
+      setActivationError("All fields are required.");
       return;
     }
 
-    if (password.length < 8) {
-      setErrorMessage("Password must be at least 8 characters long.");
+    if (activationForm.preferredPassword.length < 8) {
+      setActivationError("Preferred password must be at least 8 characters long.");
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/auth/register-mfa-init", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        setErrorMessage(data.error || "Could not start security setup");
-        setIsLoading(false);
-        return;
-      }
-
-      setMfaSecret(data.secret);
-      setQrCodeUrl(data.qrCodeDataUrl);
-      setStep(2);
-    } catch {
-      setErrorMessage("Connection error while preparing security code.");
-    } finally {
-      setIsLoading(false);
+    if (activationForm.preferredPassword !== activationForm.confirmPassword) {
+      setActivationError("Passwords do not match. Please verify.");
+      return;
     }
-  };
 
-  const handleCompleteRegistration = async (submittedCode?: string) => {
-    const codeToVerify = submittedCode || otpCode;
-    if (codeToVerify.length < 6) return;
-
-    setIsLoading(true);
-    setErrorMessage("");
-
+    setIsActivating(true);
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await fetch("/api/auth/activate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          fullName,
-          email,
-          password,
-          accessPasscode,
-          mfaSecret,
-          mfaCode: codeToVerify,
+          email: activationForm.email,
+          activationKey: activationForm.activationKey,
+          preferredPassword: activationForm.preferredPassword,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || "Could not complete account setup");
-        toastError("Setup Error", data.error || "Could not complete setup");
-        setIsLoading(false);
+        setActivationError(data.error || "Activation failed");
+        toastError(data.error || "Could not verify activation key");
         return;
       }
 
-      setRecoveryCodes(data.recoveryCodes || []);
-      toastSuccess("Account Created", "Two-step OTP security is now active.");
-      setStep(3);
+      toastSuccess(
+        "Account Activated",
+        "Your preferred password has been established. Entering workspace..."
+      );
+      router.push("/dashboard");
+      router.refresh();
     } catch {
-      setErrorMessage("Connection error. Please try again.");
+      setActivationError("Connection error while communicating with IT security service.");
     } finally {
-      setIsLoading(false);
+      setIsActivating(false);
     }
   };
 
-  const downloadRecoveryCodes = () => {
-    const text =
-      `Dexta Africa - Backup Access Codes\nAccount: ${email}\nDate: ${new Date().toISOString()}\n\n` +
-      recoveryCodes.map((c, i) => `${i + 1}. ${c}`).join("\n") +
-      "\n\nEach code can be used once if you ever lose access to your phone.";
-    const blob = new Blob([text], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dexta-backup-codes-${email.split("@")[0]}.txt`;
-    a.click();
-    toastSuccess("Downloaded", "Backup codes saved.");
+  // Handle Requesting IT Provisioning
+  const handleRequestAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!requestForm.email || !requestForm.fullName || !requestForm.reason) {
+      toastError("Please complete all required fields");
+      return;
+    }
+
+    setIsSubmittingRequest(true);
+    try {
+      const res = await fetch("/api/it/credentials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requesterName: requestForm.fullName,
+          requesterEmail: requestForm.email,
+          department: requestForm.department,
+          requestType: "ACCOUNT_PROVISION",
+          priority: "MEDIUM",
+          reason: `${requestForm.jobTitle ? `[${requestForm.jobTitle}] ` : ""}${requestForm.reason}`,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to log provisioning request");
+      }
+
+      const ticketNum = data.request?.ticketNumber || "SEC-2026";
+      setRequestSubmittedTicket(ticketNum);
+      toastSuccess(`Provisioning ticket ${ticketNum} logged for IT review`);
+      setRequestForm({
+        fullName: "",
+        email: "",
+        department: "Operations",
+        jobTitle: "",
+        reason: "",
+      });
+    } catch (err: unknown) {
+      toastError(err instanceof Error ? err.message : "Error submitting request");
+    } finally {
+      setIsSubmittingRequest(false);
+    }
   };
 
   return (
-    <div className="flex min-h-screen flex-col justify-between p-4 sm:p-6 relative overflow-hidden select-none">
-      {/* Dual-Image Zoom-In / Zoom-Out Motion Backdrop */}
-      <BackgroundVideo />
+    <div className="flex min-h-screen flex-col justify-between p-4 sm:p-6 bg-slate-950 text-white relative overflow-hidden select-none">
+      {/* Background radial gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-950/20 via-black to-black" />
 
-      {/* Top Floating Navigation Bar */}
+      {/* Header bar */}
       <header className="relative z-20 mx-auto flex w-full max-w-5xl items-center justify-between pt-1">
         <Link
-          href="/"
-          className="group inline-flex h-10 items-center gap-2 rounded-xl border border-white/25 bg-black/60 px-4 sm:px-5 text-xs sm:text-sm font-bold text-white backdrop-blur-xl hover:bg-[#ED2618] hover:border-[#ED2618] transition-all duration-200 shadow-lg"
+          href="/login"
+          className="group inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/45 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl hover:bg-[#ED2618] hover:border-[#ED2618] transition-all duration-200 shadow-lg"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          <span>Back to Home</span>
+          <span>Back to Sign In</span>
         </Link>
 
-        <button
-          type="button"
-          onClick={() => router.push("/login")}
-          className="btn-crimson-exec h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm cursor-pointer"
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur-xl hover:bg-white/20 transition-all duration-200"
         >
-          <LogIn className="h-3.5 w-3.5" />
-          <span>Sign In</span>
-        </button>
+          <Home className="h-3.5 w-3.5" />
+          <span>Home Page</span>
+        </Link>
       </header>
 
-      {/* Main Registration Card */}
-      <div className="relative z-10 my-auto mx-auto w-full max-w-lg rounded-3xl border border-white/20 dark:border-white/10 bg-white/95 dark:bg-[#121217]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl animate-fade-in">
-        {/* Brand Header with Back Action */}
-        <div className="relative flex flex-col items-center text-center">
-          <button
-            type="button"
-            onClick={() => {
-              if (step === 2) {
-                setStep(1);
-              } else {
-                router.push("/");
-              }
-            }}
-            title={step === 2 ? "Back to Step 1" : "Back to Home Page"}
-            className="absolute left-0 top-0 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-500 hover:bg-red-50 hover:text-[#ED2618] dark:hover:bg-white/10 dark:hover:text-white transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </button>
-
-          <Link
-            href="/"
-            title="Return to Dexta Africa Home"
-            className="transition-transform hover:scale-105"
-          >
-            <DextaLogo className="h-10 sm:h-11 w-auto" />
+      {/* Main card */}
+      <div className="relative z-10 my-auto mx-auto w-full max-w-xl rounded-3xl border border-white/10 bg-[#0c0d12]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl">
+        <div className="flex flex-col items-center text-center space-y-2 mb-6">
+          <Link href="/">
+            <DextaLogo className="h-10 w-auto" />
           </Link>
-
-          <div className="mt-4 flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Create Team Account
-            </h1>
-            <Badge variant="crimson" className="text-[10px]">
-              Step {step} of 3
-            </Badge>
-          </div>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            {step === 1 &&
-              "Enter your details and company invite code to join the workspace."}
-            {step === 2 &&
-              "Scan the QR code below or use your 6-digit verification code to activate two-step protection."}
-            {step === 3 &&
-              "Save your backup access codes in a safe place before entering."}
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            Staff Access & Provisioning
+          </h1>
+          <p className="text-xs text-slate-400 max-w-md">
+            Direct public self-registration is disabled per corporate governance. Account creation is controlled by the IT Department.
           </p>
         </div>
 
-        {/* Stepper Bar */}
-        <div className="mt-5 grid grid-cols-3 gap-2">
-          {[1, 2, 3].map((s) => (
-            <div
-              key={s}
-              className={cn(
-                "h-1.5 rounded-full transition-all duration-300",
-                step >= s
-                  ? "bg-[#ED2618]"
-                  : "bg-slate-200 dark:bg-white/10"
-              )}
-            />
-          ))}
+        {/* Tab switch */}
+        <div className="grid grid-cols-2 gap-2 p-1 rounded-2xl bg-white/[0.04] border border-white/10 mb-6">
+          <button
+            type="button"
+            onClick={() => setActiveTab("activate")}
+            className={`py-2 text-xs font-semibold rounded-xl transition-all ${
+              activeTab === "activate"
+                ? "bg-[#ED2618] text-white shadow-md"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Activate IT-Provisioned Account
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("request")}
+            className={`py-2 text-xs font-semibold rounded-xl transition-all ${
+              activeTab === "request"
+                ? "bg-[#ED2618] text-white shadow-md"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            Request Access from IT
+          </button>
         </div>
 
-        {/* STEP 1: Identity & Credentials */}
-        {step === 1 && (
-          <form
-            onSubmit={handleProceedToMfa}
-            className="mt-6 space-y-4 animate-fade-in"
-          >
-            <Input
-              label="Full Name"
-              placeholder="e.g. Chidi Okonkwo"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              leftIcon={<User className="h-4 w-4" />}
-              required
-            />
-
-            <Input
-              label="Work Email"
-              type="email"
-              placeholder="name@dextaafrica.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              leftIcon={<Mail className="h-4 w-4" />}
-              required
-            />
-
-            <PasswordInput
-              label="Create Password"
-              placeholder="At least 8 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              leftIcon={<Lock className="h-4 w-4" />}
-              showStrength
-              required
-            />
-
-            <Input
-              label="Company Invite Code"
-              placeholder="e.g. DEXTA-2026"
-              value={accessPasscode}
-              onChange={(e) => setAccessPasscode(e.target.value.toUpperCase())}
-              leftIcon={<KeyRound className="h-4 w-4" />}
-              helperText="Enter the authorization invite code provided by executive management"
-              required
-            />
-
-            {errorMessage && (
-              <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3 border border-red-200 dark:border-red-500/20 text-xs font-medium text-red-600 dark:text-red-400 text-center">
-                {errorMessage}
+        {/* TAB 1: Activate Account & Set Preferred Password */}
+        {activeTab === "activate" && (
+          <form onSubmit={handleActivateAccount} className="space-y-4">
+            {activationError && (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{activationError}</span>
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="btn-fill-up h-12 w-full rounded-xl px-6 text-sm sm:text-base cursor-pointer disabled:opacity-60"
-            >
-              <span>
-                {isLoading
-                  ? "Preparing OTP Verification..."
-                  : "Continue to 6-Digit OTP Setup"}
-              </span>
-              <ArrowRight className="h-4 w-4 text-[#ED2618] transition-colors" />
-            </button>
-
-            <div className="space-y-3 text-center pt-4 border-t border-slate-200/80 dark:border-white/10">
-              <button
-                type="button"
-                onClick={() => router.push("/login")}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-white/[0.04] px-4 text-xs font-bold text-slate-800 dark:text-white hover:border-[#ED2618] hover:text-[#ED2618] transition-all cursor-pointer"
-              >
-                <LogIn className="h-3.5 w-3.5 text-[#ED2618]" />
-                <span>Already have an account? Sign In</span>
-              </button>
-              <div>
-                <Link
-                  href="/"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
-                >
-                  <Home className="h-3.5 w-3.5" />
-                  <span>Return to Home Page</span>
-                </Link>
-              </div>
-            </div>
-          </form>
-        )}
-
-        {/* STEP 2: Two-Step Verification Binding */}
-        {step === 2 && (
-          <div className="mt-6 space-y-5 animate-fade-in">
-            <div className="flex flex-col items-center text-center space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                1. Scan QR Code with Your Phone App
-              </span>
-              {qrCodeUrl && (
-                <div className="w-40 h-40 rounded-2xl border border-slate-200 dark:border-white/10 p-2 bg-white flex items-center justify-center shadow-md">
-                  <img
-                    src={qrCodeUrl}
-                    alt="Security QR Code"
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-              )}
-
-              <div className="flex items-center gap-1.5 pt-1">
-                <span className="text-[11px] text-slate-400">Setup Key:</span>
-                <span className="rounded bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-xs font-bold text-slate-900 dark:text-white">
-                  {mfaSecret}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(mfaSecret);
-                    copied("Setup key copied!");
-                  }}
-                  className="text-slate-400 hover:text-red-600 p-1 cursor-pointer"
-                  title="Copy Setup Key"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3 text-center border-t border-slate-200/80 dark:border-white/10 pt-4">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
-                2. Enter 6-Digit Verification Code
-              </span>
-              <OTPInput
-                length={6}
-                value={otpCode}
-                onChange={setOtpCode}
-                onComplete={(code) => handleCompleteRegistration(code)}
-                disabled={isLoading}
-                error={Boolean(errorMessage)}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Official Work Email *
+              </label>
+              <Input
+                type="email"
+                required
+                placeholder="e.g. adebayo.ogunlesi@dextaafrica.com"
+                value={activationForm.email}
+                onChange={(e) =>
+                  setActivationForm({ ...activationForm, email: e.target.value })
+                }
+                className="bg-black/50 border-white/10 text-white text-sm"
               />
             </div>
 
-            {errorMessage && (
-              <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3 border border-red-200 dark:border-red-500/20 text-xs font-medium text-red-600 dark:text-red-400 text-center">
-                {errorMessage}
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                IT Security Authorization Key / Temporary Key *
+              </label>
+              <Input
+                type="text"
+                required
+                placeholder="e.g. DXT-ACT-XXXX or provided temporary key"
+                value={activationForm.activationKey}
+                onChange={(e) =>
+                  setActivationForm({ ...activationForm, activationKey: e.target.value })
+                }
+                className="bg-black/50 border-white/10 text-white font-mono text-sm tracking-wider"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Issued by the IT & Security Department upon account provisioning.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Your Preferred Password *
+                </label>
+                <PasswordInput
+                  required
+                  placeholder="Min 8 characters"
+                  value={activationForm.preferredPassword}
+                  onChange={(e) =>
+                    setActivationForm({
+                      ...activationForm,
+                      preferredPassword: e.target.value,
+                    })
+                  }
+                  className="bg-black/50 border-white/10 text-white"
+                />
               </div>
-            )}
 
-            <div className="flex items-center gap-2 pt-2">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setStep(1)}
-                leftIcon={<ArrowLeft className="h-4 w-4" />}
-              >
-                Back
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                className="flex-1"
-                isLoading={isLoading}
-                disabled={otpCode.length < 6}
-                onClick={() => handleCompleteRegistration()}
-                rightIcon={<ShieldCheck className="h-4 w-4" />}
-              >
-                Confirm &amp; Create Account
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: Backup Access Codes & Launch */}
-        {step === 3 && (
-          <div className="mt-6 space-y-5 animate-fade-in">
-            <div className="rounded-2xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/60 dark:bg-emerald-500/10 p-3.5 flex items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <div className="text-xs">
-                <p className="font-bold text-slate-900 dark:text-white">
-                  Account Ready!
-                </p>
-                <p className="text-slate-600 dark:text-slate-300">
-                  Save your backup access codes below in case you ever lose your
-                  phone.
-                </p>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Confirm Preferred Password *
+                </label>
+                <PasswordInput
+                  required
+                  placeholder="Re-enter password"
+                  value={activationForm.confirmPassword}
+                  onChange={(e) =>
+                    setActivationForm({
+                      ...activationForm,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  className="bg-black/50 border-white/10 text-white"
+                />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-black/40 p-3.5">
-              {recoveryCodes.map((code, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-lg border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#15161c] py-1.5 px-2 text-center text-xs font-bold text-slate-900 dark:text-white tracking-widest"
-                >
-                  {code}
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-                onClick={downloadRecoveryCodes}
-                leftIcon={<Download className="h-3.5 w-3.5" />}
-              >
-                Save as File
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => {
-                  navigator.clipboard.writeText(recoveryCodes.join("\n"));
-                  copied("Backup codes copied!");
-                }}
-                leftIcon={<Copy className="h-3.5 w-3.5" />}
-              >
-                Copy Codes
-              </Button>
+            <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1 text-[11px] text-slate-400">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Zero-knowledge storage: IT does not know your personal password.</span>
+              </div>
             </div>
 
             <Button
-              type="button"
-              variant="primary"
-              size="lg"
-              className="w-full"
-              onClick={() => {
-                router.push("/dashboard");
-                router.refresh();
-              }}
-              rightIcon={<ArrowRight className="h-4 w-4" />}
+              type="submit"
+              disabled={isActivating}
+              className="w-full h-11 bg-[#ED2618] hover:bg-[#d02013] text-white font-semibold shadow-lg shadow-red-500/20"
             >
-              Enter Workspace
+              {isActivating ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  Verifying Authorization & Saving...
+                </>
+              ) : (
+                <>
+                  <span>Activate Account & Sign In</span>
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </>
+              )}
             </Button>
-          </div>
+          </form>
         )}
-      </div>
 
-      {/* Bottom Spacer */}
-      <div className="h-6" />
+        {/* TAB 2: Request IT Provisioning */}
+        {activeTab === "request" && (
+          <form onSubmit={handleRequestAccess} className="space-y-4">
+            {requestSubmittedTicket && (
+              <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 space-y-1">
+                <div className="flex items-center gap-2 font-bold">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  Provisioning Ticket Submitted to IT Queue
+                </div>
+                <p className="text-slate-400">
+                  Ticket Number:{" "}
+                  <span className="font-mono font-bold text-white">
+                    {requestSubmittedTicket}
+                  </span>
+                  . The IT department will review your request, create your account, and issue your activation key.
+                </p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Full Name *
+                </label>
+                <Input
+                  required
+                  placeholder="e.g. Samuel Adeleke"
+                  value={requestForm.fullName}
+                  onChange={(e) =>
+                    setRequestForm({ ...requestForm, fullName: e.target.value })
+                  }
+                  className="bg-black/50 border-white/10 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Corporate Work Email *
+                </label>
+                <Input
+                  type="email"
+                  required
+                  placeholder="e.g. samuel.adeleke@dextaafrica.com"
+                  value={requestForm.email}
+                  onChange={(e) =>
+                    setRequestForm({ ...requestForm, email: e.target.value })
+                  }
+                  className="bg-black/50 border-white/10 text-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Assigned Department
+                </label>
+                <select
+                  aria-label="Staff department"
+                  value={requestForm.department}
+                  onChange={(e) =>
+                    setRequestForm({ ...requestForm, department: e.target.value })
+                  }
+                  className="w-full h-10 rounded-xl border border-white/10 bg-black/50 px-3 text-xs text-white"
+                >
+                  <option value="Executive">Executive</option>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Architecture">Architecture</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Legal">Legal</option>
+                  <option value="HR">HR</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Job Title
+                </label>
+                <Input
+                  placeholder="e.g. Senior Quantity Surveyor"
+                  value={requestForm.jobTitle}
+                  onChange={(e) =>
+                    setRequestForm({ ...requestForm, jobTitle: e.target.value })
+                  }
+                  className="bg-black/50 border-white/10 text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Business Reason for Access *
+              </label>
+              <textarea
+                required
+                rows={3}
+                placeholder="e.g. New employee joining the Architecture engineering team..."
+                value={requestForm.reason}
+                onChange={(e) =>
+                  setRequestForm({ ...requestForm, reason: e.target.value })
+                }
+                className="w-full rounded-xl border border-white/10 bg-black/50 p-2.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-[#ED2618]"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isSubmittingRequest}
+              className="w-full h-11 bg-white hover:bg-slate-100 text-black font-semibold"
+            >
+              {isSubmittingRequest ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                  Submitting to IT...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Submit Request to IT Department
+                </>
+              )}
+            </Button>
+          </form>
+        )}
+
+        <div className="mt-6 pt-4 border-t border-white/10 text-center text-xs text-slate-400">
+          Already have an active account?{" "}
+          <Link href="/login" className="font-semibold text-white hover:text-[#ED2618] transition-colors">
+            Sign In to Workspace →
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

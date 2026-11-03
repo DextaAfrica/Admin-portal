@@ -58,6 +58,36 @@ export function CommandPalette({
         },
       },
       {
+        id: "nav-crm",
+        title: "Go to Strategic Client CRM & Deals",
+        category: "Navigation",
+        icon: Briefcase,
+        action: () => {
+          router.push("/crm");
+          onClose();
+        },
+      },
+      {
+        id: "nav-hr",
+        title: "Go to HR Department & Staff Directory",
+        category: "Navigation",
+        icon: UserCheck,
+        action: () => {
+          router.push("/hr");
+          onClose();
+        },
+      },
+      {
+        id: "nav-it",
+        title: "Go to IT Access & Security Governance",
+        category: "Navigation",
+        icon: ShieldCheck,
+        action: () => {
+          router.push("/it");
+          onClose();
+        },
+      },
+      {
         id: "nav-portfolio",
         title: "Go to Portfolio & Landmark Developments",
         category: "Navigation",

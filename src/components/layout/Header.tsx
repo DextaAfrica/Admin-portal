@@ -21,6 +21,9 @@ import { CommandPalette } from "./CommandPalette";
 
 const PAGE_LABELS: Record<string, string> = {
   dashboard: "Dashboard Overview",
+  crm: "Strategic Client CRM & Deals",
+  hr: "HR & Internal Operations",
+  it: "IT Access & Security Governance",
   portfolio: "Portfolio & Developments",
   enquiries: "Client Leads & Inquiries",
   content: "Editorial CMS & Pages",
