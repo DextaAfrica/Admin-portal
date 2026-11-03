@@ -57,7 +57,6 @@ export default function SecurityPage() {
   const [isSetupOpen, setIsSetupOpen] = React.useState(false);
   const [mfaSecret, setMfaSecret] = React.useState("");
   const [qrCodeUrl, setQrCodeUrl] = React.useState("");
-  const [currentOtpHint, setCurrentOtpHint] = React.useState("");
   const [verificationCode, setVerificationCode] = React.useState("");
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [recoveryCodes, setRecoveryCodes] = React.useState<string[]>([]);
@@ -96,7 +95,6 @@ export default function SecurityPage() {
       if (res.ok) {
         setMfaSecret(data.secret);
         setQrCodeUrl(data.qrCodeDataUrl);
-        setCurrentOtpHint(data.currentOtp || "");
         setVerificationCode("");
         setIsSetupOpen(true);
       } else {
@@ -429,30 +427,6 @@ export default function SecurityPage() {
               </button>
             </div>
           </div>
-
-          {currentOtpHint && (
-            <div className="rounded-2xl border border-red-200 dark:border-red-500/25 bg-red-50/70 dark:bg-red-500/10 p-3 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#ED2618] dark:text-red-400">
-                  Active 6-Digit Verification Code
-                </p>
-                <p className="text-sm font-extrabold tracking-[0.2em] text-slate-900 dark:text-white">
-                  {currentOtpHint}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setVerificationCode(currentOtpHint);
-                  verifyAndEnableMfa(currentOtpHint);
-                }}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#ED2618] hover:bg-red-700 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all cursor-pointer shrink-0"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                <span>Fill &amp; Turn On</span>
-              </button>
-            </div>
-          )}
 
           <div className="space-y-3 text-center border-t border-slate-100 dark:border-white/10 pt-4">
             <span className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400">

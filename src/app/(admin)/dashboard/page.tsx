@@ -15,15 +15,27 @@ import {
   CheckCircle2,
   FolderOpen,
   Send,
+  Building2,
+  MessageSquare,
+  Globe,
+  BookOpen,
+  Briefcase,
+  Layers,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { TelemetryChart, RadialGauge } from "@/components/ui/TelemetryChart";
 import { formatBytes, timeAgo } from "@/lib/utils";
+import { backendApi } from "@/lib/backend-api";
 
 export default async function DashboardPage() {
-  // Real Database Aggregations & Recent Records
+  // 1. Calculate Real 7-Day Activity Aggregation from AuditLog
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  // 2. Query Local Database Records & Aggregations
   const [
     totalUsers,
     mfaUsers,
@@ -37,6 +49,7 @@ export default async function DashboardPage() {
     recentCampaigns,
     teamMembers,
     recentLogs,
+    pastWeekLogs,
   ] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { twoFactorEnabled: true } }),
@@ -65,7 +78,75 @@ export default async function DashboardPage() {
       take: 5,
       orderBy: { createdAt: "desc" },
     }),
+    prisma.auditLog.findMany({
+      where: { createdAt: { gte: sevenDaysAgo } },
+      select: { createdAt: true },
+    }),
   ]);
+
+  // Aggregate past week's audit logs by day of week
+  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const dayBuckets: Record<string, number> = {};
+
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sevenDaysAgo);
+    d.setDate(d.getDate() + i);
+    const dayName = daysOfWeek[d.getDay()];
+    dayBuckets[dayName] = 0;
+  }
+
+  for (const log of pastWeekLogs) {
+    const dayName = daysOfWeek[new Date(log.createdAt).getDay()];
+    if (dayBuckets[dayName] !== undefined) {
+      dayBuckets[dayName] += 1;
+    }
+  }
+
+  const weeklyActivityData = Object.entries(dayBuckets).map(([label, value]) => ({
+    label,
+    value,
+  }));
+
+  // 3. Query Go Core Backend API Surface with zero crash fallback
+  const [
+    backendHealthRes,
+    portfolioRes,
+    enquiriesRes,
+    contentRes,
+    journalRes,
+  ] = await Promise.allSettled([
+    backendApi.health(),
+    backendApi.portfolio.list({ perPage: 1 }),
+    backendApi.enquiries.list({ perPage: 1 }),
+    backendApi.content.list(),
+    backendApi.journal.list({ perPage: 1 }),
+  ]);
+
+  const backendHealthy =
+    backendHealthRes.status === "fulfilled" &&
+    backendHealthRes.value.status === "HEALTHY";
+  const backendLatency =
+    backendHealthRes.status === "fulfilled" ? backendHealthRes.value.latencyMs : 0;
+
+  const portfolioCount =
+    portfolioRes.status === "fulfilled"
+      ? portfolioRes.value.meta.totalItems
+      : 0;
+
+  const enquiriesCount =
+    enquiriesRes.status === "fulfilled"
+      ? enquiriesRes.value.meta.totalItems
+      : 0;
+
+  const contentCount =
+    contentRes.status === "fulfilled"
+      ? (contentRes.value.data || []).length
+      : 0;
+
+  const journalCount =
+    journalRes.status === "fulfilled"
+      ? journalRes.value.meta.totalItems
+      : 0;
 
   const mfaPercent =
     totalUsers > 0 ? Math.round((mfaUsers / totalUsers) * 100) : 0;
@@ -85,136 +166,173 @@ export default async function DashboardPage() {
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
               Executive Overview
             </h1>
-            <Badge variant="success" pulse>
-              All Systems Ready
+            <Badge
+              variant={backendHealthy ? "success" : "warning"}
+              pulse={backendHealthy}
+            >
+              {backendHealthy
+                ? `Core Backend Connected (${backendLatency}ms)`
+                : "Backend Syncing..."}
             </Badge>
           </div>
           <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            Monitor company documents, client outreach campaigns, team access,
-            and recent workspace activity.
+            Monitor real estate developments, client investment leads, editorial content, and enterprise security.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <Link href="/storage">
+          <Link href="/portfolio">
             <Button
               size="sm"
               variant="primary"
-              leftIcon={<UploadCloud className="h-4 w-4" />}
+              leftIcon={<Building2 className="h-4 w-4" />}
             >
-              Upload File
+              Developments
             </Button>
           </Link>
-          <Link href="/marketing/campaigns">
+          <Link href="/enquiries">
             <Button
               size="sm"
               variant="secondary"
-              leftIcon={<Send className="h-4 w-4" />}
+              leftIcon={<MessageSquare className="h-4 w-4" />}
             >
-              New Campaign
+              Client Leads
             </Button>
           </Link>
-          <Link href="/users">
+          <Link href="/content">
             <Button
               size="sm"
               variant="outline"
-              leftIcon={<UserPlus className="h-4 w-4" />}
+              leftIcon={<Globe className="h-4 w-4" />}
             >
-              Add Member
+              Editorial CMS
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* 4 Primary KPI Metric Cards */}
+      {/* Primary Real Estate & Core Business KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/portfolio" className="block group">
+          <StatCard
+            title="Portfolio Assets"
+            value={portfolioCount}
+            icon={<Building2 className="h-5 w-5 text-[#ED2618]" />}
+            trend={{
+              value: "Go Core Synchronized",
+              isPositive: true,
+            }}
+            description="Landmark real estate projects"
+          />
+        </Link>
+
+        <Link href="/enquiries" className="block group">
+          <StatCard
+            title="Client Inquiries"
+            value={enquiriesCount}
+            icon={<MessageSquare className="h-5 w-5 text-red-600" />}
+            trend={{
+              value: "Live investor pipeline",
+              isPositive: true,
+            }}
+            description="Property inquiries & leads"
+          />
+        </Link>
+
+        <Link href="/content" className="block group">
+          <StatCard
+            title="Editorial CMS"
+            value={contentCount}
+            icon={<Globe className="h-5 w-5 text-sky-500" />}
+            trend={{
+              value: "On-demand cache revalidation",
+              isPositive: true,
+            }}
+            description="Active web schema pages"
+          />
+        </Link>
+
+        <Link href="/journal" className="block group">
+          <StatCard
+            title="Market Insights"
+            value={journalCount}
+            icon={<BookOpen className="h-5 w-5 text-emerald-500" />}
+            trend={{
+              value: "Thought leadership articles",
+              isPositive: true,
+            }}
+            description="Published research pieces"
+          />
+        </Link>
+      </div>
+
+      {/* Secondary Operations KPI Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
-          title="Files & Documents"
+          title="Files & Media Assets"
           value={formatBytes(totalStorageBytes)}
           icon={<HardDrive className="h-5 w-5" />}
           trend={{
-            value: `${totalStorageFiles} Saved Files`,
+            value: `${totalStorageFiles} Documents`,
             isPositive: true,
           }}
-          description="Company storage library"
+          description="Cloud asset library"
         />
 
         <StatCard
-          title="Client Contacts"
+          title="Subscriber Reach"
           value={totalSubscribers}
           icon={<Users className="h-5 w-5" />}
           trend={{
             value: `${campaignsSent} Updates Sent`,
             isPositive: true,
           }}
-          description="Active mailing audience"
+          description="Client & investor audience"
         />
 
         <StatCard
-          title="Team Security"
+          title="Team MFA Protection"
           value={`${mfaPercent}%`}
           icon={<ShieldCheck className="h-5 w-5" />}
           trend={{
             value: `${mfaUsers} of ${totalUsers} Protected`,
             isPositive: true,
           }}
-          description="Two-step verification"
-        />
-
-        <StatCard
-          title="Connected Services"
-          value={
-            totalEndpoints > 0
-              ? `${Math.round((healthyEndpoints / totalEndpoints) * 100)}%`
-              : "100%"
-          }
-          icon={<Radio className="h-5 w-5" />}
-          trend={{
-            value: `${healthyEndpoints} Active`,
-            isPositive: true,
-          }}
-          description="Service connections online"
+          description="Two-step authenticator active"
         />
       </div>
 
       {/* Main 12-Column Structured Dashboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left 8 Columns: Activity Chart + Recent Files + Recent Campaigns */}
+        {/* Left 8 Columns: Dynamic Activity Chart + Recent Files + Recent Campaigns */}
         <div className="lg:col-span-8 space-y-6">
-          {/* Weekly Workspace Activity Card */}
+          {/* Weekly Workspace Activity Card with REAL Dynamic Aggregations */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#121217] p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
               <div>
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-[#ED2618]" />
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Weekly Workspace Activity
+                    Weekly Workspace Operations
                   </h2>
                 </div>
                 <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                  Summary of file uploads, client outreach, and team actions over
-                  the past 7 days
+                  Real audit log activity, content mutations, and administrative logins over the past 7 days
                 </p>
               </div>
 
               <div className="flex items-center gap-4 text-xs">
                 <div>
-                  <span className="text-slate-400">Files: </span>
+                  <span className="text-slate-400">Past 7 Days: </span>
                   <span className="font-bold text-slate-900 dark:text-white">
-                    {totalStorageFiles}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-400">Campaigns: </span>
-                  <span className="font-bold text-slate-900 dark:text-white">
-                    {totalCampaigns}
+                    {pastWeekLogs.length} actions
                   </span>
                 </div>
               </div>
             </div>
 
             <div className="mt-4 pt-2">
-              <TelemetryChart />
+              <TelemetryChart data={weeklyActivityData} />
             </div>
           </div>
 
@@ -230,7 +348,7 @@ export default async function DashboardPage() {
                     Recent Files &amp; Documents
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Latest files uploaded to your company storage
+                    Latest media assets uploaded to cloud storage
                   </p>
                 </div>
               </div>
@@ -290,10 +408,10 @@ export default async function DashboardPage() {
                 </div>
                 <div>
                   <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Recent Email Campaigns
+                    Client Communications
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Client announcements and newsletter dispatches
+                    Announcements and portfolio brochures
                   </p>
                 </div>
               </div>
@@ -312,7 +430,7 @@ export default async function DashboardPage() {
             <div className="mt-3 divide-y divide-slate-100 dark:divide-white/[0.05]">
               {recentCampaigns.length === 0 ? (
                 <p className="py-6 text-center text-xs text-slate-500">
-                  No email campaigns created yet.
+                  No email campaigns dispatched yet.
                 </p>
               ) : (
                 recentCampaigns.map((camp) => (
@@ -384,7 +502,7 @@ export default async function DashboardPage() {
                   className="w-full"
                   leftIcon={<KeyRound className="h-3.5 w-3.5" />}
                 >
-                  Security Settings
+                  Security
                 </Button>
               </Link>
               <Link href="/storage" className="w-full">
@@ -394,7 +512,7 @@ export default async function DashboardPage() {
                   className="w-full"
                   leftIcon={<UploadCloud className="h-3.5 w-3.5" />}
                 >
-                  Manage Files
+                  Files
                 </Button>
               </Link>
             </div>
@@ -456,10 +574,10 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Recent Activity
+                  Recent Audit Activity
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Latest actions across the portal
+                  Compliance and operational logs
                 </p>
               </div>
               <Link href="/audit-logs">
@@ -472,7 +590,7 @@ export default async function DashboardPage() {
             <div className="mt-3 divide-y divide-slate-100 dark:divide-white/[0.05]">
               {recentLogs.length === 0 ? (
                 <p className="py-4 text-center text-xs text-slate-500">
-                  No recent activity.
+                  No recent activity recorded.
                 </p>
               ) : (
                 recentLogs.map((log) => (

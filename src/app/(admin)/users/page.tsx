@@ -32,8 +32,22 @@ export default function UsersPage() {
 
   const [email, setEmail] = React.useState("");
   const [fullName, setFullName] = React.useState("");
-  const [password, setPassword] = React.useState("DextaAdminPass2026!");
+  const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState("ADMIN");
+
+  const generateRandomPassword = React.useCallback(() => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
+    let pwd = "";
+    for (let i = 0; i < 16; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pwd;
+  }, []);
+
+  const openInviteModal = () => {
+    setPassword(generateRandomPassword());
+    setIsAddOpen(true);
+  };
 
   const fetchUsers = React.useCallback(async () => {
     setIsLoading(true);
@@ -125,7 +139,7 @@ export default function UsersPage() {
           <Button
             size="sm"
             variant="primary"
-            onClick={() => setIsAddOpen(true)}
+            onClick={openInviteModal}
             leftIcon={<UserPlus className="h-3.5 w-3.5" />}
           >
             Invite Team Member
@@ -224,13 +238,26 @@ export default function UsersPage() {
             required
           />
 
-          <PasswordInput
-            label="Temporary Welcome Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            showStrength
-            required
-          />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Temporary Welcome Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setPassword(generateRandomPassword())}
+                className="text-[11px] font-semibold text-[#ED2618] hover:underline cursor-pointer"
+              >
+                Generate Secure Password
+              </button>
+            </div>
+            <PasswordInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              showStrength
+              required
+            />
+          </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">

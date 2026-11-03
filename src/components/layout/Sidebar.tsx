@@ -18,6 +18,10 @@ import {
   ChevronRight,
   Home,
   X,
+  Building2,
+  MessageSquare,
+  BookOpen,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
@@ -40,6 +44,16 @@ const navSections: NavSection[] = [
     items: [
       { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
       { title: "Home Page", href: "/", icon: Home },
+    ],
+  },
+  {
+    label: "Real Estate & CMS",
+    items: [
+      { title: "Portfolio & Developments", href: "/portfolio", icon: Building2 },
+      { title: "Client Leads & Inquiries", href: "/enquiries", icon: MessageSquare, badge: "Leads" },
+      { title: "Editorial CMS & Pages", href: "/content", icon: FileCode2 },
+      { title: "Journal & Insights", href: "/journal", icon: BookOpen },
+      { title: "Career Openings", href: "/careers", icon: Briefcase },
     ],
   },
   {

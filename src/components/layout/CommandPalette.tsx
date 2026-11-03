@@ -16,6 +16,11 @@ import {
   Radio,
   PlusCircle,
   X,
+  Building2,
+  MessageSquare,
+  FileCode2,
+  BookOpen,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +54,56 @@ export function CommandPalette({
         icon: LayoutDashboard,
         action: () => {
           router.push("/dashboard");
+          onClose();
+        },
+      },
+      {
+        id: "nav-portfolio",
+        title: "Go to Portfolio & Landmark Developments",
+        category: "Navigation",
+        icon: Building2,
+        action: () => {
+          router.push("/portfolio");
+          onClose();
+        },
+      },
+      {
+        id: "nav-enquiries",
+        title: "Go to Client Leads & Inquiries",
+        category: "Navigation",
+        icon: MessageSquare,
+        action: () => {
+          router.push("/enquiries");
+          onClose();
+        },
+      },
+      {
+        id: "nav-content",
+        title: "Go to Editorial CMS & Pages",
+        category: "Navigation",
+        icon: FileCode2,
+        action: () => {
+          router.push("/content");
+          onClose();
+        },
+      },
+      {
+        id: "nav-journal",
+        title: "Go to Journal & Insights",
+        category: "Navigation",
+        icon: BookOpen,
+        action: () => {
+          router.push("/journal");
+          onClose();
+        },
+      },
+      {
+        id: "nav-careers",
+        title: "Go to Career Openings",
+        category: "Navigation",
+        icon: Briefcase,
+        action: () => {
+          router.push("/careers");
           onClose();
         },
       },
