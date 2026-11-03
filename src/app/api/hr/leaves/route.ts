@@ -5,6 +5,8 @@ import { logAuditEvent } from "@/lib/auth/audit";
 
 export const dynamic = "force-dynamic";
 
+const db = prisma as any;
+
 export async function GET(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
     }
 
     const [leaves, pendingCount, approvedCount, rejectedCount] = await Promise.all([
-      prisma.leaveRequest.findMany({
+      db.leaveRequest.findMany({
         where,
         include: {
           user: {
@@ -41,9 +43,9 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.leaveRequest.count({ where: { status: "PENDING" } }),
-      prisma.leaveRequest.count({ where: { status: "APPROVED" } }),
-      prisma.leaveRequest.count({ where: { status: "REJECTED" } }),
+      db.leaveRequest.count({ where: { status: "PENDING" } }),
+      db.leaveRequest.count({ where: { status: "APPROVED" } }),
+      db.leaveRequest.count({ where: { status: "REJECTED" } }),
     ]);
 
     return NextResponse.json({
@@ -78,7 +80,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const leave = await prisma.leaveRequest.create({
+    const leave = await db.leaveRequest.create({
       data: {
         userId: user.id,
         employeeName: user.fullName,
@@ -126,7 +128,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Leave ID and Status are required" }, { status: 400 });
     }
 
-    const leave = await prisma.leaveRequest.findUnique({
+    const leave = await db.leaveRequest.findUnique({
       where: { id },
       include: { user: true },
     });
@@ -135,7 +137,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Leave request not found" }, { status: 404 });
     }
 
-    const updated = await prisma.leaveRequest.update({
+    const updated = await db.leaveRequest.update({
       where: { id },
       data: {
         status,
@@ -147,7 +149,7 @@ export async function PATCH(req: NextRequest) {
 
     // If approved, update employee's used leave days balance
     if (status === "APPROVED") {
-      await prisma.employeeProfile.updateMany({
+      await db.employeeProfile.updateMany({
         where: { userId: leave.userId },
         data: {
           usedLeaveDays: { increment: leave.daysCount },

@@ -5,6 +5,8 @@ import { logAuditEvent } from "@/lib/auth/audit";
 
 export const dynamic = "force-dynamic";
 
+const db = prisma as any;
+
 export async function GET(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
@@ -35,7 +37,7 @@ export async function GET(req: NextRequest) {
 
     const [employees, totalCount, activeCount, onLeaveCount, onboardingCount] =
       await Promise.all([
-        prisma.employeeProfile.findMany({
+        db.employeeProfile.findMany({
           where,
           include: {
             documents: true,
@@ -51,10 +53,10 @@ export async function GET(req: NextRequest) {
           },
           orderBy: { createdAt: "desc" },
         }),
-        prisma.employeeProfile.count(),
-        prisma.employeeProfile.count({ where: { status: "ACTIVE" } }),
-        prisma.employeeProfile.count({ where: { status: "ON_LEAVE" } }),
-        prisma.employeeProfile.count({ where: { status: "ONBOARDING" } }),
+        db.employeeProfile.count(),
+        db.employeeProfile.count({ where: { status: "ACTIVE" } }),
+        db.employeeProfile.count({ where: { status: "ON_LEAVE" } }),
+        db.employeeProfile.count({ where: { status: "ONBOARDING" } }),
       ]);
 
     return NextResponse.json({
@@ -104,7 +106,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const existing = await prisma.employeeProfile.findFirst({
+    const existing = await db.employeeProfile.findFirst({
       where: { workEmail: workEmail.toLowerCase().trim() },
     });
 
@@ -115,10 +117,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const empCount = await prisma.employeeProfile.count();
+    const empCount = await db.employeeProfile.count();
     const empNumber = `DXT-${department.slice(0, 3).toUpperCase()}-${String(empCount + 101).padStart(3, "0")}`;
 
-    const employee = await prisma.employeeProfile.create({
+    const employee = await db.employeeProfile.create({
       data: {
         employeeNumber: empNumber,
         fullName,
@@ -168,7 +170,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
     }
 
-    const updated = await prisma.employeeProfile.update({
+    const updated = await db.employeeProfile.update({
       where: { id },
       data: {
         ...(status && { status }),

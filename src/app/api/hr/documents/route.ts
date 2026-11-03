@@ -5,6 +5,8 @@ import { logAuditEvent } from "@/lib/auth/audit";
 
 export const dynamic = "force-dynamic";
 
+const db = prisma as any;
+
 export async function POST(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
@@ -22,7 +24,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const doc = await prisma.employeeDocument.create({
+    const doc = await db.employeeDocument.create({
       data: {
         employeeId,
         title,

@@ -5,6 +5,8 @@ import { createSession, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS } from "@/lib
 import { logAuditEvent } from "@/lib/auth/audit";
 import { logPolicyAlert } from "@/lib/auth/policy-alerts";
 
+const db = prisma as any;
+
 export async function POST(req: NextRequest) {
   try {
     const { email, activationKey, preferredPassword } = await req.json();
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest) {
         isKeyValid = true;
       } else {
         // Also check if there is an approved CredentialRequest ticket with this temporaryCode
-        const ticket = await prisma.credentialRequest.findFirst({
+        const ticket = await db.credentialRequest.findFirst({
           where: {
             requesterEmail: normalizedEmail,
             temporaryCode: cleanKey,
@@ -107,7 +109,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Mark any corresponding credential tickets as FULFILLED
-    await prisma.credentialRequest.updateMany({
+    await db.credentialRequest.updateMany({
       where: {
         requesterEmail: normalizedEmail,
         temporaryCode: cleanKey,

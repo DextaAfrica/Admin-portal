@@ -6,6 +6,8 @@ import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
 
+const db = prisma as any;
+
 export async function POST(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
@@ -60,10 +62,10 @@ export async function POST(req: NextRequest) {
     });
 
     // Also link or create EmployeeProfile in HR if not exists
-    const empCount = await prisma.employeeProfile.count();
+    const empCount = await db.employeeProfile.count();
     const empNumber = `DXT-${department.slice(0, 3).toUpperCase()}-${String(empCount + 101).padStart(3, "0")}`;
 
-    await prisma.employeeProfile.upsert({
+    await db.employeeProfile.upsert({
       where: { workEmail: normalizedEmail },
       update: {
         userId: newUser.id,

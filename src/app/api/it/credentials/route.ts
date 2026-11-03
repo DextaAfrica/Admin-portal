@@ -7,6 +7,8 @@ import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
+const db = prisma as any;
+
 export async function GET(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
@@ -27,7 +29,7 @@ export async function GET(req: NextRequest) {
     }
 
     const [requests, pendingCount, approvedCount, totalCount] = await Promise.all([
-      prisma.credentialRequest.findMany({
+      db.credentialRequest.findMany({
         where,
         include: {
           user: {
@@ -50,9 +52,9 @@ export async function GET(req: NextRequest) {
         },
         orderBy: { createdAt: "desc" },
       }),
-      prisma.credentialRequest.count({ where: { status: "PENDING" } }),
-      prisma.credentialRequest.count({ where: { status: "APPROVED" } }),
-      prisma.credentialRequest.count(),
+      db.credentialRequest.count({ where: { status: "PENDING" } }),
+      db.credentialRequest.count({ where: { status: "APPROVED" } }),
+      db.credentialRequest.count(),
     ]);
 
     return NextResponse.json({
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
 
     const ticketNumber = `SEC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    const credRequest = await prisma.credentialRequest.create({
+    const credRequest = await db.credentialRequest.create({
       data: {
         ticketNumber,
         userId: targetUser ? targetUser.id : user?.id,
@@ -152,7 +154,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const ticket = await prisma.credentialRequest.findUnique({
+    const ticket = await db.credentialRequest.findUnique({
       where: { id },
       include: { user: true },
     });
@@ -178,7 +180,7 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    const updated = await prisma.credentialRequest.update({
+    const updated = await db.credentialRequest.update({
       where: { id },
       data: {
         status,
