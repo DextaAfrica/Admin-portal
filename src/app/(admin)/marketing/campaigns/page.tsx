@@ -53,7 +53,12 @@ export default function CampaignsPage() {
   const [editingCampaign, setEditingCampaign] = React.useState<EmailCampaign | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [previewCampaign, setPreviewCampaign] = React.useState<EmailCampaign | null>(null);
+  const [deleteConfirmCampaign, setDeleteConfirmCampaign] =
+    React.useState<EmailCampaign | null>(null);
+  const [sendConfirmCampaign, setSendConfirmCampaign] =
+    React.useState<EmailCampaign | null>(null);
   const [dispatchingId, setDispatchingId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const fetchCampaigns = React.useCallback(async () => {
     setIsLoading(true);
@@ -130,6 +135,7 @@ export default function CampaignsPage() {
   };
 
   const handleDeleteCampaign = async (campaignId: string) => {
+    setIsDeleting(true);
     try {
       const res = await fetch("/api/marketing/campaigns", {
         method: "DELETE",
@@ -138,12 +144,15 @@ export default function CampaignsPage() {
       });
       if (res.ok) {
         toastSuccess("Campaign Removed", "The campaign draft has been deleted.");
+        setDeleteConfirmCampaign(null);
         fetchCampaigns();
       } else {
         toastError("Delete Error", "Could not delete this campaign.");
       }
     } catch {
       toastError("Connection Error", "Please check your connection and try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -158,6 +167,7 @@ export default function CampaignsPage() {
           "Email Broadcast Sent",
           "Your email has been delivered to your active subscribers."
         );
+        setSendConfirmCampaign(null);
         fetchCampaigns();
       } else {
         toastError("Delivery Notice", "Could not send this campaign right now.");
@@ -413,7 +423,7 @@ export default function CampaignsPage() {
                         size="xs"
                         variant="primary"
                         isLoading={dispatchingId === camp.id}
-                        onClick={() => handleDispatch(camp.id)}
+                        onClick={() => setSendConfirmCampaign(camp)}
                         leftIcon={<Send className="h-3.5 w-3.5" />}
                       >
                         Send Now
@@ -422,7 +432,7 @@ export default function CampaignsPage() {
 
                     <button
                       type="button"
-                      onClick={() => handleDeleteCampaign(camp.id)}
+                      onClick={() => setDeleteConfirmCampaign(camp)}
                       className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
                       title="Delete Campaign"
                     >
@@ -463,9 +473,9 @@ export default function CampaignsPage() {
                     size="sm"
                     variant="primary"
                     onClick={() => {
-                      const id = previewCampaign.id;
+                      const camp = previewCampaign;
                       setPreviewCampaign(null);
-                      handleDispatch(id);
+                      setSendConfirmCampaign(camp);
                     }}
                     leftIcon={<Send className="h-3.5 w-3.5" />}
                   >
@@ -498,6 +508,89 @@ export default function CampaignsPage() {
               className="rounded-2xl bg-slate-100/70 dark:bg-[#0d0e12] p-4 sm:p-6 border border-slate-200/80 dark:border-white/10 max-h-[60vh] overflow-y-auto"
               dangerouslySetInnerHTML={{ __html: previewCampaign.contentHtml }}
             />
+          </div>
+        )}
+      </Modal>
+
+      {/* Send Broadcast Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(sendConfirmCampaign)}
+        onClose={() => setSendConfirmCampaign(null)}
+        title="Send Email Campaign Now?"
+        description="Please confirm before delivering this email broadcast to your active subscriber list."
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSendConfirmCampaign(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              isLoading={Boolean(dispatchingId)}
+              onClick={() =>
+                sendConfirmCampaign && handleDispatch(sendConfirmCampaign.id)
+              }
+              leftIcon={<Send className="h-3.5 w-3.5" />}
+            >
+              Confirm &amp; Send Email
+            </Button>
+          </>
+        }
+      >
+        {sendConfirmCampaign && (
+          <div className="rounded-xl bg-slate-50 dark:bg-white/[0.03] p-3.5 border border-slate-200 dark:border-white/10 space-y-1.5 text-xs">
+            <p className="font-bold text-slate-900 dark:text-white">
+              {sendConfirmCampaign.title}
+            </p>
+            <p className="text-slate-600 dark:text-slate-300">
+              Subject: <span className="font-semibold">{sendConfirmCampaign.subject}</span>
+            </p>
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete Campaign Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(deleteConfirmCampaign)}
+        onClose={() => setDeleteConfirmCampaign(null)}
+        title="Remove Email Campaign?"
+        description="Please confirm that you want to permanently remove this campaign from your workspace."
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDeleteConfirmCampaign(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              isLoading={isDeleting}
+              onClick={() =>
+                deleteConfirmCampaign &&
+                handleDeleteCampaign(deleteConfirmCampaign.id)
+              }
+              leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+            >
+              Yes, Remove Campaign
+            </Button>
+          </>
+        }
+      >
+        {deleteConfirmCampaign && (
+          <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3.5 border border-red-200 dark:border-red-500/20 text-xs text-red-700 dark:text-red-300">
+            You are about to remove{" "}
+            <strong className="font-bold">{deleteConfirmCampaign.title}</strong>.
+            This action cannot be undone.
           </div>
         )}
       </Modal>

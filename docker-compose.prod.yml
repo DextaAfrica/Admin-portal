@@ -1,0 +1,69 @@
+name: dexta-africa-prod
+
+services:
+  app:
+    image: ${DOCKER_IMAGE:-ghcr.io/dextaafrica/admin-portal:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dexta-admin-portal-prod
+    restart: always
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/admin_portal.db}
+      - APP_SECRET=${APP_SECRET:?APP_SECRET must be set in production}
+      - PORTAL_NAME=${PORTAL_NAME:-Dexta Africa Operations Portal}
+      - AUTO_MIGRATE=${AUTO_MIGRATE:-true}
+      - AUTO_SEED=${AUTO_SEED:-false}
+      # Production Cloud S3 Credentials
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_S3_BUCKET_NAME=${AWS_S3_BUCKET_NAME}
+      # Production SMTP Engine
+      - EMAIL_FROM=${EMAIL_FROM:-Dexta Operations <operations@dextaafrica.com>}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+    volumes:
+      - dexta-prod-sqlite:/app/prisma
+      - dexta-prod-data:/app/data
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    networks:
+      - dexta-prod-net
+
+volumes:
+  dexta-prod-sqlite:
+    name: dexta-prod-sqlite
+  dexta-prod-data:
+    name: dexta-prod-data
+
+networks:
+  dexta-prod-net:
+    name: dexta-prod-net
+    driver: bridge
+

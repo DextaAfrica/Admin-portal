@@ -21,13 +21,10 @@ export async function generateMfaSecret({ email }: { email: string }) {
     },
   });
 
-  const currentOtp = authenticator.generate(secret);
-
   return {
     secret,
     otpauth,
     qrCodeDataUrl,
-    currentOtp,
   };
 }
 

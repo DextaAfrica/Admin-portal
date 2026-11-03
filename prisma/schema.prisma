@@ -8,22 +8,33 @@ datasource db {
 }
 
 model User {
-  id                String                   @id @default(uuid())
-  email             String                   @unique
-  passwordHash      String
-  fullName          String
-  role              String                   @default("ADMIN") // SUPER_ADMIN, ADMIN, MANAGER, AUDITOR
-  status            String                   @default("ACTIVE") // ACTIVE, SUSPENDED
-  twoFactorEnabled  Boolean                  @default(false)
-  twoFactorSecret   String?
-  lastLoginAt       DateTime?
-  createdAt         DateTime                 @default(now())
-  updatedAt         DateTime                 @updatedAt
-  sessions          Session[]
-  recoveryCodes     TwoFactorRecoveryCode[]
-  auditLogs         AuditLog[]               @relation("ActorAuditLogs")
-  uploadedAssets    StorageAsset[]
-  createdCampaigns  EmailCampaign[]
+  id                  String                   @id @default(uuid())
+  email               String                   @unique
+  passwordHash        String
+  fullName            String
+  role                String                   @default("ADMIN") // SUPER_ADMIN, ADMIN, HR_MANAGER, IT_ADMIN, OPERATIONS, AUDITOR
+  department          String                   @default("OPERATIONS") // HR, IT, OPERATIONS, EXECUTIVE, FINANCE, ARCHITECTURE
+  jobTitle            String?
+  phone               String?
+  status              String                   @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING_APPROVAL
+  twoFactorEnabled    Boolean                  @default(false)
+  twoFactorSecret     String?
+  mustChangePassword  Boolean                  @default(false)
+  activationKey       String?
+  lastLoginAt         DateTime?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  sessions            Session[]
+  recoveryCodes       TwoFactorRecoveryCode[]
+  auditLogs           AuditLog[]               @relation("ActorAuditLogs")
+  uploadedAssets      StorageAsset[]
+  createdCampaigns    EmailCampaign[]
+  employeeProfile     EmployeeProfile?
+  leaveRequests       LeaveRequest[]           @relation("StaffLeaveRequests")
+  approvedLeaves      LeaveRequest[]           @relation("ApprovedLeaves")
+  credentialRequests  CredentialRequest[]      @relation("UserCredentialRequests")
+  reviewedCredentials CredentialRequest[]      @relation("ItProcessedRequests")
+  crmActivities       CrmActivity[]
 }
 
 model TwoFactorRecoveryCode {
@@ -58,8 +69,8 @@ model AuditLog {
   actorId    String?
   actorEmail String?
   actor      User?    @relation("ActorAuditLogs", fields: [actorId], references: [id], onDelete: SetNull)
-  action     String   // AUTH_LOGIN, MFA_ENROLLED, ASSET_UPLOADED, CAMPAIGN_SENT, USER_UPDATED, etc.
-  entity     String   // User, StorageAsset, EmailCampaign, System
+  action     String   // AUTH_LOGIN, MFA_ENROLLED, HR_LEAVE_APPROVED, IT_CREDENTIAL_GRANTED, etc.
+  entity     String   // User, EmployeeProfile, LeaveRequest, CredentialRequest, CrmClient
   entityId   String?
   ipAddress  String?
   userAgent  String?
@@ -112,7 +123,7 @@ model EmailTemplate {
   name        String
   subject     String
   bodyHtml    String
-  variables   String   @default("[]") // JSON string of available tokens like ["firstName", "portalUrl"]
+  variables   String   @default("[]") // JSON string of available tokens
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -124,7 +135,7 @@ model AudienceSubscriber {
   firstName String?
   lastName  String?
   status    String   @default("SUBSCRIBED") // SUBSCRIBED, UNSUBSCRIBED, BOUNCED
-  tags      String   @default("[]") // JSON string of tags e.g. ["beta", "investor", "client"]
+  tags      String   @default("[]") // JSON string of tags
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -161,5 +172,195 @@ model SystemSetting {
   value       String
   description String?
   updatedAt   DateTime @updatedAt
+}
+
+// =============================================================================
+// HR DEPARTMENT WORKSPACE & EMPLOYEE CRM
+// =============================================================================
+
+model EmployeeProfile {
+  id                 String             @id @default(uuid())
+  userId             String?            @unique
+  user               User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  employeeNumber     String             @unique // e.g. "DXT-104"
+  fullName           String
+  workEmail          String             @unique
+  personalEmail      String?
+  phone              String
+  department         String             // "Executive", "Engineering", "Architecture", "Operations", "Finance", "Legal", "Human Resources", "IT"
+  jobTitle           String
+  employmentType     String             @default("FULL_TIME") // "FULL_TIME", "CONTRACT", "EXECUTIVE", "INTERN"
+  status             String             @default("ACTIVE") // "ACTIVE", "ONBOARDING", "ON_LEAVE", "PROBATION", "OFFBOARDING"
+  startDate          DateTime
+  endDate            DateTime?
+  managerName        String?
+  location           String             @default("Lagos, Nigeria")
+  emergencyContact   String?
+  annualLeaveBalance Int                @default(20)
+  usedLeaveDays      Int                @default(0)
+  compensation       String?            // Optional encrypted or formatted salary tier / grade
+  notes              String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  documents          EmployeeDocument[]
+
+  @@index([department])
+  @@index([status])
+}
+
+model EmployeeDocument {
+  id          String          @id @default(uuid())
+  employeeId  String
+  employee    EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  title       String
+  category    String          // "CONTRACT", "IDENTITY_PASSPORT", "TAX_PENSION", "CERTIFICATION", "NDA", "PERFORMANCE"
+  fileUrl     String
+  fileSize    Int             @default(0)
+  mimeType    String          @default("application/pdf")
+  verified    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([employeeId])
+  @@index([category])
+}
+
+model LeaveRequest {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation("StaffLeaveRequests", fields: [userId], references: [id], onDelete: Cascade)
+  employeeName  String
+  department    String
+  leaveType     String    // "ANNUAL", "SICK", "MATERNITY", "PATERNITY", "COMPASSIONATE", "STUDY"
+  startDate     DateTime
+  endDate       DateTime
+  daysCount     Int
+  reason        String
+  handoverNotes String?
+  status        String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "CANCELLED"
+  reviewedById  String?
+  reviewedBy    User?     @relation("ApprovedLeaves", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewerNotes String?
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status])
+  @@index([userId])
+}
+
+// =============================================================================
+// IT DEPARTMENT WORKSPACE & ACCESS GOVERNANCE
+// =============================================================================
+
+model CredentialRequest {
+  id              String    @id @default(uuid())
+  ticketNumber    String    @unique // e.g. "SEC-2026-7841"
+  userId          String?
+  user            User?     @relation("UserCredentialRequests", fields: [userId], references: [id], onDelete: Cascade)
+  requesterEmail  String
+  requesterName   String
+  department      String    @default("GENERAL")
+  requestType     String    // "PASSWORD_RESET", "ACCOUNT_PROVISION", "MFA_RESET", "ROLE_ELEVATION"
+  status          String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "FULFILLED"
+  priority        String    @default("MEDIUM") // "LOW", "MEDIUM", "HIGH", "URGENT"
+  reason          String
+  temporaryCode   String?   // Secure temporary OTP or verification code issued by IT
+  ipAddress       String?
+  userAgent       String?
+  itNotes         String?
+  reviewedById    String?
+  reviewedBy      User?     @relation("ItProcessedRequests", fields: [reviewedById], references: [id], onDelete: SetNull)
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+  @@index([requestType])
+}
+
+// =============================================================================
+// CLIENT RELATIONSHIP & DEAL PIPELINE CRM
+// =============================================================================
+
+model CrmClient {
+  id             String        @id @default(uuid())
+  name           String
+  company        String?
+  email          String        @unique
+  phone          String?
+  category       String        @default("PROSPECT") // "PROSPECT", "ACTIVE_CLIENT", "INVESTOR", "STRATEGIC_PARTNER", "VENDOR"
+  stage          String        @default("INQUIRY") // "INQUIRY", "DISCOVERY", "PROPOSAL_SENT", "NEGOTIATION", "CONTRACT_SIGNED", "ACTIVE_ACCOUNT"
+  estimatedValue Float         @default(0)
+  currency       String        @default("USD")
+  assignedTo     String?
+  location       String?       @default("Lagos, Nigeria")
+  tags           String        @default("[]") // JSON string list
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deals          CrmDeal[]
+  activities     CrmActivity[]
+
+  @@index([stage])
+  @@index([category])
+}
+
+model CrmDeal {
+  id                 String    @id @default(uuid())
+  clientId           String
+  client             CrmClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  title              String
+  value              Float
+  currency           String    @default("USD")
+  stage              String    @default("PROPOSAL") // "PROPOSAL", "DUE_DILIGENCE", "CLOSING", "WON", "LOST"
+  probability        Int       @default(60)
+  expectedCloseDate  DateTime?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([clientId])
+}
+
+model CrmActivity {
+  id           String     @id @default(uuid())
+  clientId     String?
+  client       CrmClient? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type         String     // "CALL", "MEETING", "EMAIL", "CONTRACT_MEMO", "TASK", "MILESTONE"
+  title        String
+  description  String?
+  outcome      String?
+  activityDate DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+
+  @@index([clientId])
+}
+
+// =============================================================================
+// ENTERPRISE POLICY VIOLATIONS & SECURITY ALERTS
+// =============================================================================
+
+model PolicyAlert {
+  id              String    @id @default(uuid())
+  severity        String    @default("WARNING") // "INFO", "WARNING", "CRITICAL", "BREACH_ATTEMPT"
+  eventType       String    // "UNAUTHORIZED_DASHBOARD_ACCESS", "POLICY_VIOLATION", "SUSPICIOUS_ACTIVITY", "CREDENTIAL_ABUSE"
+  title           String
+  description     String
+  actorEmail      String?
+  targetResource  String?
+  ipAddress       String?
+  userAgent       String?
+  status          String    @default("OPEN") // "OPEN", "INVESTIGATING", "RESOLVED", "DISMISSED"
+  resolvedAt      DateTime?
+  resolutionNotes String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([status])
+  @@index([severity])
+  @@index([createdAt])
 }
 

@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { secret, otpauth, qrCodeDataUrl, currentOtp } = await generateMfaSecret({
+    const { secret, otpauth, qrCodeDataUrl } = await generateMfaSecret({
       email: user.email,
     });
 
@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
       secret,
       otpauth,
       qrCodeDataUrl,
-      currentOtp,
     });
   } catch (err: unknown) {
     return NextResponse.json(

@@ -107,11 +107,13 @@ export async function POST(req: NextRequest) {
 
     const res = NextResponse.json({
       success: true,
+      mustChangePassword: user.mustChangePassword,
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        mustChangePassword: user.mustChangePassword,
       },
     });
 

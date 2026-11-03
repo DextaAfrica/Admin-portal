@@ -26,11 +26,28 @@ export default function UsersPage() {
   const [users, setUsers] = React.useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAddOpen, setIsAddOpen] = React.useState(false);
+  const [statusConfirmUser, setStatusConfirmUser] =
+    React.useState<UserItem | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = React.useState(false);
 
   const [email, setEmail] = React.useState("");
   const [fullName, setFullName] = React.useState("");
-  const [password, setPassword] = React.useState("DextaAdminPass2026!");
+  const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState("ADMIN");
+
+  const generateRandomPassword = React.useCallback(() => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
+    let pwd = "";
+    for (let i = 0; i < 16; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pwd;
+  }, []);
+
+  const openInviteModal = () => {
+    setPassword(generateRandomPassword());
+    setIsAddOpen(true);
+  };
 
   const fetchUsers = React.useCallback(async () => {
     setIsLoading(true);
@@ -73,6 +90,7 @@ export default function UsersPage() {
   };
 
   const handleToggleStatus = async (user: UserItem) => {
+    setIsUpdatingStatus(true);
     const nextStatus = user.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
     try {
       const res = await fetch("/api/users", {
@@ -85,12 +103,15 @@ export default function UsersPage() {
           "Member Status Updated",
           `${user.fullName}'s access is now ${nextStatus === "ACTIVE" ? "Active" : "Paused"}.`
         );
+        setStatusConfirmUser(null);
         fetchUsers();
       } else {
         toastError("Update Failed", "Could not update member access.");
       }
     } catch {
       toastError("Connection Error", "Please check your connection and try again.");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -118,7 +139,7 @@ export default function UsersPage() {
           <Button
             size="sm"
             variant="primary"
-            onClick={() => setIsAddOpen(true)}
+            onClick={openInviteModal}
             leftIcon={<UserPlus className="h-3.5 w-3.5" />}
           >
             Invite Team Member
@@ -181,7 +202,7 @@ export default function UsersPage() {
                   <Button
                     size="xs"
                     variant={u.status === "ACTIVE" ? "ghost" : "primary"}
-                    onClick={() => handleToggleStatus(u)}
+                    onClick={() => setStatusConfirmUser(u)}
                   >
                     {u.status === "ACTIVE" ? "Pause Access" : "Restore Access"}
                   </Button>
@@ -217,13 +238,26 @@ export default function UsersPage() {
             required
           />
 
-          <PasswordInput
-            label="Temporary Welcome Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            showStrength
-            required
-          />
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Temporary Welcome Password
+              </label>
+              <button
+                type="button"
+                onClick={() => setPassword(generateRandomPassword())}
+                className="text-[11px] font-semibold text-[#ED2618] hover:underline cursor-pointer"
+              >
+                Generate Secure Password
+              </button>
+            </div>
+            <PasswordInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              showStrength
+              required
+            />
+          </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -249,6 +283,59 @@ export default function UsersPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Pause / Restore Member Access Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(statusConfirmUser)}
+        onClose={() => setStatusConfirmUser(null)}
+        title={
+          statusConfirmUser?.status === "ACTIVE"
+            ? "Pause Team Member Access?"
+            : "Restore Team Member Access?"
+        }
+        description={
+          statusConfirmUser?.status === "ACTIVE"
+            ? "Please confirm before temporarily pausing this colleague's workspace sign-in access."
+            : "Please confirm before restoring this colleague's workspace sign-in access."
+        }
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setStatusConfirmUser(null)}
+              disabled={isUpdatingStatus}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant={
+                statusConfirmUser?.status === "ACTIVE" ? "danger" : "primary"
+              }
+              isLoading={isUpdatingStatus}
+              onClick={() =>
+                statusConfirmUser && handleToggleStatus(statusConfirmUser)
+              }
+            >
+              {statusConfirmUser?.status === "ACTIVE"
+                ? "Yes, Pause Access"
+                : "Yes, Restore Access"}
+            </Button>
+          </>
+        }
+      >
+        {statusConfirmUser && (
+          <div className="rounded-xl bg-slate-50 dark:bg-white/[0.03] p-3.5 border border-slate-200 dark:border-white/10 text-xs text-slate-700 dark:text-slate-300">
+            Team Member:{" "}
+            <strong className="text-slate-900 dark:text-white">
+              {statusConfirmUser.fullName}
+            </strong>{" "}
+            ({statusConfirmUser.email})
+          </div>
+        )}
       </Modal>
     </div>
   );

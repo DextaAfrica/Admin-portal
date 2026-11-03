@@ -9,20 +9,25 @@ interface TelemetryChartProps {
 }
 
 export function TelemetryChart({
-  data = [
-    { label: "Mon", value: 34 },
-    { label: "Tue", value: 52 },
-    { label: "Wed", value: 45 },
-    { label: "Thu", value: 78 },
-    { label: "Fri", value: 65 },
-    { label: "Sat", value: 89 },
-    { label: "Sun", value: 94 },
-  ],
+  data = [],
   className,
 }: TelemetryChartProps) {
   const [hoveredIdx, setHoveredIdx] = React.useState<number | null>(null);
 
-  const maxValue = Math.max(...data.map((d) => d.value), 100);
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className={cn(
+          "flex h-32 w-full items-center justify-center rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-xs text-slate-400 font-medium",
+          className
+        )}
+      >
+        No activity actions recorded during this period
+      </div>
+    );
+  }
+
+  const maxValue = Math.max(...data.map((d) => d.value), 10);
   const height = 140;
   const width = 480;
   const padding = 24;

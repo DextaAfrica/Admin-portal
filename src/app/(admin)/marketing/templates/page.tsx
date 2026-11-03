@@ -54,6 +54,9 @@ export default function TemplatesPage() {
     contentHtml: string;
   } | null>(null);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [deleteConfirmTemplate, setDeleteConfirmTemplate] =
+    React.useState<Template | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const fetchTemplates = React.useCallback(async () => {
     setIsLoading(true);
@@ -114,6 +117,7 @@ export default function TemplatesPage() {
   };
 
   const handleDeleteTemplate = async (templateId: string) => {
+    setIsDeleting(true);
     try {
       const res = await fetch("/api/marketing/templates", {
         method: "DELETE",
@@ -122,12 +126,15 @@ export default function TemplatesPage() {
       });
       if (res.ok) {
         toastSuccess("Template Deleted", "The template has been removed from your library.");
+        setDeleteConfirmTemplate(null);
         fetchTemplates();
       } else {
         toastError("Delete Error", "Could not delete this template.");
       }
     } catch {
       toastError("Connection Error", "Please check your connection and try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -286,7 +293,7 @@ export default function TemplatesPage() {
                         </Button>
                         <button
                           type="button"
-                          onClick={() => handleDeleteTemplate(tpl.id)}
+                          onClick={() => setDeleteConfirmTemplate(tpl)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                           title="Delete Template"
                         >
@@ -458,6 +465,47 @@ export default function TemplatesPage() {
               className="rounded-2xl bg-slate-100/70 dark:bg-[#0d0e12] p-4 sm:p-6 border border-slate-200/80 dark:border-white/10 max-h-[60vh] overflow-y-auto"
               dangerouslySetInnerHTML={{ __html: selectedTemplate.bodyHtml }}
             />
+          </div>
+        )}
+      </Modal>
+
+      {/* Delete Template Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(deleteConfirmTemplate)}
+        onClose={() => setDeleteConfirmTemplate(null)}
+        title="Remove Email Template?"
+        description="Please confirm that you want to remove this template from your workspace library."
+        maxWidth="sm"
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDeleteConfirmTemplate(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              isLoading={isDeleting}
+              onClick={() =>
+                deleteConfirmTemplate &&
+                handleDeleteTemplate(deleteConfirmTemplate.id)
+              }
+              leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+            >
+              Yes, Remove Template
+            </Button>
+          </>
+        }
+      >
+        {deleteConfirmTemplate && (
+          <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3.5 border border-red-200 dark:border-red-500/20 text-xs text-red-700 dark:text-red-300">
+            You are about to remove{" "}
+            <strong className="font-bold">{deleteConfirmTemplate.name}</strong>.
+            This action cannot be undone.
           </div>
         )}
       </Modal>

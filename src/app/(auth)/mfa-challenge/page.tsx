@@ -51,6 +51,13 @@ function MfaChallengeContent() {
         return;
       }
 
+      if (data.mustChangePassword) {
+        toastSuccess("First-Time Sign In", "Please configure your preferred account password.");
+        router.push("/setup/password");
+        router.refresh();
+        return;
+      }
+
       toastSuccess("Verified", "Welcome to Dexta Africa.");
       router.push("/dashboard");
       router.refresh();

@@ -10,6 +10,7 @@ export interface SessionUser {
   email: string;
   fullName: string;
   role: string;
+  department?: string;
   status: string;
   twoFactorEnabled: boolean;
 }
@@ -61,6 +62,7 @@ export async function getCurrentSession(): Promise<{
             email: true,
             fullName: true,
             role: true,
+            department: true,
             status: true,
             twoFactorEnabled: true,
           },

@@ -18,6 +18,10 @@ import {
   ChevronRight,
   Home,
   X,
+  Building2,
+  MessageSquare,
+  BookOpen,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
@@ -40,6 +44,24 @@ const navSections: NavSection[] = [
     items: [
       { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
       { title: "Home Page", href: "/", icon: Home },
+    ],
+  },
+  {
+    label: "Internal Operations & CRM",
+    items: [
+      { title: "Client CRM & Deals", href: "/crm", icon: Briefcase, badge: "Pipeline" },
+      { title: "HR Department", href: "/hr", icon: Users, badge: "Staff" },
+      { title: "IT Access & Security", href: "/it", icon: ShieldCheck, badge: "Gov" },
+    ],
+  },
+  {
+    label: "Real Estate & CMS",
+    items: [
+      { title: "Portfolio & Developments", href: "/portfolio", icon: Building2 },
+      { title: "Client Leads & Inquiries", href: "/enquiries", icon: MessageSquare, badge: "Leads" },
+      { title: "Editorial CMS & Pages", href: "/content", icon: FileCode2 },
+      { title: "Journal & Insights", href: "/journal", icon: BookOpen },
+      { title: "Career Openings", href: "/careers", icon: Briefcase },
     ],
   },
   {
@@ -89,14 +111,9 @@ export function Sidebar({
     setMobileOpen(false);
   }, [pathname]);
 
-  const handleLogout = async () => {
-    if (isSigningOut) return;
-    setIsSigningOut(true);
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-    } finally {
-      window.location.href = "/login";
-    }
+  const handleLogout = () => {
+    setMobileOpen(false);
+    window.dispatchEvent(new CustomEvent("dexta:prompt-signout"));
   };
 
   return (
