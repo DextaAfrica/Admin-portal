@@ -71,6 +71,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            DATABASE_URL=file:/app/prisma/admin_portal.db
+            APP_SECRET=dexta_build_fallback_secret_key_production_standalone
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

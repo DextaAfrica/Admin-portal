@@ -29,60 +29,98 @@ import { TelemetryChart, RadialGauge } from "@/components/ui/TelemetryChart";
 import { formatBytes, timeAgo } from "@/lib/utils";
 import { backendApi } from "@/lib/backend-api";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function DashboardPage() {
   // 1. Calculate Real 7-Day Activity Aggregation from AuditLog
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
-  // 2. Query Local Database Records & Aggregations
-  const [
-    totalUsers,
-    mfaUsers,
-    storageAggregate,
-    totalSubscribers,
-    campaignsSent,
-    totalCampaigns,
-    totalEndpoints,
-    healthyEndpoints,
-    recentAssets,
-    recentCampaigns,
-    teamMembers,
-    recentLogs,
-    pastWeekLogs,
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.user.count({ where: { twoFactorEnabled: true } }),
-    prisma.storageAsset.aggregate({
-      _sum: { fileSize: true },
-      _count: { id: true },
-    }),
-    prisma.audienceSubscriber.count(),
-    prisma.emailCampaign.count({ where: { status: "SENT" } }),
-    prisma.emailCampaign.count(),
-    prisma.apiEndpoint.count(),
-    prisma.apiEndpoint.count({ where: { healthStatus: "HEALTHY" } }),
-    prisma.storageAsset.findMany({
-      take: 4,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.emailCampaign.findMany({
-      take: 4,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.user.findMany({
-      take: 4,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.auditLog.findMany({
-      take: 5,
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.auditLog.findMany({
-      where: { createdAt: { gte: sevenDaysAgo } },
-      select: { createdAt: true },
-    }),
-  ]);
+  // 2. Query Local Database Records & Aggregations with safe fallback
+  let totalUsers = 0;
+  let mfaUsers = 0;
+  let storageAggregate: { _sum: { fileSize: number | null }; _count: { id: number } } = {
+    _sum: { fileSize: 0 },
+    _count: { id: 0 },
+  };
+  let totalSubscribers = 0;
+  let campaignsSent = 0;
+  let totalCampaigns = 0;
+  let totalEndpoints = 0;
+  let healthyEndpoints = 0;
+  let recentAssets: any[] = [];
+  let recentCampaigns: any[] = [];
+  let teamMembers: any[] = [];
+  let recentLogs: any[] = [];
+  let pastWeekLogs: { createdAt: Date }[] = [];
+
+  try {
+    const [
+      tu,
+      mu,
+      sa,
+      ts,
+      cs,
+      tc,
+      te,
+      he,
+      ra,
+      rc,
+      tm,
+      rl,
+      pwl,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.user.count({ where: { twoFactorEnabled: true } }),
+      prisma.storageAsset.aggregate({
+        _sum: { fileSize: true },
+        _count: { id: true },
+      }),
+      prisma.audienceSubscriber.count(),
+      prisma.emailCampaign.count({ where: { status: "SENT" } }),
+      prisma.emailCampaign.count(),
+      prisma.apiEndpoint.count(),
+      prisma.apiEndpoint.count({ where: { healthStatus: "HEALTHY" } }),
+      prisma.storageAsset.findMany({
+        take: 4,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.emailCampaign.findMany({
+        take: 4,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.user.findMany({
+        take: 4,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.auditLog.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.auditLog.findMany({
+        where: { createdAt: { gte: sevenDaysAgo } },
+        select: { createdAt: true },
+      }),
+    ]);
+
+    totalUsers = tu;
+    mfaUsers = mu;
+    storageAggregate = sa;
+    totalSubscribers = ts;
+    campaignsSent = cs;
+    totalCampaigns = tc;
+    totalEndpoints = te;
+    healthyEndpoints = he;
+    recentAssets = ra;
+    recentCampaigns = rc;
+    teamMembers = tm;
+    recentLogs = rl;
+    pastWeekLogs = pwl;
+  } catch (error) {
+    console.warn("[Dashboard] Database queries deferred or unavailable during initial bootstrap:", error);
+  }
 
   // Aggregate past week's audit logs by day of week
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

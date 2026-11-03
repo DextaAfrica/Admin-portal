@@ -101,6 +101,9 @@ jobs:
           file: ./Dockerfile
           push: false
           tags: dexta-admin-portal:ci-test
+          build-args: |
+            DATABASE_URL=file:/app/prisma/admin_portal.db
+            APP_SECRET=ci_build_verification_temporary_secret_key_12345
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

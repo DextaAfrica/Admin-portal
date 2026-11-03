@@ -33,9 +33,15 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Build-time arguments and default environment configuration
+ARG DATABASE_URL="file:/app/prisma/admin_portal.db"
+ARG APP_SECRET="dexta_build_fallback_secret_key_production_standalone"
+
 # Environment variables for build optimization
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV DATABASE_URL=${DATABASE_URL}
+ENV APP_SECRET=${APP_SECRET}
 
 # 1. Generate type-safe Prisma Client
 RUN npx prisma generate
@@ -59,6 +65,8 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL="file:/app/prisma/admin_portal.db"
+ENV APP_SECRET="dexta_africa_portal_super_secure_enterprise_secret_key_2026_xyz"
 
 # Create unprivileged system user & group (UID/GID 1001) for strict container security
 RUN addgroup --system --gid 1001 nodejs && \
