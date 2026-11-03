@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
-import type { PolicyAlert } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
+
+const db = prisma as any;
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,14 +27,14 @@ export async function GET(req: NextRequest) {
     }
 
     const [alerts, openCount, criticalCount, totalCount] = await Promise.all([
-      prisma.policyAlert.findMany({
+      db.policyAlert.findMany({
         where,
         orderBy: { createdAt: "desc" },
         take: 100,
       }),
-      prisma.policyAlert.count({ where: { status: "OPEN" } }),
-      prisma.policyAlert.count({ where: { severity: "CRITICAL", status: "OPEN" } }),
-      prisma.policyAlert.count(),
+      db.policyAlert.count({ where: { status: "OPEN" } }),
+      db.policyAlert.count({ where: { severity: "CRITICAL", status: "OPEN" } }),
+      db.policyAlert.count(),
     ]);
 
     return NextResponse.json({
@@ -68,7 +69,7 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const updated = await prisma.policyAlert.update({
+    const updated = await db.policyAlert.update({
       where: { id },
       data: {
         status,

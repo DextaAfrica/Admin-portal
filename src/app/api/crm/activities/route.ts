@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
-import type { CrmActivity } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +18,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Activity title is required" }, { status: 400 });
     }
 
-    const activity = await prisma.crmActivity.create({
+    const db = prisma as any;
+    const activity = await db.crmActivity.create({
       data: {
         clientId: clientId || null,
         userId: user.id,

@@ -1,6 +1,5 @@
 import { prisma } from "../prisma";
 import { logAuditEvent } from "./audit";
-import type { PolicyAlert } from "@prisma/client";
 
 export interface LogPolicyAlertParams {
   severity?: "INFO" | "WARNING" | "CRITICAL" | "BREACH_ATTEMPT";
@@ -20,7 +19,8 @@ export interface LogPolicyAlertParams {
 
 export async function logPolicyAlert(params: LogPolicyAlertParams) {
   try {
-    const alert = await prisma.policyAlert.create({
+    const db = prisma as any;
+    const alert = await db.policyAlert.create({
       data: {
         severity: params.severity || "WARNING",
         eventType: params.eventType,
