@@ -3,16 +3,20 @@
 # ==============================================================================
 # Dexta Africa Enterprise Admin Portal - Development Container Dockerfile
 # Optimized for Live Hot Reloading (HMR), Prisma Introspection, and Fast Iteration
+# Uses Debian Slim (glibc) for 100% reliable DNS on macOS & native Prisma engines
 # ==============================================================================
 
-FROM node:20-alpine
+FROM node:20-slim
 
-# Install native prerequisites for musl libc, Prisma engines, curl and signal handling
-RUN apk add --no-cache libc6-compat openssl curl dumb-init
+# Install OpenSSL for Prisma engine & CA certificates
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Enable Next.js hot reloading inside container environments (especially macOS / Windows)
+# Enable Next.js hot reloading inside container environments (macOS / Windows / Linux)
 ENV NODE_ENV=development
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
@@ -34,15 +38,13 @@ COPY . .
 RUN npx prisma generate
 
 # Create persistent storage directories
-RUN mkdir -p /app/prisma /app/data
+RUN mkdir -p /app/prisma /app/data /app/public/uploads
 
 EXPOSE 3000
 
-# Health check probe
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -f http://localhost:3000/api/health || exit 1
+# Native Node.js healthcheck probe (zero external package dependency)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD node -e 'fetch("http://localhost:3000/api/health").then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))'
 
 # Launch Next.js development server with auto-binding to 0.0.0.0
-ENTRYPOINT ["dumb-init", "--"]
 CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && npm run dev -- -H 0.0.0.0"]
-

@@ -10,8 +10,12 @@ services:
       dockerfile: Dockerfile.dev
     container_name: dexta-admin-portal-dev
     restart: unless-stopped
+    init: true
     ports:
       - "${PORT:-3000}:3000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     environment:
       - NODE_ENV=development
       - PORT=3000
@@ -37,7 +41,7 @@ services:
     volumes:
       # Bind mount project root for instant hot code reloading
       - .:/app
-      # Anonymous volume preserves Linux musl node_modules without host overwrite
+      # Anonymous volume preserves Linux node_modules without host overwrite
       - /app/node_modules
       # Anonymous volume preserves Next.js build and HMR cache
       - /app/.next
@@ -52,7 +56,7 @@ services:
       mailpit:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 15s
       timeout: 5s
       retries: 3
