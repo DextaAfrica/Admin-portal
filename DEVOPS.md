@@ -98,7 +98,35 @@ The application uses an optimized **multi-stage Docker build** (`Dockerfile`) ut
 
 ---
 
-## 4. Local Development with Docker Compose
+## 4. Local Development Containers (`docker-compose.dev.yml` & `Dockerfile.dev`)
+
+For daily development with **live code hot-reloading (HMR)** and isolated dependencies:
+
+- **Hot Reloading**: The host directory is bind-mounted (`.:/app`), with `WATCHPACK_POLLING=true` enabled for cross-platform filesystem sync.
+- **Dependency Isolation**: Anonymous volume `/app/node_modules` guarantees that container-native Linux musl binaries and engines do not clash with macOS/host packages.
+- **Full Stack Mocking**: Includes local S3 (MinIO) and local SMTP (Mailpit) out-of-the-box.
+- **IDE Dev Container**: `.devcontainer/devcontainer.json` provides native 1-click container workspace in VS Code or Cursor.
+
+### Dev Container Commands
+
+```bash
+# Start live hot-reloading dev container stack
+make dev-up
+# Or directly via docker compose:
+docker compose -f docker-compose.dev.yml up -d --build
+
+# Stream live development server logs
+make dev-logs
+# Or:
+docker compose -f docker-compose.dev.yml logs -f app
+
+# Stop the dev container stack
+make dev-down
+```
+
+---
+
+## 5. Local Production-Like Stack with Docker Compose (`docker-compose.yml`)
 
 To test the entire enterprise stack locally without configuring external cloud services, Docker Compose provides:
 

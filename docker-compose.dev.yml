@@ -1,0 +1,150 @@
+name: dexta-africa-dev
+
+services:
+  # ============================================================================
+  # Dexta Africa Admin Portal - Development Container (Live Hot-Reloading)
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: dexta-admin-portal-dev
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/dev.db}
+      - APP_SECRET=${APP_SECRET:-dexta_dev_secret_key_continuous_development_2026}
+      - PORTAL_NAME=${PORTAL_NAME:-Dexta Africa Dev Portal}
+      - AUTO_MIGRATE=true
+      - AUTO_SEED=${AUTO_SEED:-true}
+      - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL:-admin@dextaafrica.com}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-AdminPassword2026!}
+      - INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME:-Dexta Super Admin}
+      # Local S3 Storage Integration (MinIO)
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=dexta_minio_user
+      - AWS_SECRET_ACCESS_KEY=DextaMinioPass2026!
+      - AWS_S3_BUCKET_NAME=dexta-assets-storage
+      - AWS_ENDPOINT=http://minio:9000
+      - AWS_S3_FORCE_PATH_STYLE=true
+      # Local Email Service (Mailpit)
+      - EMAIL_FROM=Dexta Dev <operations@dextaafrica.com>
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SMTP_USER=
+      - SMTP_PASS=
+      # Core Go Backend Proxy target
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://host.docker.internal:8080}
+    volumes:
+      # Bind mount project root for instant hot code reloading
+      - .:/app
+      # Anonymous volume preserves Linux musl node_modules without host overwrite
+      - /app/node_modules
+      # Anonymous volume preserves Next.js build and HMR cache
+      - /app/.next
+      # Named persistent volumes for SQLite and assets
+      - dexta-dev-sqlite:/app/prisma
+      - dexta-dev-data:/app/data
+    extra_hosts:
+      # Allows the container to access Go core backend running on host machine
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      minio:
+        condition: service_healthy
+      mailpit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    networks:
+      - dexta-dev-net
+
+  # ============================================================================
+  # Local S3-Compatible Cloud Storage (MinIO)
+  # ============================================================================
+  minio:
+    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    container_name: dexta-minio-dev
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=dexta_minio_user
+      - MINIO_ROOT_PASSWORD=DextaMinioPass2026!
+    ports:
+      - "9000:9000"   # MinIO S3 API Endpoint
+      - "9001:9001"   # MinIO Web Console
+    volumes:
+      - dexta-dev-minio-storage:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - dexta-dev-net
+
+  # Bucket provisioner: runs once to create the default S3 bucket
+  minio-init:
+    image: minio/mc:RELEASE.2024-10-08T12-08-03Z
+    container_name: dexta-minio-dev-provisioner
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set localminio http://minio:9000 dexta_minio_user DextaMinioPass2026!;
+      /usr/bin/mc mb --ignore-existing localminio/dexta-assets-storage;
+      /usr/bin/mc anonymous set download localminio/dexta-assets-storage;
+      echo '✅ [MinIO Dev] S3 Bucket initialized: dexta-assets-storage';
+      exit 0;
+      "
+    networks:
+      - dexta-dev-net
+
+  # ============================================================================
+  # Local SMTP Testing Server (Mailpit)
+  # ============================================================================
+  mailpit:
+    image: axllent/mailpit:v1.20
+    container_name: dexta-mailpit-dev
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP Port
+      - "8025:8025"   # Mailpit Web UI Inbox
+    environment:
+      - MP_MAX_MESSAGES=500
+      - MP_DATABASE=/data/mailpit.db
+    volumes:
+      - dexta-dev-mail-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/info"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - dexta-dev-net
+
+volumes:
+  dexta-dev-sqlite:
+    name: dexta-dev-sqlite
+  dexta-dev-data:
+    name: dexta-dev-data
+  dexta-dev-minio-storage:
+    name: dexta-dev-minio-storage
+  dexta-dev-mail-data:
+    name: dexta-dev-mail-data
+
+networks:
+  dexta-dev-net:
+    name: dexta-dev-net
+    driver: bridge
+
