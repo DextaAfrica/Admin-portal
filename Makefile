@@ -16,6 +16,10 @@ help:
 	@echo "  make typecheck    - Verify TypeScript types without emitting files"
 	@echo ""
 	@echo "  Docker Stack:"
+	@echo "  make dev-up       - Start live hot-reloading dev container (App + MinIO + Mailpit)"
+	@echo "  make dev-down     - Stop and remove dev container stack"
+	@echo "  make dev-logs     - Stream live dev container Next.js logs"
+	@echo "  make dev-build    - Build the development Docker image (Dockerfile.dev)"
 	@echo "  make up           - Start local container stack (App + MinIO S3 + Mailpit)"
 	@echo "  make down         - Stop and remove all local containers"
 	@echo "  make restart      - Restart local container services"
@@ -60,16 +64,35 @@ db-seed:
 # ------------------------------------------------------------------------------
 # Docker Operations
 # ------------------------------------------------------------------------------
+dev-build:
+	docker build -f Dockerfile.dev -t dexta-admin-portal:dev .
+
+dev-up:
+	docker compose -f docker-compose.dev.yml up -d --build
+	@echo ""
+	@echo "🔥 Dexta Africa Dev Container Running (Live Hot-Reloading):"
+	@echo "   - Next.js Dev UI:     http://localhost:3000"
+	@echo "   - Health Check:       http://localhost:3000/api/health"
+	@echo "   - Mailpit Email UI:   http://localhost:8025"
+	@echo ""
+
+dev-down:
+	docker compose -f docker-compose.dev.yml down
+
+dev-restart: dev-down dev-up
+
+dev-logs:
+	docker compose -f docker-compose.dev.yml logs -f app
+
 docker-build:
 	docker build -t dexta-admin-portal:latest .
 
 up:
-	docker-compose up -d --build
+	docker compose up -d --build
 	@echo ""
 	@echo "🚀 Dexta Africa Local Stack Ready:"
 	@echo "   - Portal Application: http://localhost:3000"
 	@echo "   - Health Check:       http://localhost:3000/api/health"
-	@echo "   - MinIO S3 Console:   http://localhost:9001 (User: dexta_minio_user)"
 	@echo "   - Mailpit Email UI:   http://localhost:8025"
 	@echo ""
 

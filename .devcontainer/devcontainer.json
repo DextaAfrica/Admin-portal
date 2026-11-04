@@ -1,0 +1,27 @@
+{
+  "name": "Dexta Africa Admin Portal (Dev)",
+  "dockerComposeFile": [
+    "../docker-compose.dev.yml"
+  ],
+  "service": "app",
+  "workspaceFolder": "/app",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "typescript.tsdk": "node_modules/typescript/lib",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "Prisma.prisma",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "forwardPorts": [3000, 8025, 8080],
+  "postCreateCommand": "npx prisma generate",
+  "remoteUser": "root"
+}
+

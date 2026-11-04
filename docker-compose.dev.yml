@@ -1,0 +1,101 @@
+name: dexta-africa-dev
+
+services:
+  # ============================================================================
+  # Dexta Africa Admin Portal - Development Container (Live Hot-Reloading)
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: dexta-admin-portal-dev
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - WATCHPACK_POLLING=true
+      - CHOKIDAR_USEPOLLING=true
+      - DATABASE_URL=${DATABASE_URL:-file:/app/prisma/dev.db}
+      - APP_SECRET=${APP_SECRET:-dexta_dev_secret_key_continuous_development_2026}
+      - PORTAL_NAME=${PORTAL_NAME:-Dexta Africa Dev Portal}
+      - AUTO_MIGRATE=true
+      - AUTO_SEED=${AUTO_SEED:-true}
+      - INITIAL_ADMIN_EMAIL=${INITIAL_ADMIN_EMAIL:-admin@dextaafrica.com}
+      - INITIAL_ADMIN_PASSWORD=${INITIAL_ADMIN_PASSWORD:-AdminPassword2026!}
+      - INITIAL_ADMIN_NAME=${INITIAL_ADMIN_NAME:-Dexta Super Admin}
+      # Local Email Service (Mailpit)
+      - EMAIL_FROM=Dexta Dev <operations@dextaafrica.com>
+      - SMTP_HOST=mailpit
+      - SMTP_PORT=1025
+      - SMTP_USER=
+      - SMTP_PASS=
+      # Core Go Backend Proxy target
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://host.docker.internal:8080}
+    volumes:
+      # Bind mount project root for instant hot code reloading
+      - .:/app
+      # Anonymous volume preserves Linux musl node_modules without host overwrite
+      - /app/node_modules
+      # Anonymous volume preserves Next.js build and HMR cache
+      - /app/.next
+      # Named persistent volumes for SQLite, uploads, and data
+      - dexta-dev-sqlite:/app/prisma
+      - dexta-dev-uploads:/app/public/uploads
+      - dexta-dev-data:/app/data
+    extra_hosts:
+      # Allows the container to access Go core backend running on host machine
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      mailpit:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    networks:
+      - dexta-dev-net
+
+  # ============================================================================
+  # Local SMTP Testing Server (Mailpit)
+  # Captures all outgoing emails, verification tokens, and alerts
+  # Web UI accessible at http://localhost:8025
+  # ============================================================================
+  mailpit:
+    image: axllent/mailpit:v1.20
+    container_name: dexta-mailpit-dev
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP Port
+      - "8025:8025"   # Mailpit Web UI Inbox
+    environment:
+      - MP_MAX_MESSAGES=500
+      - MP_DATABASE=/data/mailpit.db
+    volumes:
+      - dexta-dev-mail-data:/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8025/api/v1/info"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - dexta-dev-net
+
+volumes:
+  dexta-dev-sqlite:
+    name: dexta-dev-sqlite
+  dexta-dev-uploads:
+    name: dexta-dev-uploads
+  dexta-dev-data:
+    name: dexta-dev-data
+  dexta-dev-mail-data:
+    name: dexta-dev-mail-data
+
+networks:
+  dexta-dev-net:
+    name: dexta-dev-net
+    driver: bridge

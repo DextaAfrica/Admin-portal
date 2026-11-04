@@ -1,0 +1,48 @@
+# syntax=docker/dockerfile:1.4
+
+# ==============================================================================
+# Dexta Africa Enterprise Admin Portal - Development Container Dockerfile
+# Optimized for Live Hot Reloading (HMR), Prisma Introspection, and Fast Iteration
+# ==============================================================================
+
+FROM node:20-alpine
+
+# Install native prerequisites for musl libc, Prisma engines, curl and signal handling
+RUN apk add --no-cache libc6-compat openssl curl dumb-init
+
+WORKDIR /app
+
+# Enable Next.js hot reloading inside container environments (especially macOS / Windows)
+ENV NODE_ENV=development
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV WATCHPACK_POLLING=true
+ENV CHOKIDAR_USEPOLLING=true
+
+# Copy package manifests for deterministic dependency caching
+COPY package.json package-lock.json ./
+COPY prisma ./prisma/
+
+# Install full dependencies including devDependencies (TypeScript, Tailwind, Prisma CLI)
+RUN npm install
+
+# Copy application source code
+COPY . .
+
+# Generate initial Prisma client bindings
+RUN npx prisma generate
+
+# Create persistent storage directories
+RUN mkdir -p /app/prisma /app/data
+
+EXPOSE 3000
+
+# Health check probe
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Launch Next.js development server with auto-binding to 0.0.0.0
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate --accept-data-loss && npm run dev -- -H 0.0.0.0"]
+
