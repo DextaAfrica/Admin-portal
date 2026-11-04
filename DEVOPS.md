@@ -104,7 +104,8 @@ For daily development with **live code hot-reloading (HMR)** and isolated depend
 
 - **Hot Reloading**: The host directory is bind-mounted (`.:/app`), with `WATCHPACK_POLLING=true` enabled for cross-platform filesystem sync.
 - **Dependency Isolation**: Anonymous volume `/app/node_modules` guarantees that container-native Linux musl binaries and engines do not clash with macOS/host packages.
-- **Full Stack Mocking**: Includes local S3 (MinIO) and local SMTP (Mailpit) out-of-the-box.
+- **Persistent Local Assets & DB**: Native persistent volumes for SQLite (`/app/prisma/dev.db`) and local asset storage (`/app/public/uploads`).
+- **Local Mail Testing**: Pre-configured with local Mailpit SMTP server (`:1025` / Web inbox `:8025`).
 - **IDE Dev Container**: `.devcontainer/devcontainer.json` provides native 1-click container workspace in VS Code or Cursor.
 
 ### Dev Container Commands

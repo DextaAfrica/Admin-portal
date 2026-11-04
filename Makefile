@@ -73,7 +73,6 @@ dev-up:
 	@echo "🔥 Dexta Africa Dev Container Running (Live Hot-Reloading):"
 	@echo "   - Next.js Dev UI:     http://localhost:3000"
 	@echo "   - Health Check:       http://localhost:3000/api/health"
-	@echo "   - MinIO S3 Console:   http://localhost:9001 (User: dexta_minio_user)"
 	@echo "   - Mailpit Email UI:   http://localhost:8025"
 	@echo ""
 
@@ -89,12 +88,11 @@ docker-build:
 	docker build -t dexta-admin-portal:latest .
 
 up:
-	docker-compose up -d --build
+	docker compose up -d --build
 	@echo ""
 	@echo "🚀 Dexta Africa Local Stack Ready:"
 	@echo "   - Portal Application: http://localhost:3000"
 	@echo "   - Health Check:       http://localhost:3000/api/health"
-	@echo "   - MinIO S3 Console:   http://localhost:9001 (User: dexta_minio_user)"
 	@echo "   - Mailpit Email UI:   http://localhost:8025"
 	@echo ""
 
