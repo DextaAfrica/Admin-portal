@@ -15,6 +15,7 @@ import {
   LogIn,
   UserPlus,
   Lock,
+  Briefcase,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 import { cn } from "@/lib/utils";
@@ -64,22 +65,28 @@ const PORTRAITS: PortraitSlide[] = [
 
 const CORE_PILLARS = [
   {
-    icon: Building2,
-    title: "Project Excellence",
+    icon: Briefcase,
+    title: "Strategic Capital & CRM",
+    badge: "Deal Pipeline",
     description:
-      "Delivering modern infrastructure and real estate developments with disciplined planning and lasting quality.",
+      "Enterprise client dossiers, confidential interaction memos, and high-stakes real estate escrow milestones.",
+    href: "/crm/landing",
   },
   {
     icon: Users,
-    title: "Client Experience",
+    title: "HR & People Workspace",
+    badge: "Staff Governance",
     description:
-      "Building trusted relationships through transparent communication, dedicated support, and warm service.",
+      "Integrated employee directory, confidential contract vault, and formal leave request lifecycle reviews.",
+    href: "/login",
   },
   {
     icon: ShieldCheck,
-    title: "Protected Team Workspace",
+    title: "IT Security & Watchdog",
+    badge: "Zero-Knowledge",
     description:
-      "Restricted to verified Dexta Africa team members with two-step verification and organized tools.",
+      "Strict account provisioning, isolated employee dashboards, and automated corporate policy watchdog alerts.",
+    href: "/login",
   },
 ];
 
@@ -166,11 +173,21 @@ export default function LandingPage() {
         <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
           {/* Left Column: Clean Executive Introduction */}
           <div className="lg:col-span-6 space-y-6 animate-fade-in">
-            <div className="inline-flex items-center gap-2.5 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#ED2618]" />
-              <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400 whitespace-nowrap">
-                Dexta Africa Team Portal
-              </span>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1.5">
+                <span className="h-2 w-2 rounded-full bg-[#ED2618]" />
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400 whitespace-nowrap">
+                  Dexta Africa Team Portal
+                </span>
+              </div>
+
+              <Link
+                href="/crm/landing"
+                className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold text-amber-500 dark:text-amber-400 hover:bg-amber-500/20 transition-all cursor-pointer"
+              >
+                <Briefcase className="h-3 w-3" />
+                <span>Strategic Capital CRM &rarr;</span>
+              </Link>
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.14]">
@@ -179,18 +196,17 @@ export default function LandingPage() {
 
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
               Welcome to the official Dexta Africa team workspace. Sign in with
-              your verified work account or create your team profile to manage
-              project media, design branded client emails, and collaborate
-              securely.
+              your verified work credentials or establish your team profile to manage
+              landmark developments, institutional investor deals, and operational workflows.
             </p>
 
             {/* Framed Executive Action Bar (Sign In + Fill-Up Create Account) */}
             <div className="pt-2">
-              <div className="flex flex-col sm:flex-row sm:flex-nowrap items-stretch sm:items-center gap-3.5">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5">
                 <button
                   type="button"
                   onClick={() => router.push("/login")}
-                  className="btn-crimson-exec h-12 rounded-xl px-6 text-sm whitespace-nowrap shrink-0 cursor-pointer"
+                  className="btn-crimson-exec h-12 rounded-xl px-6 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer shadow-lg shadow-red-500/20"
                 >
                   <span className="whitespace-nowrap">Sign In to Workspace</span>
                   <ArrowRight className="h-4 w-4 shrink-0" />
@@ -199,7 +215,7 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => router.push("/register")}
-                  className="btn-fill-up h-12 rounded-xl px-6 text-sm whitespace-nowrap shrink-0 cursor-pointer"
+                  className="btn-fill-up h-12 rounded-xl px-6 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <UserPlus className="h-4 w-4 shrink-0 text-[#ED2618] transition-colors" />
                   <span className="whitespace-nowrap">Create Team Account</span>
@@ -295,22 +311,29 @@ export default function LandingPage() {
             {CORE_PILLARS.map((item) => {
               const Icon = item.icon;
               return (
-                <div
+                <Link
                   key={item.title}
-                  className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#121318] p-6 shadow-sm hover:border-red-500/30 transition-all"
+                  href={item.href}
+                  className="group block rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#121318] p-6 shadow-sm hover:border-red-500/40 hover:shadow-md transition-all cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5 mb-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-[#ED2618]">
-                      <Icon className="h-5 w-5" />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3.5">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-[#ED2618] group-hover:bg-[#ED2618] group-hover:text-white transition-all">
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                        {item.title}
+                      </h3>
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      {item.title}
-                    </h3>
+
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                      {item.badge}
+                    </span>
                   </div>
                   <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
                     {item.description}
                   </p>
-                </div>
+                </Link>
               );
             })}
           </div>

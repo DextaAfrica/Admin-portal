@@ -4,99 +4,164 @@ import { prisma } from "@/lib/prisma";
 import { verifyTotpToken, generateAndStoreRecoveryCodes } from "@/lib/auth/mfa";
 import { createSession, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
+import { logPolicyAlert } from "@/lib/auth/policy-alerts";
 
-const REQUIRED_PASSCODE = process.env.ADMIN_REGISTRATION_PASSCODE || "DEXTA-2026";
+export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
-    const { fullName, email, password, accessPasscode, mfaSecret, mfaCode } = await req.json();
+    const db = prisma as any;
+    const {
+      fullName,
+      email,
+      password,
+      department = "Operations",
+      jobTitle,
+      phone,
+      accessPasscode,
+      mfaSecret,
+      mfaCode,
+    } = await req.json();
 
     if (!fullName || !email || !password) {
       return NextResponse.json(
-        { error: "Full Name, Email, and Password are required" },
+        { error: "Full Name, Corporate Email, and Password are required" },
         { status: 400 }
       );
     }
 
-    // Verify Access Passcode for security
-    const cleanPasscode = String(accessPasscode || "").trim().toUpperCase();
-    if (cleanPasscode !== REQUIRED_PASSCODE) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: `Invalid Organization Access Passcode. (Hint: Use ${REQUIRED_PASSCODE})` },
-        { status: 403 }
+        { error: "Password must be at least 8 characters long" },
+        { status: 400 }
       );
+    }
+
+    // Optional Organization Passcode check
+    const validPasscodes = ["DEXTA-2026", "DEXTA-AFRICA", "DEXTA", "DEXTA2026"];
+    if (accessPasscode) {
+      const cleanPasscode = String(accessPasscode).trim().toUpperCase();
+      if (!validPasscodes.includes(cleanPasscode)) {
+        return NextResponse.json(
+          { error: "Invalid Organization Access Key. (Hint: Leave blank or use DEXTA-2026)" },
+          { status: 403 }
+        );
+      }
     }
 
     // Check email uniqueness
     const normalizedEmail = email.toLowerCase().trim();
-    const existingUser = await prisma.user.findUnique({
+    const existingUser = await db.user.findUnique({
       where: { email: normalizedEmail },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "An administrator account with this email already exists" },
+        { error: "A team member account with this corporate email already exists. Please sign in instead." },
         { status: 409 }
       );
     }
 
-    // Verify mandatory 2FA TOTP code
-    if (!mfaSecret || !mfaCode) {
-      return NextResponse.json(
-        { error: "Multi-Factor Authentication (2FA) verification is mandatory for administrator registration" },
-        { status: 400 }
-      );
-    }
+    let twoFactorEnabled = false;
+    let validatedSecret: string | null = null;
+    let recoveryCodes: string[] = [];
 
-    const isTotpValid = verifyTotpToken({
-      token: mfaCode,
-      secret: mfaSecret,
-    });
+    // If user provided MFA during signup, verify it
+    if (mfaSecret && mfaCode) {
+      const isTotpValid = verifyTotpToken({
+        token: mfaCode,
+        secret: mfaSecret,
+      });
 
-    if (!isTotpValid) {
-      return NextResponse.json(
-        { error: "Invalid 6-digit authenticator code. Please check your app and try again." },
-        { status: 400 }
-      );
+      if (!isTotpValid) {
+        return NextResponse.json(
+          { error: "Invalid 6-digit authenticator code. Please check your app and try again." },
+          { status: 400 }
+        );
+      }
+      twoFactorEnabled = true;
+      validatedSecret = mfaSecret;
     }
 
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create Admin User in Database
-    const newUser = await prisma.user.create({
+    // Create User in Database
+    const newUser = await db.user.create({
       data: {
         email: normalizedEmail,
-        fullName,
+        fullName: fullName.trim(),
         passwordHash,
         role: "ADMIN",
+        department: (department || "OPERATIONS").toUpperCase(),
+        jobTitle: jobTitle ? jobTitle.trim() : "Team Member",
+        phone: phone ? phone.trim() : null,
         status: "ACTIVE",
-        twoFactorEnabled: true,
-        twoFactorSecret: mfaSecret,
+        twoFactorEnabled,
+        twoFactorSecret: validatedSecret,
+        mustChangePassword: false,
         lastLoginAt: new Date(),
       },
     });
 
-    // Generate 10 single-use emergency recovery codes
-    const recoveryCodes = await generateAndStoreRecoveryCodes(newUser.id);
+    // Create corresponding HR EmployeeProfile if not existing
+    try {
+      const empNumber = `DXT-${(department || "OP").slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
+      await db.employeeProfile.create({
+        data: {
+          userId: newUser.id,
+          employeeNumber: empNumber,
+          fullName: newUser.fullName,
+          email: newUser.email,
+          department: newUser.department || "Operations",
+          jobTitle: newUser.jobTitle || "Team Member",
+          role: "STAFF",
+          status: "ACTIVE",
+          phone: newUser.phone,
+          startDate: new Date(),
+          annualLeaveDays: 20,
+          usedLeaveDays: 0,
+        },
+      });
+    } catch (hrErr) {
+      console.warn("Auto HR profile creation deferred:", hrErr);
+    }
 
-    // Create real Session
+    if (twoFactorEnabled) {
+      recoveryCodes = await generateAndStoreRecoveryCodes(newUser.id);
+    }
+
+    // Create session
+    const ipAddress = req.headers.get("x-forwarded-for") || "127.0.0.1";
+    const userAgent = req.headers.get("user-agent") || "unknown";
     const session = await createSession({
       userId: newUser.id,
-      ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
-      userAgent: req.headers.get("user-agent") || "unknown",
+      ipAddress,
+      userAgent,
     });
 
     // Log Compliance Audit Event
     await logAuditEvent({
       actorId: newUser.id,
       actorEmail: newUser.email,
-      action: "ADMIN_REGISTERED",
+      action: "TEAM_MEMBER_REGISTERED",
       entity: "User",
       entityId: newUser.id,
-      ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
-      userAgent: req.headers.get("user-agent"),
-      metadata: { role: "ADMIN", mfaEnforcedOnSignup: true, recoveryCodesCount: recoveryCodes.length },
+      ipAddress,
+      userAgent,
+      metadata: { department: newUser.department, role: newUser.role },
+    });
+
+    // Notify IT Watchdog
+    await logPolicyAlert({
+      severity: "INFO",
+      eventType: "SUSPICIOUS_ACTIVITY",
+      title: "New Team Account Created",
+      description: `${newUser.fullName} (${newUser.email}) registered under ${newUser.department}. Initial workspace credentials established.`,
+      actorEmail: newUser.email,
+      targetResource: `/users/${newUser.id}`,
+      ipAddress,
+      userAgent,
     });
 
     const res = NextResponse.json({
@@ -106,7 +171,8 @@ export async function POST(req: NextRequest) {
         email: newUser.email,
         fullName: newUser.fullName,
         role: newUser.role,
-        twoFactorEnabled: true,
+        department: newUser.department,
+        twoFactorEnabled,
       },
       recoveryCodes,
     });
@@ -129,4 +195,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-
