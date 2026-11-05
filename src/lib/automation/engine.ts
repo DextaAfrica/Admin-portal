@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/email/dispatcher";
 import { logAuditEvent } from "@/lib/auth/audit";
+import crypto from "crypto";
 
 const db = prisma as any;
 
@@ -15,6 +16,7 @@ export async function ensureDefaultAutomationRules(): Promise<void> {
     await db.workflowAutomationRule.createMany({
       data: [
         {
+          id: crypto.randomUUID(),
           name: "Inter-Department Approval Auto-Dispatch & Routing",
           triggerEvent: "APPROVAL_CREATED",
           conditions: JSON.stringify({ priority: ["NORMAL", "HIGH", "URGENT"] }),
@@ -24,6 +26,7 @@ export async function ensureDefaultAutomationRules(): Promise<void> {
           lastTriggeredAt: new Date(),
         },
         {
+          id: crypto.randomUUID(),
           name: "HR to Operations Milestone Clearance Trigger",
           triggerEvent: "APPROVAL_GRANTED",
           conditions: JSON.stringify({ category: ["PROCUREMENT_LOGISTICS", "CONTRACTOR_CLEARANCE"] }),
@@ -33,6 +36,7 @@ export async function ensureDefaultAutomationRules(): Promise<void> {
           lastTriggeredAt: new Date(),
         },
         {
+          id: crypto.randomUUID(),
           name: "CEO Executive Threshold Watchdog (Amount > $25,000)",
           triggerEvent: "APPROVAL_CREATED",
           conditions: JSON.stringify({ amountMin: 25000 }),
@@ -42,6 +46,7 @@ export async function ensureDefaultAutomationRules(): Promise<void> {
           lastTriggeredAt: new Date(),
         },
         {
+          id: crypto.randomUUID(),
           name: "Automated Contractor & Disbursement Settlement",
           triggerEvent: "APPROVAL_GRANTED",
           conditions: JSON.stringify({ hasAmount: true }),
@@ -67,6 +72,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
       await db.financialTransaction.createMany({
         data: [
           {
+            id: crypto.randomUUID(),
             reference: "TXN-2026-8801",
             type: "CAPITAL_INFLOW",
             title: "Series A Sovereign Capital Tranche",
@@ -81,6 +87,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
             transactionDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
           },
           {
+            id: crypto.randomUUID(),
             reference: "TXN-2026-8802",
             type: "PROJECT_DISBURSEMENT",
             title: "Eko Atlantic Horizon Tower - Foundation Concrete Procurement",
@@ -95,6 +102,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
             transactionDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
           },
           {
+            id: crypto.randomUUID(),
             reference: "TXN-2026-8803",
             type: "CONTRACTOR_PAYOUT",
             title: "Structural Geotechnical Survey Milestone #2",
@@ -109,6 +117,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
             transactionDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
           },
           {
+            id: crypto.randomUUID(),
             reference: "TXN-2026-8804",
             type: "PAYROLL",
             title: "Executive & Engineering Fleet Compensation (Bi-Weekly)",
@@ -123,6 +132,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
             transactionDate: new Date(Date.now() - 12 * 60 * 60 * 1000),
           },
           {
+            id: crypto.randomUUID(),
             reference: "TXN-2026-8805",
             type: "PROJECT_DISBURSEMENT",
             title: "Site Power Generation & Solar Inverter Microgrid",
@@ -145,6 +155,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
       await db.interDeptApproval.createMany({
         data: [
           {
+            id: crypto.randomUUID(),
             ticketNumber: "APR-2026-1001",
             title: "On-Site Engineering Clearance for Coastal Tower 4",
             description: "HR requesting Operations clearance for 6 structural inspectors arriving Monday.",
@@ -162,6 +173,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
             decidedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
           },
           {
+            id: crypto.randomUUID(),
             ticketNumber: "APR-2026-1002",
             title: "Heavy Equipment Excavator Lease Authorization",
             description: "Operations requesting Treasury & CEO release for 3 CAT Excavators for Zone B.",
@@ -176,6 +188,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
             currency: "USD",
           },
           {
+            id: crypto.randomUUID(),
             ticketNumber: "APR-2026-1003",
             title: "Senior BIM Civil Architect Headcount Authorization",
             description: "HR requesting Executive clearance to extend offer for Lead Coastal Structural Engineer.",
@@ -198,6 +211,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
       await db.dashboardNotification.createMany({
         data: [
           {
+            id: crypto.randomUUID(),
             department: "OPERATIONS",
             title: "New Approval Request from HR",
             message: "Sadia (HR) submitted an On-Site Engineering Clearance request (APR-2026-1001).",
@@ -206,6 +220,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
             isRead: false,
           },
           {
+            id: crypto.randomUUID(),
             department: "EXECUTIVE",
             title: "High-Value Capital Deployment Pending",
             message: "Operations requested $45,000 for Heavy Excavator Lease Authorization (APR-2026-1002).",
@@ -214,6 +229,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
             isRead: false,
           },
           {
+            id: crypto.randomUUID(),
             department: "ALL",
             title: "Automated Treasury Settlement Completed",
             message: "Transaction TXN-2026-8802 for $185,000 successfully settled to Lafarge Holcim Africa.",
