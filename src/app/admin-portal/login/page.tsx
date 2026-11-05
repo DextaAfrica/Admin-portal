@@ -10,6 +10,7 @@ import {
   Terminal,
   ArrowRight,
   ArrowLeft,
+  Home,
   AlertCircle,
   KeyRound,
   Fingerprint,
@@ -149,8 +150,8 @@ export default function AdminPortalLoginPage() {
             href={landingPath}
             className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-[#ED2618] dark:hover:text-white transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Systems Landing</span>
+            <Home className="h-4 w-4" />
+            <span>Home</span>
           </Link>
 
           <div className="flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">
@@ -164,7 +165,7 @@ export default function AdminPortalLoginPage() {
             href={registerPath}
             className="text-xs font-bold text-[#ED2618] hover:underline"
           >
-            Provision Account &rarr;
+            Create Account &rarr;
           </Link>
         </div>
       </header>
@@ -264,7 +265,7 @@ export default function AdminPortalLoginPage() {
             <div>
               Need systems authorization?{" "}
               <Link href={registerPath} className="font-bold text-[#ED2618] hover:underline">
-                Provision / Activate IT Key &rarr;
+                Create Account / Activate Key &rarr;
               </Link>
             </div>
             <div>

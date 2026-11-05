@@ -129,7 +129,7 @@ export function DepartmentDashboardView({
               Department Workflow &amp; Analytics
             </span>
             {isExecutive && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#ED2618] bg-red-500/10 px-2 py-0.5 rounded-full border border-red-500/20">
                 <Crown className="h-3 w-3" />
                 Executive Access
               </span>
@@ -157,7 +157,7 @@ export function DepartmentDashboardView({
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
-            <Crown className="h-3.5 w-3.5 text-amber-400" />
+            <Crown className="h-3.5 w-3.5 text-[#ED2618]" />
             <span>MD / CEO Command</span>
           </button>
 
@@ -166,7 +166,7 @@ export function DepartmentDashboardView({
             onClick={() => setActiveTab("operations")}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
               activeTab === "operations"
-                ? "bg-amber-500 text-slate-950 shadow-sm"
+                ? "bg-[#ED2618] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
             }`}
           >
@@ -213,7 +213,7 @@ export function DepartmentDashboardView({
               <StatCard
                 title="Gross Capital Pipeline"
                 value={formatCurrency(executiveMetrics.grossPipelineValue)}
-                icon={<Briefcase className="h-5 w-5 text-amber-500" />}
+                icon={<Briefcase className="h-5 w-5 text-[#ED2618]" />}
                 trend={{
                   value: `${executiveMetrics.totalDeals} In-Flight Deals`,
                   isPositive: true,
@@ -296,7 +296,7 @@ export function DepartmentDashboardView({
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
                   Institutional Capital Deals
                 </h3>
-                <Link href="/crm" className="text-xs font-bold text-amber-500 hover:underline">
+                <Link href="/crm" className="text-xs font-bold text-[#ED2618] hover:underline">
                   View All &rarr;
                 </Link>
               </div>
@@ -318,7 +318,7 @@ export function DepartmentDashboardView({
                         <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                           {deal.title}
                         </span>
-                        <span className="text-xs font-mono font-bold text-amber-500">
+                        <span className="text-xs font-mono font-bold text-[#ED2618]">
                           {formatCurrency(deal.value)}
                         </span>
                       </div>
@@ -344,7 +344,7 @@ export function DepartmentDashboardView({
             <StatCard
               title="Real Estate Developments"
               value={operationsMetrics.developmentsCount}
-              icon={<Building2 className="h-5 w-5 text-amber-500" />}
+              icon={<Building2 className="h-5 w-5 text-[#ED2618]" />}
               trend={{
                 value: "Active Portfolio",
                 isPositive: true,
@@ -388,9 +388,9 @@ export function DepartmentDashboardView({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Link
                   href="/portfolio"
-                  className="p-4 rounded-xl border border-slate-200/80 dark:border-white/10 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all block"
+                  className="p-4 rounded-xl border border-slate-200/80 dark:border-white/10 hover:border-red-500/50 hover:bg-red-500/5 transition-all block"
                 >
-                  <Building2 className="h-5 w-5 text-amber-500 mb-2" />
+                  <Building2 className="h-5 w-5 text-[#ED2618] mb-2" />
                   <p className="text-xs font-bold text-slate-900 dark:text-white">Landmark Projects</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">Manage portfolio assets and engineering updates.</p>
                 </Link>
@@ -497,7 +497,7 @@ export function DepartmentDashboardView({
             <StatCard
               title="Closing Escrow Phase"
               value={formatCurrency(financeMetrics.closingValue)}
-              icon={<Clock className="h-5 w-5 text-amber-500" />}
+              icon={<Clock className="h-5 w-5 text-rose-500" />}
               trend={{
                 value: "Due Diligence Stage",
                 isPositive: true,
@@ -622,7 +622,7 @@ export function DepartmentDashboardView({
             <StatCard
               title="Storage Vault Quota"
               value={formatBytes(itMetrics.totalStorageBytes)}
-              icon={<HardDrive className="h-5 w-5 text-amber-500" />}
+              icon={<HardDrive className="h-5 w-5 text-[#ED2618]" />}
               trend={{
                 value: `${itMetrics.storagePercent}% Quota Used`,
                 isPositive: itMetrics.storagePercent < 80,
@@ -667,9 +667,9 @@ export function DepartmentDashboardView({
 
                 <Link
                   href="/endpoints"
-                  className="p-4 rounded-xl border border-slate-200/80 dark:border-white/10 hover:border-amber-500/50 hover:bg-amber-500/5 transition-all block"
+                  className="p-4 rounded-xl border border-slate-200/80 dark:border-white/10 hover:border-red-500/50 hover:bg-red-500/5 transition-all block"
                 >
-                  <Globe className="h-5 w-5 text-amber-500 mb-2" />
+                  <Globe className="h-5 w-5 text-[#ED2618] mb-2" />
                   <p className="text-xs font-bold text-slate-900 dark:text-white">API Gateways</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">Ping service endpoints &amp; verify latency.</p>
                 </Link>

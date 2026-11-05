@@ -12,6 +12,7 @@ import {
   User,
   ArrowRight,
   ArrowLeft,
+  Home,
   AlertCircle,
   CheckCircle2,
   Cpu,
@@ -151,7 +152,7 @@ export default function AdminPortalRegisterPage() {
         return;
       }
 
-      toastSuccess("Systems Account Provisioned", "Redirecting to console...");
+      toastSuccess("Systems Account Created", "Redirecting to console...");
       router.push("/dashboard");
       router.refresh();
     } catch {
@@ -216,8 +217,8 @@ export default function AdminPortalRegisterPage() {
             href={landingPath}
             className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-[#ED2618] dark:hover:text-white transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Systems Landing</span>
+            <Home className="h-4 w-4" />
+            <span>Home</span>
           </Link>
 
           <div className="flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">
@@ -231,7 +232,7 @@ export default function AdminPortalRegisterPage() {
             href={loginPath}
             className="text-xs font-bold text-[#ED2618] hover:underline"
           >
-            Already authenticated? Sign In &rarr;
+            Already have an account? Sign In &rarr;
           </Link>
         </div>
       </header>
@@ -244,15 +245,15 @@ export default function AdminPortalRegisterPage() {
               <DextaLogo className="h-9 w-auto" />
             </Link>
             <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1 text-[11px] font-bold text-[#ED2618] dark:text-red-400">
-              <Terminal className="h-3.5 w-3.5" />
-              <span>Systems Identity Provisioning</span>
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Systems Account Registration</span>
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                 Systems &amp; Web Infrastructure Access
               </h1>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                Activate an IT-issued cryptographic key, provision systems engineering credentials, or submit an access ticket.
+                Activate an IT-issued access key, create your systems administrator account, or submit an access request.
               </p>
             </div>
           </div>
@@ -279,7 +280,7 @@ export default function AdminPortalRegisterPage() {
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              Direct Provision
+              Create Account
             </button>
             <button
               type="button"
@@ -290,7 +291,7 @@ export default function AdminPortalRegisterPage() {
                   : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
               }`}
             >
-              Request Ticket
+              Request Access
             </button>
           </div>
 
@@ -506,7 +507,7 @@ export default function AdminPortalRegisterPage() {
                 disabled={isDirectRegistering}
                 className="btn-crimson-exec w-full h-12 rounded-xl text-sm font-bold shadow-lg shadow-red-500/25 hover:shadow-red-500/40 cursor-pointer disabled:opacity-50 mt-2"
               >
-                {isDirectRegistering ? "Provisioning..." : "Provision Systems Account"}
+                {isDirectRegistering ? "Creating Account..." : "Create Systems Account"}
               </button>
             </form>
           )}
@@ -576,7 +577,7 @@ export default function AdminPortalRegisterPage() {
                     disabled={isRequesting}
                     className="btn-crimson-exec w-full h-12 rounded-xl text-sm font-bold shadow-lg shadow-red-500/25 hover:shadow-red-500/40 cursor-pointer disabled:opacity-50"
                   >
-                    {isRequesting ? "Submitting Ticket..." : "Submit IT Provisioning Ticket"}
+                    {isRequesting ? "Submitting Request..." : "Submit Access Request"}
                   </button>
                 </form>
               )}

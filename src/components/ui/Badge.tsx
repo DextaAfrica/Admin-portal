@@ -14,7 +14,7 @@ const badgeVariants = cva(
         success:
           "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-500/20",
         warning:
-          "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200/80 dark:border-amber-500/20",
+          "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200/80 dark:border-red-500/20",
         danger:
           "bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200/80 dark:border-red-500/20",
         outline:
@@ -38,7 +38,7 @@ export function Badge({ className, variant, pulse = false, children, ...props }:
     default: "bg-slate-400",
     crimson: "bg-rose-500",
     success: "bg-emerald-500",
-    warning: "bg-amber-500",
+    warning: "bg-red-500",
     danger: "bg-red-500",
     outline: "bg-slate-400",
   }[variant || "default"];

@@ -13,6 +13,7 @@ import {
   Phone,
   ArrowRight,
   ArrowLeft,
+  Home,
   AlertCircle,
   ShieldCheck,
   CheckCircle2,
@@ -118,8 +119,8 @@ export default function OperationsRegisterPage() {
             href={landingPath}
             className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-[#ED2618] dark:hover:text-white transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Operations Landing</span>
+            <Home className="h-4 w-4" />
+            <span>Home</span>
           </Link>
 
           <div className="flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">
@@ -322,7 +323,7 @@ export default function OperationsRegisterPage() {
               {isLoading ? (
                 <div className="flex items-center gap-2">
                   <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  <span>Provisioning Account...</span>
+                  <span>Creating Profile...</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">

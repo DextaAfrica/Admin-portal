@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   HardHat,
   ArrowLeft,
+  Home,
   AlertCircle,
   KeyRound,
   Sparkles,
@@ -151,8 +152,8 @@ export default function OperationsLoginPage() {
             href={landingPath}
             className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-[#ED2618] dark:hover:text-white transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Operations Landing</span>
+            <Home className="h-4 w-4" />
+            <span>Home</span>
           </Link>
 
           <div className="flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">

@@ -208,7 +208,7 @@ export default async function DashboardPage() {
             <Button
               size="sm"
               variant="secondary"
-              leftIcon={<Briefcase className="h-4 w-4 text-amber-500" />}
+              leftIcon={<Briefcase className="h-4 w-4 text-[#ED2618]" />}
             >
               Strategic CRM
             </Button>

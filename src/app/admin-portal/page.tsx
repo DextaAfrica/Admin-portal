@@ -10,16 +10,18 @@ import {
   ArrowLeft,
   Sun,
   Moon,
-  LogIn,
   KeyRound,
-  Lock,
   ShieldCheck,
-  Terminal,
-  Server,
-  HardDrive,
-  Cpu,
+  Mail,
+  Lock,
+  AlertCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
+import { OTPInput } from "@/components/ui/OTPInput";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
 
 interface PortraitSlide {
@@ -67,10 +69,30 @@ const SYSTEMS_PORTRAITS: PortraitSlide[] = [
 
 export default function AdminSystemsPortalLandingPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const { error: toastError, success: toastSuccess } = useToast();
+
   const [activeSlide, setActiveSlide] = React.useState(0);
   const [zoomToggle, setZoomToggle] = React.useState(false);
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
+
+  // Direct In-Hero Login State
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [errorMessage, setErrorMessage] = React.useState("");
+
+  // OTP Verification Modal
+  const [otpModalOpen, setOtpModalOpen] = React.useState(false);
+  const [pendingUserId, setPendingUserId] = React.useState("");
+  const [pendingUserName, setPendingUserName] = React.useState("");
+  const [isEmailOtp, setIsEmailOtp] = React.useState(false);
+  const [otpCode, setOtpCode] = React.useState("");
+  const [recoveryCode, setRecoveryCode] = React.useState("");
+  const [useRecoveryCode, setUseRecoveryCode] = React.useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = React.useState(false);
+  const [otpError, setOtpError] = React.useState("");
 
   React.useEffect(() => {
     setMounted(true);
@@ -97,8 +119,97 @@ export default function AdminSystemsPortalLandingPage() {
   };
 
   const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
-  const loginPath = isSubdomain ? "/login" : "/admin-portal/login";
   const registerPath = isSubdomain ? "/register" : "/admin-portal/register";
+
+  const handleDirectLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setErrorMessage("Please enter both admin email and password.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMessage(data.error || "Authentication failed");
+        toastError("Authentication Failed", data.error || "Invalid credentials");
+        setIsLoading(false);
+        return;
+      }
+
+      if (data.requiresMfa) {
+        setPendingUserId(data.userId);
+        setPendingUserName(data.fullName || email);
+        setIsEmailOtp(Boolean(data.emailOtpSent));
+        setOtpCode("");
+        setRecoveryCode("");
+        setOtpError("");
+        setUseRecoveryCode(false);
+        setOtpModalOpen(true);
+        setIsLoading(false);
+        toastSuccess(
+          "Verification Required",
+          data.emailOtpSent
+            ? "A 6-digit verification code has been dispatched to your email."
+            : "Please enter your 6-digit code from your authenticator app."
+        );
+        return;
+      }
+
+      toastSuccess("Access Authorized", "Authenticated to Dexta Africa Systems Command.");
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setErrorMessage("Connection error while accessing authentication service.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (submittedCode?: string) => {
+    const codeToVerify = submittedCode || (useRecoveryCode ? recoveryCode : otpCode);
+    if (!codeToVerify || codeToVerify.length < 6) return;
+
+    setIsVerifyingOtp(true);
+    setOtpError("");
+
+    try {
+      const res = await fetch("/api/auth/mfa-challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: pendingUserId,
+          code: codeToVerify,
+          isRecoveryCode: useRecoveryCode,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setOtpError(data.error || "Verification failed");
+        setIsVerifyingOtp(false);
+        return;
+      }
+
+      setOtpModalOpen(false);
+      toastSuccess("Systems Authenticated", "Welcome to Dexta Africa Systems Command.");
+      router.push("/dashboard");
+      router.refresh();
+    } catch {
+      setOtpError("Network error during verification.");
+      setIsVerifyingOtp(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090B] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white overflow-x-hidden transition-colors duration-200">
@@ -134,36 +245,24 @@ export default function AdminSystemsPortalLandingPage() {
               </button>
             )}
 
-            {/* Primary Authenticate Button */}
-            <button
-              type="button"
-              onClick={() => router.push(loginPath)}
-              className="btn-crimson-exec h-9 sm:h-10 rounded-xl px-4 sm:px-6 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <LogIn className="h-3.5 w-3.5 shrink-0" />
-              <span>Authenticate</span>
-            </button>
-
-            {/* Secondary Action: Activate IT Key */}
-            <button
-              type="button"
-              onClick={() => router.push(registerPath)}
+            {/* Secondary Action: Create Account / Activate Key */}
+            <Link
+              href={registerPath}
               className="btn-fill-up h-9 sm:h-10 rounded-xl px-4 sm:px-6 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
               <KeyRound className="h-3.5 w-3.5 shrink-0 text-[#ED2618] transition-colors" />
-              <span className="hidden sm:inline">Provision Access</span>
-              <span className="inline sm:hidden">Activate</span>
-            </button>
+              <span className="hidden sm:inline">Create Account</span>
+              <span className="inline sm:hidden">Register</span>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Main Hero Section */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-20 flex items-center">
-        {/* Hero Split Section */}
-        <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          {/* Left Column: Focused Executive Systems Introduction */}
-          <div className="lg:col-span-6 space-y-6 animate-fade-in">
+      {/* Main Single-Viewport Hero Section (Direct Login + Slant-Curvy Visual) */}
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-10 py-8 sm:py-12 flex items-center">
+        <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+          {/* Left Column: Direct Systems IT Command Authentication */}
+          <div className="lg:col-span-6 space-y-5 animate-fade-in">
             <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1.5">
               <span className="h-2 w-2 rounded-full bg-[#ED2618]" />
               <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400 whitespace-nowrap">
@@ -171,43 +270,117 @@ export default function AdminSystemsPortalLandingPage() {
               </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
-              Zero-Trust Infrastructure, Security &amp; Core Web Gateways.
-            </h1>
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-[38px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.15]">
+                Systems Command Portal
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 leading-relaxed max-w-lg">
+                Direct administrative console governing web editorial schemas, AWS S3 storage vaults,
+                security policy intrusion shields, and cryptographic access key distribution.
+              </p>
+            </div>
 
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
-              The centralized administrative environment governing enterprise access policies,
-              cryptographic key conduits, AWS S3 storage vaults, and high-availability core CMS schemas under continuous watchdog surveillance.
-            </p>
+            {/* In-Hero Authentication Card */}
+            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-white/10 bg-white/95 dark:bg-[#0C1017]/95 p-5 sm:p-7 shadow-xl backdrop-blur-xl relative space-y-4">
+              {errorMessage && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-500 dark:text-red-400 animate-fade-in">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{errorMessage}</span>
+                </div>
+              )}
 
-            {/* Action Bar */}
-            <div className="pt-2">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5">
+              <form onSubmit={handleDirectLogin} className="space-y-3.5">
+                {/* Admin Email */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Systems Admin Email
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="email"
+                      required
+                      placeholder="admin@dextafrica.org"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full h-11 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/50 pl-10 pr-4 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#ED2618] focus:ring-1 focus:ring-[#ED2618] transition-all"
+                    />
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  </div>
+                </div>
+
+                {/* Master Admin Password */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      Master Password
+                    </label>
+                    <Link
+                      href={registerPath}
+                      className="text-[11px] font-semibold text-[#ED2618] hover:underline"
+                    >
+                      Activate Key?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="Enter IT master password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full h-11 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/50 pl-10 pr-10 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#ED2618] focus:ring-1 focus:ring-[#ED2618] transition-all"
+                    />
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Primary Authenticate Button */}
                 <button
-                  type="button"
-                  onClick={() => router.push(loginPath)}
-                  className="btn-crimson-exec h-12 rounded-xl px-7 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer shadow-lg shadow-red-500/20 hover:shadow-red-500/35"
+                  type="submit"
+                  disabled={isLoading}
+                  className="btn-crimson-exec w-full h-11 rounded-xl text-xs sm:text-sm font-bold justify-center cursor-pointer shadow-lg shadow-red-500/20 hover:shadow-red-500/35 disabled:opacity-50"
                 >
-                  <span className="whitespace-nowrap">Sign In to Systems Command</span>
-                  <ArrowRight className="h-4 w-4 shrink-0" />
+                  {isLoading ? (
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>Authenticating...</span>
+                    </div>
+                  ) : (
+                    <>
+                      <span>Authenticate to Systems Command</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </button>
+              </form>
 
-                <button
-                  type="button"
-                  onClick={() => router.push(registerPath)}
-                  className="btn-fill-up h-12 rounded-xl px-7 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer"
+              {/* Direct Link to Account Creation / Key Activation */}
+              <div className="pt-2 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs">
+                <span className="text-slate-500 dark:text-slate-400">
+                  Have an IT activation key?
+                </span>
+                <Link
+                  href={registerPath}
+                  className="font-bold text-[#ED2618] hover:underline inline-flex items-center gap-1"
                 >
-                  <KeyRound className="h-4 w-4 shrink-0 text-[#ED2618] transition-colors" />
-                  <span className="whitespace-nowrap">Provision / Activate Key</span>
-                </button>
+                  <span>Activate Key / Sign Up</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
               </div>
             </div>
 
-            {/* Security Notice */}
-            <div className="pt-2 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-              <Lock className="h-3.5 w-3.5 text-[#ED2618] shrink-0" />
+            {/* Zero-Trust Notice */}
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 pt-1">
+              <ShieldCheck className="h-3.5 w-3.5 text-[#ED2618] shrink-0" />
               <span>
-                Systems access is restricted to authorized IT administrators with hardware 2FA and cryptographic access policies.
+                NIST-Aligned Password Entropy &bull; Mandatory Hardware 2FA &bull; Zero-Trust Protocol
               </span>
             </div>
           </div>
@@ -294,7 +467,7 @@ export default function AdminSystemsPortalLandingPage() {
       </main>
 
       {/* Clean Minimalist Footer */}
-      <footer className="border-t border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#09090B] py-6 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#09090B] py-5 text-center text-xs text-slate-500">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <DextaLogo className="h-5 w-auto" />
@@ -305,6 +478,96 @@ export default function AdminSystemsPortalLandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* Two-Factor Verification Modal */}
+      <Modal
+        isOpen={otpModalOpen}
+        onClose={() => setOtpModalOpen(false)}
+        title="Systems Two-Factor Verification"
+        maxWidth="md"
+      >
+        <div className="space-y-6 pt-2">
+          <div className="flex flex-col items-center text-center space-y-2">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500/10 text-[#ED2618] border border-red-500/20">
+              <ShieldCheck className="h-6 w-6" />
+            </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm">
+              {isEmailOtp
+                ? `A 6-digit one-time passcode was dispatched to your registered address for ${pendingUserName}.`
+                : `Enter the 6-digit security code generated by your corporate authenticator device.`}
+            </p>
+          </div>
+
+          {otpError && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-500 animate-fade-in">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{otpError}</span>
+            </div>
+          )}
+
+          {!useRecoveryCode ? (
+            <div className="space-y-4">
+              <OTPInput
+                length={6}
+                value={otpCode}
+                onChange={setOtpCode}
+                onComplete={(val) => handleVerifyOtp(val)}
+                error={Boolean(otpError)}
+              />
+              <button
+                type="button"
+                onClick={() => setUseRecoveryCode(true)}
+                className="w-full text-center text-xs font-semibold text-slate-500 hover:text-[#ED2618] transition-colors"
+              >
+                Use a backup recovery code instead
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  8-Character Backup Recovery Code
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={recoveryCode}
+                    onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
+                    placeholder="e.g. A1B2-C3D4"
+                    className="w-full h-11 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/50 pl-10 pr-4 text-xs sm:text-sm font-mono tracking-widest uppercase focus:outline-none focus:border-[#ED2618]"
+                  />
+                  <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setUseRecoveryCode(false)}
+                className="w-full text-center text-xs font-semibold text-slate-500 hover:text-[#ED2618] transition-colors"
+              >
+                Return to 6-digit OTP verification
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-200 dark:border-white/10">
+            <button
+              type="button"
+              onClick={() => setOtpModalOpen(false)}
+              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => handleVerifyOtp()}
+              disabled={isVerifyingOtp}
+              className="btn-crimson-exec px-5 py-2 rounded-xl text-xs font-bold"
+            >
+              {isVerifyingOtp ? "Verifying..." : "Verify & Enter"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
