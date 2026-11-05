@@ -359,7 +359,7 @@ export default function ItGovernancePage() {
   });
 
   return (
-    <div className="space-y-8 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="w-full min-w-0 space-y-8 animate-fade-in">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-white/[0.08] pb-6">
         <div>
@@ -378,7 +378,7 @@ export default function ItGovernancePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <Button
             variant="outline"
             size="sm"
@@ -623,7 +623,7 @@ export default function ItGovernancePage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full min-w-[750px] text-left border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 dark:border-white/[0.06] bg-slate-50/50 dark:bg-white/[0.02] text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       <th className="py-3.5 px-4">Ticket</th>
@@ -966,7 +966,7 @@ export default function ItGovernancePage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full min-w-[750px] text-left border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 dark:border-white/[0.06] bg-slate-50/50 dark:bg-white/[0.02] text-xs font-semibold text-slate-500 uppercase tracking-wider">
                       <th className="py-3.5 px-4">Severity</th>
@@ -1058,7 +1058,7 @@ export default function ItGovernancePage() {
       {activeTab === "sessions" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 shadow-sm space-y-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
                 <EyeOff className="h-5 w-5" />
               </div>
@@ -1093,7 +1093,7 @@ export default function ItGovernancePage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 shadow-sm space-y-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
                 <Fingerprint className="h-5 w-5" />
               </div>

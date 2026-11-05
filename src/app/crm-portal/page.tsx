@@ -58,7 +58,7 @@ export default function CrmLandingPortalPage() {
 
       if (!res.ok) {
         setErrorMessage(data.error || "Authentication failed. Verify credentials.");
-        toastError(data.error || "Sign in failed");
+        toastError("Authentication Issue", data.error || "Sign in failed");
         return;
       }
 
@@ -106,13 +106,6 @@ export default function CrmLandingPortalPage() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="/crm"
-              className="text-xs font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
-            >
-              <span>Pipeline Dashboard</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-            <Link
               href="/login"
               className="text-xs font-semibold px-4 py-2 rounded-full border border-white/20 bg-white/5 hover:bg-white/10 text-white transition-all"
             >
@@ -129,12 +122,12 @@ export default function CrmLandingPortalPage() {
           <div className="lg:col-span-7 space-y-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-semibold">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Institutional Real Estate & Private Equity CRM</span>
+              <span>Institutional Real Estate &amp; Private Equity CRM</span>
             </div>
 
             <div className="space-y-4">
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.08]">
-                Precision Capital & Landmark Deal Governance.
+                Precision Capital &amp; Landmark Deal Governance.
               </h1>
               <p className="text-base sm:text-lg text-slate-400 leading-relaxed max-w-2xl">
                 Dexta Africa&apos;s dedicated CRM suite unifies institutional investor relationships, milestone-driven escrow agreements, and multi-million dollar real estate pipelines into an isolated, zero-spreadsheet vault.
@@ -194,7 +187,7 @@ export default function CrmLandingPortalPage() {
                     CRM Executive Entrance
                   </h2>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    Authorized Investor & Deal Lead Sign In
+                    Authorized Investor &amp; Deal Lead Sign In
                   </p>
                 </div>
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
@@ -265,7 +258,7 @@ export default function CrmLandingPortalPage() {
                     href="/register"
                     className="hover:text-slate-300 transition-colors"
                   >
-                    Activate IT Provisioned Account →
+                    Register / Activate Key &rarr;
                   </Link>
                   <Link
                     href="/login"
@@ -282,9 +275,8 @@ export default function CrmLandingPortalPage() {
 
       {/* Footer */}
       <footer className="border-t border-white/[0.08] bg-black/80 py-8 relative z-10 text-center text-xs text-slate-500">
-        <p>© 2026 Dexta Africa Operations Portal. Confidential & Proprietary Real Estate Architecture.</p>
+        <p>&copy; 2026 Dexta Africa Operations Portal. Confidential &amp; Proprietary Real Estate Architecture.</p>
       </footer>
     </div>
   );
 }
-

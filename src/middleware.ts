@@ -8,12 +8,12 @@ export function middleware(req: NextRequest) {
 
   const isPublicRoute =
     pathname === "/" ||
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/mfa-challenge" ||
-    pathname.startsWith("/api/auth/login") ||
-    pathname.startsWith("/api/auth/register") ||
-    pathname.startsWith("/api/auth/mfa-challenge");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/crm-portal") ||
+    pathname.startsWith("/setup/password") ||
+    pathname.startsWith("/mfa-challenge") ||
+    pathname.startsWith("/api/auth");
 
   const isStaticOrApi =
     pathname.startsWith("/_next") ||
