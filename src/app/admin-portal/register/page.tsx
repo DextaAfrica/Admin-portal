@@ -239,7 +239,7 @@ export default function AdminPortalRegisterPage() {
 
       {/* Main Container */}
       <main className="relative z-10 flex-1 flex items-center justify-center p-4 sm:p-6 py-10">
-        <div className="w-full max-w-2xl rounded-3xl border border-slate-200/90 dark:border-white/10 bg-white/95 dark:bg-[#0C1017]/95 p-6 sm:p-10 shadow-2xl backdrop-blur-2xl relative overflow-hidden space-y-6">
+        <div className="w-full max-w-2xl rounded-3xl border border-slate-200/90 dark:border-white/[0.14] bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#171A26] dark:to-[#11141E] p-6 sm:p-10 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08] backdrop-blur-2xl relative overflow-hidden space-y-6">
           <div className="flex flex-col items-center text-center space-y-3">
             <Link href={landingPath}>
               <DextaLogo className="h-9 w-auto" />

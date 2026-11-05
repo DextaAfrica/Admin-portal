@@ -214,9 +214,15 @@ export default function OperationsLandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090B] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white overflow-x-hidden transition-colors duration-200">
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#070A0F] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white overflow-x-hidden transition-colors duration-200 relative">
+      {/* Background Ambient Radial Highlights for Dark Mode Depth */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/4 w-[650px] h-[380px] bg-red-600/[0.06] blur-[160px] rounded-full dark:opacity-100 opacity-20" />
+        <div className="absolute top-1/2 -right-32 w-[550px] h-[350px] bg-slate-700/[0.06] blur-[150px] rounded-full dark:opacity-100 opacity-20" />
+      </div>
+
       {/* Top Navigation Bar - Minimalist, Professional, Clean Header */}
-      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#09090B]/95 backdrop-blur-md">
+      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.12] bg-white/95 dark:bg-[#0C0F17]/95 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center shrink-0">
@@ -283,7 +289,7 @@ export default function OperationsLandingPage() {
             </div>
 
             {/* In-Hero Authentication Card */}
-            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-white/10 bg-white/95 dark:bg-[#0C1017]/95 p-5 sm:p-7 shadow-xl backdrop-blur-xl relative space-y-4">
+            <div className="rounded-2xl sm:rounded-3xl border border-slate-200/90 dark:border-white/[0.14] bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#171A26] dark:to-[#11141E] p-6 sm:p-8 shadow-xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08] backdrop-blur-xl relative space-y-4">
               {errorMessage && (
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-500 dark:text-red-400 animate-fade-in">
                   <AlertCircle className="h-4 w-4 shrink-0" />
@@ -291,10 +297,10 @@ export default function OperationsLandingPage() {
                 </div>
               )}
 
-              <form onSubmit={handleDirectLogin} className="space-y-3.5">
+              <form onSubmit={handleDirectLogin} className="space-y-4">
                 {/* Corporate Work Email */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                     Corporate Work Email
                   </label>
                   <div className="relative">
@@ -304,7 +310,7 @@ export default function OperationsLandingPage() {
                       placeholder="name@dextaafrica.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full h-11 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/50 pl-10 pr-4 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#ED2618] focus:ring-1 focus:ring-[#ED2618] transition-all"
+                      className="w-full h-11 rounded-xl border border-slate-200 dark:border-white/[0.12] bg-slate-50 dark:bg-[#0A0D15] pl-10 pr-4 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#ED2618] focus:ring-1 focus:ring-[#ED2618] transition-all"
                     />
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                   </div>
@@ -312,7 +318,7 @@ export default function OperationsLandingPage() {
 
                 {/* Workspace Password */}
                 <div>
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Workspace Password
                     </label>
@@ -330,7 +336,7 @@ export default function OperationsLandingPage() {
                       placeholder="Enter operations password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full h-11 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/50 pl-10 pr-10 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#ED2618] focus:ring-1 focus:ring-[#ED2618] transition-all"
+                      className="w-full h-11 rounded-xl border border-slate-200 dark:border-white/[0.12] bg-slate-50 dark:bg-[#0A0D15] pl-10 pr-10 text-xs sm:text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#ED2618] focus:ring-1 focus:ring-[#ED2618] transition-all"
                     />
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <button
@@ -389,7 +395,7 @@ export default function OperationsLandingPage() {
 
           {/* Right Column: Cinematic Slant-Curvy Showcase (Pure Red & Slate Palette) */}
           <div className="lg:col-span-6 animate-fade-in delay-100">
-            <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden rounded-[2.5rem] rounded-tr-[5.5rem] rounded-bl-[4.5rem] border border-slate-200/90 dark:border-white/10 bg-slate-950 shadow-2xl">
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden rounded-[2.5rem] rounded-tr-[5.5rem] rounded-bl-[4.5rem] border border-slate-200/90 dark:border-white/[0.16] bg-slate-950 shadow-2xl dark:shadow-[0_24px_60px_rgba(0,0,0,0.85)] dark:ring-1 dark:ring-white/[0.1]">
               {/* Slant-Curvy Architectural Accent Waves */}
               <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-bl from-red-500/20 via-transparent to-transparent rounded-bl-[100px] pointer-events-none z-20" />
               <div className="absolute bottom-0 left-0 w-36 h-36 bg-gradient-to-tr from-red-500/10 via-transparent to-transparent rounded-tr-[80px] pointer-events-none z-20" />

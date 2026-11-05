@@ -92,9 +92,15 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090B] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white overflow-x-hidden transition-colors duration-200">
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#070A0F] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white overflow-x-hidden transition-colors duration-200 relative">
+      {/* Background Ambient Radial Highlights for Dark Mode Depth */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/4 w-[650px] h-[380px] bg-red-600/[0.06] blur-[160px] rounded-full dark:opacity-100 opacity-20" />
+        <div className="absolute top-1/2 -right-32 w-[550px] h-[350px] bg-slate-700/[0.06] blur-[150px] rounded-full dark:opacity-100 opacity-20" />
+      </div>
+
       {/* Top Navigation Bar - Minimalist, Professional, Clean Header */}
-      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#09090B]/95 backdrop-blur-md">
+      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.12] bg-white/95 dark:bg-[#0C0F17]/95 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center shrink-0">
@@ -171,26 +177,29 @@ export default function LandingPage() {
             </p>
 
             {/* Direct Dual Workspace Launchers */}
-            <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Operations Portal Button */}
               <button
                 type="button"
                 onClick={() => router.push("/ops")}
-                className="group flex flex-col items-start p-4 rounded-2xl border border-red-500/30 bg-white dark:bg-[#0C1017] hover:border-[#ED2618] shadow-sm hover:shadow-lg hover:shadow-red-500/10 transition-all text-left cursor-pointer"
+                className="group flex flex-col items-start p-5 rounded-2xl border border-red-500/35 dark:border-red-500/40 bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#181C28] dark:to-[#11141E] hover:border-[#ED2618] dark:hover:border-[#ED2618] shadow-md dark:shadow-[0_12px_32px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/[0.08] hover:shadow-xl hover:shadow-red-500/10 transition-all text-left cursor-pointer relative overflow-hidden"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-[#ED2618] group-hover:bg-[#ED2618] group-hover:text-white transition-all mb-3">
-                  <Building2 className="h-4.5 w-4.5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200/60 dark:border-red-500/30 text-[#ED2618] group-hover:bg-[#ED2618] group-hover:text-white transition-all mb-3.5">
+                  <Building2 className="h-5 w-5" />
                 </div>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
-                  ops.dextaafrica.org
-                </span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors mt-0.5">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-500/15 border border-red-200/60 dark:border-red-500/30 mb-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618]" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#ED2618] dark:text-red-400">
+                    ops.dextaafrica.org
+                  </span>
+                </div>
+                <span className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors mt-0.5">
                   Operations Command Desk
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                  Landmark deliveries, field engineering, and procurement treasury.
+                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed line-clamp-2">
+                  Landmark deliveries, field engineering milestones, and procurement treasury.
                 </span>
-                <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-[#ED2618]">
+                <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-[#ED2618] group-hover:translate-x-0.5 transition-transform">
                   <span>Sign In &rarr;</span>
                 </div>
               </button>
@@ -199,21 +208,24 @@ export default function LandingPage() {
               <button
                 type="button"
                 onClick={() => router.push("/admin-portal")}
-                className="group flex flex-col items-start p-4 rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#0C1017] hover:border-[#ED2618] shadow-sm hover:shadow-lg hover:shadow-red-500/10 transition-all text-left cursor-pointer"
+                className="group flex flex-col items-start p-5 rounded-2xl border border-slate-200/90 dark:border-white/[0.14] bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#181C28] dark:to-[#11141E] hover:border-[#ED2618] dark:hover:border-[#ED2618] shadow-md dark:shadow-[0_12px_32px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/[0.08] hover:shadow-xl hover:shadow-red-500/10 transition-all text-left cursor-pointer relative overflow-hidden"
               >
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-200 group-hover:bg-[#ED2618] group-hover:text-white transition-all mb-3">
-                  <ShieldCheck className="h-4.5 w-4.5" />
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/10 border border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200 group-hover:bg-[#ED2618] group-hover:text-white transition-all mb-3.5">
+                  <ShieldCheck className="h-5 w-5" />
                 </div>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  admin.dextafrica.org
-                </span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors mt-0.5">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/10 mb-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-300" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                    admin.dextafrica.org
+                  </span>
+                </div>
+                <span className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors mt-0.5">
                   Systems &amp; IT Command
                 </span>
-                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
-                  Zero-trust IT access, AWS S3 storage vaults, and core web CMS.
+                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed line-clamp-2">
+                  Zero-trust IT access, AWS S3 storage vaults, and core web CMS schemas.
                 </span>
-                <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-[#ED2618] transition-colors">
+                <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-[#ED2618] group-hover:translate-x-0.5 transition-transform">
                   <span>Authenticate &rarr;</span>
                 </div>
               </button>
@@ -230,7 +242,7 @@ export default function LandingPage() {
 
           {/* Right Column: Cinematic Slant-Curvy Showcase (Pure Red & Slate Palette) */}
           <div className="lg:col-span-6 animate-fade-in delay-100">
-            <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden rounded-[2.5rem] rounded-tr-[5.5rem] rounded-bl-[4.5rem] border border-slate-200/90 dark:border-white/10 bg-slate-950 shadow-2xl">
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden rounded-[2.5rem] rounded-tr-[5.5rem] rounded-bl-[4.5rem] border border-slate-200/90 dark:border-white/[0.16] bg-slate-950 shadow-2xl dark:shadow-[0_24px_60px_rgba(0,0,0,0.85)] dark:ring-1 dark:ring-white/[0.1]">
               {/* Slant-Curvy Architectural Accent Waves */}
               <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-bl from-red-500/20 via-transparent to-transparent rounded-bl-[100px] pointer-events-none z-20" />
               <div className="absolute bottom-0 left-0 w-36 h-36 bg-gradient-to-tr from-red-500/10 via-transparent to-transparent rounded-tr-[80px] pointer-events-none z-20" />
