@@ -140,6 +140,70 @@ export default function ItGovernancePage() {
   const [isProvisioning, setIsProvisioning] = React.useState(false);
   const [provisionSuccessCode, setProvisionSuccessCode] = React.useState<string | null>(null);
 
+  // Inactivity Policy & Active Sessions State
+  const [inactivityTimeout, setInactivityTimeout] = React.useState<number>(15);
+  const [selectedTimeoutOption, setSelectedTimeoutOption] = React.useState<number>(15);
+  const [isSavingInactivity, setIsSavingInactivity] = React.useState(false);
+  const [liveSessions, setLiveSessions] = React.useState<any[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = React.useState(false);
+
+  const fetchInactivityPolicy = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/inactivity-policy");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.timeoutMinutes) {
+          setInactivityTimeout(data.timeoutMinutes);
+          setSelectedTimeoutOption(data.timeoutMinutes);
+        }
+      }
+    } catch {}
+  }, []);
+
+  const fetchLiveSessions = React.useCallback(async () => {
+    setIsLoadingSessions(true);
+    try {
+      const res = await fetch("/api/it/sessions");
+      if (res.ok) {
+        const data = await res.json();
+        setLiveSessions(data.sessions || []);
+      }
+    } catch {} finally {
+      setIsLoadingSessions(false);
+    }
+  }, []);
+
+  const handleSaveInactivity = async (newMinutes: number) => {
+    setIsSavingInactivity(true);
+    try {
+      const res = await fetch("/api/auth/inactivity-policy", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ timeoutMinutes: newMinutes }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update inactivity policy");
+      setInactivityTimeout(newMinutes);
+      setSelectedTimeoutOption(newMinutes);
+      toastSuccess(`Inactivity Auto-Logout updated to ${newMinutes} minutes across all portals.`);
+    } catch (err: unknown) {
+      toastError(err instanceof Error ? err.message : "Failed to update policy");
+    } finally {
+      setIsSavingInactivity(false);
+    }
+  };
+
+  const handleRevokeSession = async (sessionId: string) => {
+    try {
+      const res = await fetch(`/api/it/sessions?id=${sessionId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to revoke session");
+      toastSuccess("Session revoked immediately.");
+      fetchLiveSessions();
+    } catch (err: unknown) {
+      toastError(err instanceof Error ? err.message : "Failed to revoke session");
+    }
+  };
+
   const fetchRequests = React.useCallback(async () => {
     try {
       setIsLoading(true);
@@ -171,7 +235,16 @@ export default function ItGovernancePage() {
   React.useEffect(() => {
     fetchRequests();
     fetchAlerts();
-  }, [fetchRequests, fetchAlerts]);
+    fetchInactivityPolicy();
+    fetchLiveSessions();
+  }, [fetchRequests, fetchAlerts, fetchInactivityPolicy, fetchLiveSessions]);
+
+  React.useEffect(() => {
+    if (activeTab === "sessions") {
+      fetchLiveSessions();
+      fetchInactivityPolicy();
+    }
+  }, [activeTab, fetchLiveSessions, fetchInactivityPolicy]);
 
   // Handle Review Submission (Grant Access / Reject)
   const handleSubmitReview = async () => {
@@ -1054,69 +1127,298 @@ export default function ItGovernancePage() {
         </div>
       )}
 
-      {/* TAB 4: Zero-Dashboard Access Policy Architecture */}
+      {/* TAB 4: Enterprise Inactivity Timeout & Session Governance */}
       {activeTab === "sessions" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
-                <EyeOff className="h-5 w-5" />
+        <div className="space-y-6">
+          {/* Section 1: Inactivity Policy Control Card */}
+          <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/[0.06] pb-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 dark:bg-red-500/15 text-[#ED2618] border border-red-200 dark:border-red-500/25">
+                  <Clock className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Global Session Inactivity &amp; Auto-Logout Policy
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Enforced by backend session verification and real-time client heartbeat across all portals
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Zero-Access User Dashboard Boundary
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Strict cryptographic and architectural isolation
-                </p>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-500">Active Threshold:</span>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 px-3 py-1 text-xs font-bold text-[#ED2618] dark:text-red-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
+                  {inactivityTimeout} Minutes Inactivity
+                </span>
               </div>
             </div>
 
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              In strict accordance with Dexta Africa privacy rules, the IT department creates accounts and manages security, but **IT personnel have zero access to private user dashboards**.
-            </p>
+            {/* Inactivity Threshold Tier Options */}
+            <div className="space-y-3">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                Select Enterprise Inactivity Timeout Threshold
+              </label>
 
-            <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span><strong>No Payroll & Document Access:</strong> IT is restricted from browsing private HR staff contracts, tax returns, or executive reviews.</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {[
+                  {
+                    minutes: 5,
+                    title: "5 Minutes",
+                    badge: "High Security",
+                    desc: "Optimal for high-risk field sites & public workstations",
+                  },
+                  {
+                    minutes: 15,
+                    title: "15 Minutes",
+                    badge: "Recommended",
+                    desc: "Standard corporate policy for balance of security & productivity",
+                  },
+                  {
+                    minutes: 30,
+                    title: "30 Minutes",
+                    badge: "Extended Ops",
+                    desc: "Recommended for operations desks managing live site dispatches",
+                  },
+                  {
+                    minutes: 60,
+                    title: "60 Minutes",
+                    badge: "Supervisory",
+                    desc: "For command center wallboards and executive oversight suites",
+                  },
+                ].map((tier) => {
+                  const isSelected = selectedTimeoutOption === tier.minutes;
+                  return (
+                    <button
+                      key={tier.minutes}
+                      type="button"
+                      onClick={() => setSelectedTimeoutOption(tier.minutes)}
+                      className={`p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
+                        isSelected
+                          ? "border-[#ED2618] bg-red-50/70 dark:bg-red-500/10 ring-1 ring-[#ED2618]"
+                          : "border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/20"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-sm font-bold text-slate-900 dark:text-white">
+                          {tier.title}
+                        </span>
+                        <span
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                            isSelected
+                              ? "bg-red-200/80 dark:bg-red-500/20 text-[#ED2618] dark:text-red-300"
+                              : "bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400"
+                          }`}
+                        >
+                          {tier.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        {tier.desc}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span><strong>No Deal Memo Snooping:</strong> IT cannot view investor conversations or confidential real estate escrow memos.</span>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <ShieldCheck className="h-4 w-4 text-[#ED2618] shrink-0" />
+                <span>
+                  Includes 60-second in-app grace period countdown before auto-signing out.
+                </span>
               </div>
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                <span><strong>Automated Watchdog Violation Trigger:</strong> If an IT account attempts to inspect private user dashboards, the access attempt is blocked and immediately logged in the Policy Violations feed.</span>
-              </div>
+
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                onClick={() => handleSaveInactivity(selectedTimeoutOption)}
+                isLoading={isSavingInactivity}
+                leftIcon={<RefreshCw className="h-4 w-4" />}
+                className="bg-[#ED2618] hover:bg-[#c91e12] text-xs font-bold"
+              >
+                Save &amp; Apply Policy Across All Portals
+              </Button>
             </div>
           </div>
 
+          {/* Section 2: Live Active Sessions Monitor */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 shadow-sm space-y-4">
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                <Fingerprint className="h-5 w-5" />
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/[0.05] text-slate-700 dark:text-slate-300">
+                  <Fingerprint className="h-4 w-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Live Active User Sessions &amp; Idle Watchdog
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    {liveSessions.length} active sessions tracked across ops.dextaafrica.org and admin.dextafrica.org
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  Two-Factor Authentication & Session Guard
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Time-based OTP & Hardware Key Integration
-                </p>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={fetchLiveSessions}
+                isLoading={isLoadingSessions}
+                leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+                className="text-xs"
+              >
+                Refresh Sessions
+              </Button>
+            </div>
+
+            {liveSessions.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-500">
+                No active sessions found.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-slate-200/80 dark:border-white/[0.08]">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-white/[0.03] text-slate-500 border-b border-slate-200/80 dark:border-white/[0.08]">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">User &amp; Department</th>
+                      <th className="px-4 py-3 font-semibold">IP &amp; Device</th>
+                      <th className="px-4 py-3 font-semibold">Last Active</th>
+                      <th className="px-4 py-3 font-semibold">Inactivity Status</th>
+                      <th className="px-4 py-3 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
+                    {liveSessions.map((s) => (
+                      <tr key={s.id} className="hover:bg-slate-50/50 dark:hover:bg-white/[0.01]">
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-slate-900 dark:text-white">
+                            {s.user?.fullName || "Active User"}
+                            {s.isCurrent && (
+                              <span className="ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+                                This Device
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500">
+                            {s.user?.email} &bull; {s.user?.department || "OPERATIONS"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="font-mono text-slate-700 dark:text-slate-300">
+                            {s.ipAddress || "127.0.0.1"}
+                          </span>
+                          <p className="text-[10px] text-slate-400 truncate max-w-[200px]">
+                            {s.userAgent || "Desktop Browser"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 dark:text-slate-400">
+                          {s.inactiveMinutes === 0
+                            ? "Active just now"
+                            : `${s.inactiveMinutes} min${s.inactiveMinutes > 1 ? "s" : ""} ago`}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              s.isIdle
+                                ? "bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300"
+                                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                s.isIdle ? "bg-slate-400" : "bg-emerald-500 animate-pulse"
+                              }`}
+                            />
+                            {s.isIdle ? `Idle (${s.remainingMinutes}m left)` : "Actively Working"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          {!s.isCurrent && (
+                            <button
+                              type="button"
+                              onClick={() => handleRevokeSession(s.id)}
+                              className="text-xs font-bold text-red-500 hover:text-red-700 hover:underline cursor-pointer"
+                            >
+                              Terminate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Architecture & Privacy Isolation Boundaries */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/[0.05] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10">
+                  <EyeOff className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Zero-Access User Dashboard Boundary
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Strict cryptographic and architectural isolation
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                In strict accordance with Dexta Africa privacy rules, the IT department manages credentials and security, but **IT personnel have zero access to private user dashboards**.
+              </p>
+
+              <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>No Payroll &amp; Document Access:</strong> IT is restricted from browsing private HR staff contracts, tax returns, or executive reviews.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>No Deal Memo Snooping:</strong> IT cannot view investor conversations or confidential real estate escrow memos.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span><strong>Automated Inactivity Revocation:</strong> Inactive sessions are cleared from the database immediately when the threshold expires.</span>
+                </div>
               </div>
             </div>
 
-            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Every staff member with Administrative privileges enforces hardware-backed TOTP verification. IT retains full capability to revoke compromised sessions remotely in case of device loss.
-            </p>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-slate-800 dark:text-white">Zero External Cloud Leakage</span>
-                <p className="text-xs text-slate-500">All credentials and document records remain isolated in dedicated database storage.</p>
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 shadow-sm space-y-4">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                  <Fingerprint className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Two-Factor Authentication &amp; Hardware Security
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Time-based OTP &amp; Inactivity Guard Integration
+                  </p>
+                </div>
               </div>
-              <Badge variant="success" className="text-xs">Active</Badge>
+
+              <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+                Every staff member with Administrative privileges enforces hardware-backed TOTP verification. IT retains full capability to revoke compromised sessions remotely in case of device loss.
+              </p>
+
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-slate-800 dark:text-white">Zero External Cloud Leakage</span>
+                  <p className="text-xs text-slate-500">All credentials and session records remain isolated in dedicated database storage.</p>
+                </div>
+                <Badge variant="success" className="text-xs">Active</Badge>
+              </div>
             </div>
           </div>
         </div>

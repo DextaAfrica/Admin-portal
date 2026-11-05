@@ -2,6 +2,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
+import { SessionInactivityGuard } from "@/components/auth/SessionInactivityGuard";
 
 export default async function AdminLayout({
   children,
@@ -16,6 +17,9 @@ export default async function AdminLayout({
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-[#fafafa] dark:bg-[#09090b]">
+      {/* Real-Time Session Inactivity Guard across All Portals */}
+      <SessionInactivityGuard />
+
       {/* Collapsible Sidebar */}
       <Sidebar user={user} />
 

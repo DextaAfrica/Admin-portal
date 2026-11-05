@@ -14,6 +14,7 @@ import {
   KeyRound,
   ShieldCheck,
   Sparkles,
+  Clock,
 } from "lucide-react";
 import { Input, PasswordInput } from "@/components/ui/Input";
 import { OTPInput } from "@/components/ui/OTPInput";
@@ -30,6 +31,16 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const [inactivityNotice, setInactivityNotice] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("reason") === "inactivity") {
+        setInactivityNotice(true);
+      }
+    }
+  }, []);
 
   // In-App OTP Verification Modal State
   const [otpModalOpen, setOtpModalOpen] = React.useState(false);
@@ -203,6 +214,20 @@ export default function LoginPage() {
             verification prompt
           </p>
         </div>
+
+        {inactivityNotice && (
+          <div className="mt-5 p-3.5 rounded-2xl bg-red-500/10 border border-red-500/25 flex items-start gap-3 text-xs text-red-600 dark:text-red-400 animate-fade-in">
+            <Clock className="h-4 w-4 shrink-0 mt-0.5 text-[#ED2618]" />
+            <div>
+              <strong className="block font-bold text-slate-900 dark:text-white">
+                Session Expired Due to Inactivity
+              </strong>
+              <span>
+                You were automatically logged out for security compliance. Enter your credentials to re-enter your workspace.
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="mt-7 space-y-4">
