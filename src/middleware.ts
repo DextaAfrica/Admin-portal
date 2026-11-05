@@ -13,6 +13,15 @@ export function middleware(req: NextRequest) {
 
   // 2. Subdomain Root & Auth Rewrites
   if (isOpsHost) {
+    if (pathname === "/ops") {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+    if (pathname === "/ops/login") {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (pathname === "/ops/register") {
+      return NextResponse.redirect(new URL("/register", req.url));
+    }
     if (pathname === "/") {
       return NextResponse.rewrite(new URL("/ops", req.url));
     }
@@ -25,6 +34,15 @@ export function middleware(req: NextRequest) {
   }
 
   if (isAdminHost) {
+    if (pathname === "/admin-portal") {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+    if (pathname === "/admin-portal/login") {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (pathname === "/admin-portal/register") {
+      return NextResponse.redirect(new URL("/register", req.url));
+    }
     if (pathname === "/") {
       return NextResponse.rewrite(new URL("/admin-portal", req.url));
     }
