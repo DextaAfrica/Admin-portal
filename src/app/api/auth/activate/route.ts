@@ -53,13 +53,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const staffUser = user as any;
+
     // Verify activation key: either matches stored activationKey, or matches temporary credential ticket
     let isKeyValid = false;
-    if (user.activationKey && user.activationKey === cleanKey) {
+    if (staffUser.activationKey && staffUser.activationKey === cleanKey) {
       isKeyValid = true;
     } else {
       // Check if matches bcrypt of temporary password
-      const matchTemp = await bcrypt.compare(cleanKey, user.passwordHash).catch(() => false);
+      const matchTemp = await bcrypt.compare(cleanKey, staffUser.passwordHash).catch(() => false);
       if (matchTemp) {
         isKeyValid = true;
       } else {
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
     const passwordHash = await bcrypt.hash(preferredPassword, 10);
 
     // Update user: clear mustChangePassword and activationKey
-    const updatedUser = await prisma.user.update({
+    const updatedUser: any = await prisma.user.update({
       where: { id: user.id },
       data: {
         passwordHash,
@@ -137,7 +139,7 @@ export async function POST(req: NextRequest) {
       entityId: updatedUser.id,
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent"),
-      metadata: { department: updatedUser.department, role: updatedUser.role },
+      metadata: { department: updatedUser.department || "OPERATIONS", role: updatedUser.role },
     });
 
     const res = NextResponse.json({
@@ -148,7 +150,7 @@ export async function POST(req: NextRequest) {
         email: updatedUser.email,
         fullName: updatedUser.fullName,
         role: updatedUser.role,
-        department: updatedUser.department,
+        department: updatedUser.department || "OPERATIONS",
       },
     });
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -271,10 +272,13 @@ export default function LandingPage() {
                         : "opacity-0 z-0 pointer-events-none"
                     )}
                   >
-                    <img
+                    <Image
                       src={slide.image}
                       alt={slide.name}
-                      className="h-full w-full object-cover transition-transform duration-[9500ms] ease-out will-change-transform"
+                      fill
+                      priority={index === 0}
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-cover transition-transform duration-[9500ms] ease-out will-change-transform"
                       style={{
                         objectPosition: slide.objectPosition,
                         transform: `scale(${scaleValue})`,
