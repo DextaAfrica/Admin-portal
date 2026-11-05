@@ -118,8 +118,7 @@ export default function AdminSystemsPortalLandingPage() {
     setZoomToggle((prev) => !prev);
   };
 
-  const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
-  const registerPath = isSubdomain ? "/register" : "/admin-portal/register";
+  const registerPath = "/register";
 
   const handleDirectLogin = async (e: React.FormEvent) => {
     e.preventDefault();

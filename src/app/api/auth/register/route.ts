@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     // 1. Enterprise Schema & Password Entropy Validation
     const validationResult = RegisterSchema.safeParse(body);
     if (!validationResult.success) {
-      const firstError = validationResult.error.errors[0]?.message || "Validation failed";
+      const firstError = validationResult.error.issues?.[0]?.message || (validationResult.error as any).errors?.[0]?.message || "Validation failed";
       return NextResponse.json(
         {
           error: firstError,

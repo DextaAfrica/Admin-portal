@@ -131,9 +131,8 @@ export default function AdminPortalLoginPage() {
     }
   };
 
-  const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("admin.");
-  const landingPath = isSubdomain ? "/" : "/admin-portal";
-  const registerPath = isSubdomain ? "/register" : "/admin-portal/register";
+  const landingPath = "/";
+  const registerPath = "/register";
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#070A0F] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-[#ED2618] selection:text-white font-sans relative overflow-x-hidden">

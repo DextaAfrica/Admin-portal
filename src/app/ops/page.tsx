@@ -120,8 +120,7 @@ export default function OperationsLandingPage() {
     setZoomToggle((prev) => !prev);
   };
 
-  const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("ops.");
-  const registerPath = isSubdomain ? "/register" : "/ops/register";
+  const registerPath = "/register";
 
   const handleDirectLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -100,9 +100,8 @@ export default function OperationsRegisterPage() {
     }
   };
 
-  const isSubdomain = typeof window !== "undefined" && window.location.hostname.startsWith("ops.");
-  const loginPath = isSubdomain ? "/login" : "/ops/login";
-  const landingPath = isSubdomain ? "/" : "/ops";
+  const loginPath = "/login";
+  const landingPath = "/";
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#070A0F] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-[#ED2618] selection:text-white font-sans relative overflow-x-hidden">
