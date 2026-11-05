@@ -4,23 +4,37 @@ import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { sendEmail } from "@/lib/email/dispatcher";
+import { LoginSchema } from "@/lib/auth/validation";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const body = await req.json();
+    const validationResult = LoginSchema.safeParse(body);
 
-    if (!email || !password) {
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0]?.message || "Email and password are required";
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: firstError },
         { status: 400 }
       );
     }
+
+    const { email, password } = validationResult.data;
 
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
     });
 
     if (!user || user.status !== "ACTIVE") {
+      await logAuditEvent({
+        actorEmail: email,
+        action: "AUTH_LOGIN_FAILED",
+        entity: "User",
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent"),
+        metadata: { reason: "Account not found or inactive" },
+      });
+
       return NextResponse.json(
         { error: "Invalid email or password, or account access is paused" },
         { status: 401 }

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -65,28 +66,28 @@ const PORTRAITS: PortraitSlide[] = [
 
 const CORE_PILLARS = [
   {
-    icon: Briefcase,
-    title: "Strategic Capital & CRM",
-    badge: "Deal Pipeline",
+    icon: Building2,
+    title: "Operations Enterprise Portal",
+    badge: "ops.dextaafrica.org",
     description:
-      "Enterprise client dossiers, confidential interaction memos, and high-stakes real estate escrow milestones.",
-    href: "/crm-portal",
-  },
-  {
-    icon: Users,
-    title: "HR & People Workspace",
-    badge: "Staff Governance",
-    description:
-      "Integrated employee directory, confidential contract vault, and formal leave request lifecycle reviews.",
-    href: "/login",
+      "Landmark project delivery, capital allocation, field engineering milestones, and internal workforce logistics.",
+    href: "/ops",
   },
   {
     icon: ShieldCheck,
-    title: "IT Security & Watchdog",
-    badge: "Zero-Knowledge",
+    title: "Systems & Web Command",
+    badge: "admin.dextafrica.org",
     description:
-      "Strict account provisioning, isolated employee dashboards, and automated corporate policy watchdog alerts.",
-    href: "/login",
+      "Zero-trust IT access governance, AWS S3 storage vaults, policy watchdog intrusion shields, and web CMS schemas.",
+    href: "/admin-portal",
+  },
+  {
+    icon: Briefcase,
+    title: "Strategic Capital & CRM",
+    badge: "Institutional Deals",
+    description:
+      "Confidential client dossiers, institutional partnership memos, and high-value project pipelines.",
+    href: "/crm-portal",
   },
 ];
 
@@ -130,7 +131,23 @@ export default function LandingPage() {
             <DextaLogo className="h-7 sm:h-10 w-auto" />
           </Link>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/ops"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              <span>Ops Portal</span>
+            </Link>
+
+            <Link
+              href="/admin-portal"
+              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Systems IT</span>
+            </Link>
+
             {mounted && (
               <button
                 type="button"
@@ -255,10 +272,13 @@ export default function LandingPage() {
                         : "opacity-0 z-0 pointer-events-none"
                     )}
                   >
-                    <img
+                    <Image
                       src={slide.image}
                       alt={slide.name}
-                      className="h-full w-full object-cover transition-transform duration-[9500ms] ease-out will-change-transform"
+                      fill
+                      priority={index === 0}
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-cover transition-transform duration-[9500ms] ease-out will-change-transform"
                       style={{
                         objectPosition: slide.objectPosition,
                         transform: `scale(${scaleValue})`,

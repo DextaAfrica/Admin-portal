@@ -44,8 +44,15 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setErrorMessage("");
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setErrorMessage("Please provide both work email and password.");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       const res = await fetch("/api/auth/login", {
