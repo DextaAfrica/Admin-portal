@@ -37,15 +37,10 @@ export function middleware(req: NextRequest) {
 
   // 3. Subdomain Root & Auth Rewrites on OPS Subdomain
   if (isOpsHost) {
-    // Prevent nested /ops paths on ops subdomain
-    if (pathname === "/ops") {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-    if (pathname === "/ops/login") {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-    if (pathname === "/ops/register") {
-      return NextResponse.redirect(new URL("/register", req.url));
+    // Strip redundant /ops prefix on ops subdomain
+    if (pathname === "/ops" || pathname.startsWith("/ops/")) {
+      const sub = pathname.replace(/^\/ops/, "") || "/";
+      return NextResponse.redirect(new URL(sub, req.url));
     }
 
     // Rewrite clean paths to internal Next.js folder routes
@@ -62,15 +57,10 @@ export function middleware(req: NextRequest) {
 
   // 4. Subdomain Root & Auth Rewrites on ADMIN Subdomain
   if (isAdminHost) {
-    // Prevent nested /admin-portal paths on admin subdomain
-    if (pathname === "/admin-portal") {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-    if (pathname === "/admin-portal/login") {
-      return NextResponse.redirect(new URL("/login", req.url));
-    }
-    if (pathname === "/admin-portal/register") {
-      return NextResponse.redirect(new URL("/register", req.url));
+    // Strip redundant /admin-portal prefix on admin subdomain
+    if (pathname === "/admin-portal" || pathname.startsWith("/admin-portal/")) {
+      const sub = pathname.replace(/^\/admin-portal/, "") || "/";
+      return NextResponse.redirect(new URL(sub, req.url));
     }
 
     // Rewrite clean paths to internal Next.js folder routes

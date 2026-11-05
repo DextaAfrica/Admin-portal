@@ -1,24 +1,38 @@
 import nodemailer from "nodemailer";
 import { prisma } from "../prisma";
 
-const smtpHost = process.env.SMTP_HOST;
-const smtpPort = Number(process.env.SMTP_PORT) || 587;
-const smtpUser = process.env.SMTP_USER;
-const smtpPass = process.env.SMTP_PASS;
+const smtpHost = process.env.SMTP_HOST || "127.0.0.1";
+const smtpPort = Number(process.env.SMTP_PORT) || 1025;
+const smtpUser = process.env.SMTP_USER || "";
+const smtpPass = process.env.SMTP_PASS || "";
 const emailFrom = process.env.EMAIL_FROM || "Dexta Operations <operations@dextaafrica.com>";
 
-export const isEmailConfigured = Boolean(smtpHost && smtpUser && smtpPass);
+// Local Mailpit/MailHog on 127.0.0.1/localhost/mailpit or port 1025 does NOT require authentication credentials
+const isLocalSmtp =
+  smtpHost === "127.0.0.1" ||
+  smtpHost === "localhost" ||
+  smtpHost === "mailpit" ||
+  smtpPort === 1025;
+
+export const isEmailConfigured = isLocalSmtp || Boolean(smtpHost && smtpUser && smtpPass);
 
 export const emailTransporter = isEmailConfigured
-  ? nodemailer.createTransport({
-      host: smtpHost,
-      port: smtpPort,
-      secure: smtpPort === 465,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
-    })
+  ? isLocalSmtp
+    ? nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: false,
+        ignoreTLS: true,
+      })
+    : nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpPort === 465,
+        auth: {
+          user: smtpUser,
+          pass: smtpPass,
+        },
+      })
   : null;
 
 export function compileTemplate(html: string, variables: Record<string, string>): string {
@@ -41,24 +55,26 @@ export async function sendEmail({
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const recipients = Array.isArray(to) ? to.join(", ") : to;
 
-  if (emailTransporter && isEmailConfigured) {
-    try {
-      const info = await emailTransporter.sendMail({
-        from: emailFrom,
-        to: recipients,
-        subject,
-        html,
-      });
-      return { success: true, messageId: info.messageId };
-    } catch (err: unknown) {
-      console.error("SMTP error:", err);
-      return { success: false, error: err instanceof Error ? err.message : "SMTP send failed" };
-    }
+  if (!emailTransporter || !isEmailConfigured) {
+    const err = "SMTP dispatcher is not configured. Please verify SMTP_HOST and SMTP_PORT in environment variables.";
+    console.error(`[Email Dispatcher Error] ${err}`);
+    return { success: false, error: err };
   }
 
-  // Development simulation / console logging
-  console.log(`[Email Dispatcher DEV Mode] Sent to: ${recipients} | Subject: "${subject}"`);
-  return { success: true, messageId: `dev-sim-${Date.now()}` };
+  try {
+    const info = await emailTransporter.sendMail({
+      from: emailFrom,
+      to: recipients,
+      subject,
+      html,
+    });
+    console.log(`[Email Dispatcher] Dispatched email to "${recipients}" via SMTP on ${smtpHost}:${smtpPort} (Message ID: ${info.messageId})`);
+    return { success: true, messageId: info.messageId };
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "SMTP send failed";
+    console.error(`[Email Dispatcher SMTP Error] Delivery to "${recipients}" failed:`, err);
+    return { success: false, error: errorMsg };
+  }
 }
 
 export async function dispatchCampaign(campaignId: string) {

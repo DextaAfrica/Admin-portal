@@ -67,22 +67,34 @@ export async function POST(req: NextRequest) {
 
     if (!user.twoFactorEnabled) {
       sessionOtp = String(crypto.randomInt(100000, 999999));
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: user.email,
-        subject: "Your Dexta Africa Login Verification Code",
+        subject: `${sessionOtp} is your Dexta Africa verification code`,
         html: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 32px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
-            <h2 style="color: #0f172a; margin-top: 0;">Sign-In Verification</h2>
-            <p style="color: #475569; font-size: 14px; line-height: 1.6;">Hello <strong>${user.fullName}</strong>,</p>
-            <p style="color: #475569; font-size: 14px; line-height: 1.6;">Use the verification code below to complete your sign-in to the Dexta Africa Enterprise Workspace:</p>
-            <div style="margin: 24px 0; padding: 16px; background: #f8fafc; border-radius: 8px; text-align: center; border: 1px dashed #cbd5e1;">
-              <span style="font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #ED2618;">${sessionOtp}</span>
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 36px 32px; border: 1px solid #e4e4e7; border-radius: 12px; background: #ffffff; color: #09090b;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid #f4f4f5; padding-bottom: 16px;">
+              <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #09090b;">De<span style="color: #ED2618;">x</span>ta</span>
+              <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #71717a; margin-left: 8px;">Security Verification</span>
             </div>
-            <p style="color: #64748b; font-size: 12px;">This code will expire in 5 minutes. If you did not attempt to sign in, please contact security immediately.</p>
+            <h2 style="font-size: 20px; font-weight: 700; color: #09090b; margin: 0 0 12px 0;">Sign-In Verification Code</h2>
+            <p style="font-size: 14px; line-height: 1.6; color: #52525b; margin: 0 0 20px 0;">
+              Hello <strong>${user.fullName}</strong>,<br/>
+              A sign-in attempt was initiated for your account. Please enter the following one-time verification token to complete authentication:
+            </p>
+            <div style="margin: 24px 0; padding: 20px; background: #fafafa; border-radius: 8px; text-align: center; border: 1px solid #e4e4e7;">
+              <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 36px; font-weight: 800; letter-spacing: 8px; color: #ED2618;">${sessionOtp}</div>
+              <div style="font-size: 11px; color: #71717a; margin-top: 8px; font-weight: 500;">Valid for 5 minutes</div>
+            </div>
+            <p style="font-size: 13px; line-height: 1.6; color: #71717a; margin: 0 0 16px 0;">
+              If you did not make this request, your credentials may be compromised. Please notify the Dexta Africa Information Security Desk immediately.
+            </p>
+            <div style="border-top: 1px solid #f4f4f5; padding-top: 16px; margin-top: 24px; font-size: 11px; color: #a1a1aa; text-align: center;">
+              &copy; 2026 Dexta Africa Enterprise Gateway &bull; Zero-Trust Systems Command
+            </div>
           </div>
         `,
       });
-      emailOtpSent = true;
+      emailOtpSent = emailResult.success;
     }
 
     const res = NextResponse.json({
