@@ -70,7 +70,7 @@ const CORE_PILLARS = [
     badge: "Deal Pipeline",
     description:
       "Enterprise client dossiers, confidential interaction memos, and high-stakes real estate escrow milestones.",
-    href: "/crm/landing",
+    href: "/crm-portal",
   },
   {
     icon: Users,
@@ -182,7 +182,7 @@ export default function LandingPage() {
               </div>
 
               <Link
-                href="/crm/landing"
+                href="/crm-portal"
                 className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold text-amber-500 dark:text-amber-400 hover:bg-amber-500/20 transition-all cursor-pointer"
               >
                 <Briefcase className="h-3 w-3" />

@@ -360,7 +360,7 @@ export default function CrmDashboardPage() {
 
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <a
-            href="/crm/landing"
+            href="/crm-portal"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 text-xs font-semibold transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5" />

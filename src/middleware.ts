@@ -10,7 +10,7 @@ export function middleware(req: NextRequest) {
     pathname === "/" ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
-    pathname.startsWith("/crm/landing") ||
+    pathname.startsWith("/crm-portal") ||
     pathname.startsWith("/setup/password") ||
     pathname.startsWith("/mfa-challenge") ||
     pathname.startsWith("/api/auth");
