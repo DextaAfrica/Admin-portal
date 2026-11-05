@@ -54,8 +54,8 @@ export async function setInactivityTimeoutMinutes(minutes: number, adminUserId?:
       data: {
         actorId: adminUserId,
         action: "UPDATE_INACTIVITY_POLICY",
-        target: "SystemSetting",
-        details: JSON.stringify({
+        entity: "SystemSetting",
+        metadata: JSON.stringify({
           newTimeoutMinutes: minutes,
           policyKey: INACTIVITY_SETTING_KEY,
         }),
@@ -151,8 +151,8 @@ export async function getCurrentSession(): Promise<{
         data: {
           actorId: session.userId,
           action: "SESSION_EXPIRED_INACTIVITY",
-          target: "Session",
-          details: JSON.stringify({
+          entity: "Session",
+          metadata: JSON.stringify({
             sessionId: session.id,
             inactiveDurationMinutes: Math.round(inactiveMs / 60000),
             thresholdMinutes: timeoutMinutes,

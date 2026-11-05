@@ -113,8 +113,8 @@ export async function DELETE(req: NextRequest) {
       data: {
         actorId: user.id,
         action: "REVOKE_SESSION",
-        target: "Session",
-        details: JSON.stringify({ revokedSessionId: sessionId }),
+        entity: "Session",
+        metadata: JSON.stringify({ revokedSessionId: sessionId }),
       },
     }).catch(() => {});
 
