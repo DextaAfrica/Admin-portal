@@ -87,7 +87,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
 
     const strength = calculateStrength(pwdVal);
     const strengthLabels = ["Very Weak", "Weak", "Fair", "Strong", "Very Strong"];
-    const strengthColors = ["bg-slate-300", "bg-red-500", "bg-amber-500", "bg-emerald-500", "bg-emerald-600"];
+    const strengthColors = ["bg-slate-300", "bg-red-500", "bg-slate-400", "bg-emerald-500", "bg-emerald-600"];
 
     return (
       <div className="space-y-1.5 w-full">

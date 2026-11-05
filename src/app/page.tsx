@@ -134,7 +134,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/ops"
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/25 bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
             >
               <Building2 className="h-3.5 w-3.5" />
               <span>Ops Portal</span>
@@ -201,7 +201,7 @@ export default function LandingPage() {
 
               <Link
                 href="/crm-portal"
-                className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold text-amber-500 dark:text-amber-400 hover:bg-amber-500/20 transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-red-500/25 bg-red-500/10 px-3 py-1.5 text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-all cursor-pointer"
               >
                 <Briefcase className="h-3 w-3" />
                 <span>Strategic Capital CRM &rarr;</span>
