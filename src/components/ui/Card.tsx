@@ -115,31 +115,36 @@ export function StatCard({
       </div>
 
       {(trend || description) && (
-        <div className="mt-2.5 flex items-center gap-1.5 text-xs">
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
           {trend && (
             <span
               className={cn(
-                "inline-flex items-center font-medium font-mono text-[11px] px-1.5 py-0.5 rounded",
+                "inline-flex items-center font-medium font-mono text-[11px] px-1.5 py-0.5 rounded shrink-0",
                 trend.isPositive !== false
                   ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
                   : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400"
               )}
             >
               {trend.isPositive !== false ? (
-                <ArrowUpRight className="mr-0.5 h-3 w-3" />
+                <ArrowUpRight className="mr-0.5 h-3 w-3 shrink-0" />
               ) : (
-                <ArrowDownRight className="mr-0.5 h-3 w-3" />
+                <ArrowDownRight className="mr-0.5 h-3 w-3 shrink-0" />
               )}
-              {trend.value}
+              <span>{trend.value}</span>
             </span>
           )}
           {trend?.label && (
-            <span className="text-slate-500 dark:text-slate-400">{trend.label}</span>
+            <span className="text-slate-500 dark:text-slate-400 text-[11px]">{trend.label}</span>
           )}
           {!trend && description && (
-            <span className="text-slate-500 dark:text-slate-400">{description}</span>
+            <span className="text-slate-500 dark:text-slate-400 text-[11px]">{description}</span>
           )}
         </div>
+      )}
+      {trend && description && (
+        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400 truncate">
+          {description}
+        </p>
       )}
     </Card>
   );

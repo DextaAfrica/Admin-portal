@@ -257,7 +257,7 @@ export default async function DashboardPage() {
             value={portfolioCount}
             icon={<Building2 className="h-5 w-5 text-[#ED2618]" />}
             trend={{
-              value: "Go Core Synchronized",
+              value: "Live Active",
               isPositive: true,
             }}
             description="Landmark real estate projects"
@@ -270,7 +270,7 @@ export default async function DashboardPage() {
             value={enquiriesCount}
             icon={<MessageSquare className="h-5 w-5 text-red-600" />}
             trend={{
-              value: "Live investor pipeline",
+              value: "Investor Leads",
               isPositive: true,
             }}
             description="Property inquiries & leads"
@@ -283,7 +283,7 @@ export default async function DashboardPage() {
             value={contentCount}
             icon={<Globe className="h-5 w-5 text-sky-500" />}
             trend={{
-              value: "On-demand cache revalidation",
+              value: "Edge Synced",
               isPositive: true,
             }}
             description="Active web schema pages"
@@ -296,7 +296,7 @@ export default async function DashboardPage() {
             value={journalCount}
             icon={<BookOpen className="h-5 w-5 text-emerald-500" />}
             trend={{
-              value: "Thought leadership articles",
+              value: "Published",
               isPositive: true,
             }}
             description="Published research pieces"
@@ -517,18 +517,18 @@ export default async function DashboardPage() {
               </p>
             </div>
 
-            <div className="py-6 grid grid-cols-2 gap-4">
+            <div className="py-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4 justify-items-center">
               <RadialGauge
                 percentage={mfaPercent}
                 label="Team Protected"
                 sublabel={`${mfaUsers} of ${totalUsers} members`}
-                size={105}
+                size={92}
               />
               <RadialGauge
                 percentage={storagePercent}
                 label="Storage Used"
                 sublabel="50 GB limit"
-                size={105}
+                size={92}
               />
             </div>
 

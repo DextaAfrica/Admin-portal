@@ -125,17 +125,17 @@ export default function LandingPage() {
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090B] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white overflow-x-hidden">
       {/* Top Navigation Bar */}
       <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#09090B]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-10">
           <Link href="/" className="flex items-center shrink-0">
-            <DextaLogo className="h-8 sm:h-10 w-auto" />
+            <DextaLogo className="h-7 sm:h-10 w-auto" />
           </Link>
 
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {mounted && (
               <button
                 type="button"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200/90 dark:border-white/15 text-slate-600 hover:border-[#ED2618] hover:text-[#ED2618] dark:text-slate-300 dark:hover:border-[#ED2618] dark:hover:text-white transition-all cursor-pointer"
+                className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl border border-slate-200/90 dark:border-white/15 text-slate-600 hover:border-[#ED2618] hover:text-[#ED2618] dark:text-slate-300 dark:hover:border-[#ED2618] dark:hover:text-white transition-all cursor-pointer shrink-0"
                 title="Switch light or dark appearance"
               >
                 {theme === "dark" ? (
@@ -149,19 +149,20 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => router.push("/login")}
-              className="btn-crimson-exec h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
+              className="btn-crimson-exec h-9 sm:h-10 rounded-xl px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
               <LogIn className="h-3.5 w-3.5 shrink-0" />
-              <span className="whitespace-nowrap">Sign In</span>
+              <span>Sign In</span>
             </button>
 
             <button
               type="button"
               onClick={() => router.push("/register")}
-              className="btn-fill-up h-10 rounded-xl px-4 sm:px-5 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
+              className="btn-fill-up h-9 sm:h-10 rounded-xl px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
               <UserPlus className="h-3.5 w-3.5 shrink-0 text-[#ED2618] transition-colors" />
-              <span className="whitespace-nowrap">Create Account</span>
+              <span className="hidden sm:inline">Create Team Account</span>
+              <span className="inline sm:hidden">Register</span>
             </button>
           </div>
         </div>

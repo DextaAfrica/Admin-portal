@@ -220,7 +220,7 @@ export default function HrDashboardPage() {
   const pendingLeavesCount = leaves.filter((l) => l.status === "PENDING").length;
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="w-full min-w-0 space-y-8 animate-fade-in">
       {/* Executive Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-white/10 pb-5">
         <div>
@@ -238,7 +238,7 @@ export default function HrDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <Button
             size="sm"
             variant="secondary"
@@ -260,7 +260,7 @@ export default function HrDashboardPage() {
       </div>
 
       {/* KPI Metrics Strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#121318] p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-slate-500">Total Workforce</p>
@@ -315,7 +315,7 @@ export default function HrDashboardPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 dark:border-white/10 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-200/80 dark:border-white/10 pb-2 overflow-x-auto no-scrollbar flex-nowrap">
         <button
           type="button"
           onClick={() => setActiveTab("directory")}
@@ -397,7 +397,8 @@ export default function HrDashboardPage() {
 
           {/* Directory Table */}
           <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#121318] overflow-hidden shadow-xs">
-            <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[750px] text-left text-xs">
               <thead className="border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] text-slate-500 font-bold">
                 <tr>
                   <th className="px-5 py-3.5">Staff Member</th>
@@ -466,6 +467,7 @@ export default function HrDashboardPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -483,7 +485,8 @@ export default function HrDashboardPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#121318] overflow-hidden shadow-xs">
-            <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[750px] text-left text-xs">
               <thead className="border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] text-slate-500 font-bold">
                 <tr>
                   <th className="px-5 py-3.5">Colleague</th>
@@ -548,6 +551,7 @@ export default function HrDashboardPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
