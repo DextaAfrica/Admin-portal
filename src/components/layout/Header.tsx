@@ -18,6 +18,7 @@ import {
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { CommandPalette } from "./CommandPalette";
+import { NotificationCenter } from "./NotificationCenter";
 
 const PAGE_LABELS: Record<string, string> = {
   dashboard: "Dashboard Overview",
@@ -167,6 +168,9 @@ export function Header({
           >
             <Search className="h-4 w-4" />
           </button>
+
+          {/* Automated Notification Hub */}
+          <NotificationCenter />
 
           {/* Theme Switcher */}
           {mounted && (
