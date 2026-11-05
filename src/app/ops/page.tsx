@@ -177,8 +177,9 @@ export default function OperationsLandingPage() {
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
-              Welcome to the dedicated operations workspace. Coordinate landmark real estate deliveries,
-              institutional investor milestones, procurement treasury, and departmental logistics with zero guesswork.
+              The centralized operational command environment for Dexta Africa internal teams.
+              Orchestrate cross-departmental milestone approvals, contractor procurement pipelines,
+              treasury disbursement authorizations, and field engineering governance under strict zero-trust audit controls.
             </p>
 
             {/* Action Bar (Sign In + Fill-Up Create Profile) */}
