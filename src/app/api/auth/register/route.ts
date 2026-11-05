@@ -5,12 +5,29 @@ import { verifyTotpToken, generateAndStoreRecoveryCodes } from "@/lib/auth/mfa";
 import { createSession, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { logPolicyAlert } from "@/lib/auth/policy-alerts";
+import { RegisterSchema } from "@/lib/auth/validation";
+import { backendApi } from "@/lib/backend-api";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
   try {
     const db = prisma as any;
+    const body = await req.json();
+
+    // 1. Enterprise Schema & Password Entropy Validation
+    const validationResult = RegisterSchema.safeParse(body);
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0]?.message || "Validation failed";
+      return NextResponse.json(
+        {
+          error: firstError,
+          fieldErrors: validationResult.error.flatten().fieldErrors,
+        },
+        { status: 400 }
+      );
+    }
+
     const {
       fullName,
       email,
@@ -21,23 +38,9 @@ export async function POST(req: NextRequest) {
       accessPasscode,
       mfaSecret,
       mfaCode,
-    } = await req.json();
+    } = validationResult.data;
 
-    if (!fullName || !email || !password) {
-      return NextResponse.json(
-        { error: "Full Name, Corporate Email, and Password are required" },
-        { status: 400 }
-      );
-    }
-
-    if (password.length < 8) {
-      return NextResponse.json(
-        { error: "Password must be at least 8 characters long" },
-        { status: 400 }
-      );
-    }
-
-    // Optional Organization Passcode check
+    // 2. Organization Passcode Verification
     const validPasscodes = ["DEXTA-2026", "DEXTA-AFRICA", "DEXTA", "DEXTA2026"];
     if (accessPasscode) {
       const cleanPasscode = String(accessPasscode).trim().toUpperCase();
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Check email uniqueness
+    // 3. Email Uniqueness Check
     const normalizedEmail = email.toLowerCase().trim();
     const existingUser = await db.user.findUnique({
       where: { email: normalizedEmail },
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
     let validatedSecret: string | null = null;
     let recoveryCodes: string[] = [];
 
-    // If user provided MFA during signup, verify it
+    // 4. TOTP Verification (if enabled during registration)
     if (mfaSecret && mfaCode) {
       const isTotpValid = verifyTotpToken({
         token: mfaCode,
@@ -83,10 +86,10 @@ export async function POST(req: NextRequest) {
       validatedSecret = mfaSecret;
     }
 
-    // Hash password
+    // 5. Secure Cryptographic Password Hashing
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create User in Database
+    // 6. Create User in Database
     const newUser = await db.user.create({
       data: {
         email: normalizedEmail,
@@ -104,7 +107,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Create corresponding HR EmployeeProfile if not existing
+    // 7. Auto-create HR EmployeeProfile
     try {
       const empNumber = `DXT-${(department || "OP").slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
       await db.employeeProfile.create({
@@ -131,7 +134,20 @@ export async function POST(req: NextRequest) {
       recoveryCodes = await generateAndStoreRecoveryCodes(newUser.id);
     }
 
-    // Create session
+    // 8. Go Core Backend Synchronization & Real-Time Registration Notification
+    const backendSyncResult = await backendApi.users.syncUser({
+      id: newUser.id,
+      email: newUser.email,
+      fullName: newUser.fullName,
+      role: newUser.role,
+      department: newUser.department,
+      jobTitle: newUser.jobTitle || undefined,
+      phone: newUser.phone || undefined,
+      status: newUser.status,
+      createdAt: newUser.createdAt,
+    });
+
+    // 9. Session Generation
     const ipAddress = req.headers.get("x-forwarded-for") || "127.0.0.1";
     const userAgent = req.headers.get("user-agent") || "unknown";
     const session = await createSession({
@@ -140,7 +156,7 @@ export async function POST(req: NextRequest) {
       userAgent,
     });
 
-    // Log Compliance Audit Event
+    // 10. Audit Logging (persisted locally and dispatched to Go backend in real-time)
     await logAuditEvent({
       actorId: newUser.id,
       actorEmail: newUser.email,
@@ -149,10 +165,14 @@ export async function POST(req: NextRequest) {
       entityId: newUser.id,
       ipAddress,
       userAgent,
-      metadata: { department: newUser.department, role: newUser.role },
+      metadata: {
+        department: newUser.department,
+        role: newUser.role,
+        backendSynced: backendSyncResult.synced,
+      },
     });
 
-    // Notify IT Watchdog
+    // 11. Security Watchdog Alert
     await logPolicyAlert({
       severity: "INFO",
       eventType: "SUSPICIOUS_ACTIVITY",
@@ -174,6 +194,7 @@ export async function POST(req: NextRequest) {
         department: newUser.department,
         twoFactorEnabled,
       },
+      backendSynced: backendSyncResult.synced,
       recoveryCodes,
     });
 

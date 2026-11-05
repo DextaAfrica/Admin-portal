@@ -26,6 +26,8 @@ import { Input, PasswordInput } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { DextaLogo } from "@/components/ui/DextaLogo";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
+import { evaluatePasswordStrength } from "@/lib/auth/validation";
 
 export default function AccountRegistrationPage() {
   const router = useRouter();
@@ -80,8 +82,9 @@ export default function AccountRegistrationPage() {
       return;
     }
 
-    if (registerForm.password.length < 8) {
-      setRegisterError("Password must be at least 8 characters long.");
+    const passwordStrength = evaluatePasswordStrength(registerForm.password);
+    if (passwordStrength.errors.length > 0) {
+      setRegisterError(passwordStrength.errors[0]);
       return;
     }
 
@@ -144,8 +147,9 @@ export default function AccountRegistrationPage() {
       return;
     }
 
-    if (activationForm.preferredPassword.length < 8) {
-      setActivationError("Preferred password must be at least 8 characters long.");
+    const preferredStrength = evaluatePasswordStrength(activationForm.preferredPassword);
+    if (preferredStrength.errors.length > 0) {
+      setActivationError(preferredStrength.errors[0]);
       return;
     }
 
@@ -445,6 +449,9 @@ export default function AccountRegistrationPage() {
               </div>
             </div>
 
+            {/* Real-time Enterprise Password Entropy Meter & Checklist */}
+            <PasswordStrengthMeter password={registerForm.password} />
+
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                 Organization Access Key
@@ -567,6 +574,9 @@ export default function AccountRegistrationPage() {
                 />
               </div>
             </div>
+
+            {/* Real-time Password Strength Meter */}
+            <PasswordStrengthMeter password={activationForm.preferredPassword} />
 
             <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1 text-[11px] text-slate-400">
               <div className="flex items-center gap-1.5">

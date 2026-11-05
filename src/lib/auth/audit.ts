@@ -1,4 +1,5 @@
 import { prisma } from "../prisma";
+import { backendApi } from "../backend-api";
 
 export interface LogAuditEventParams {
   actorId?: string | null;
@@ -22,7 +23,7 @@ export async function logAuditEvent({
   metadata,
 }: LogAuditEventParams) {
   try {
-    return await prisma.auditLog.create({
+    const localLog = await prisma.auditLog.create({
       data: {
         actorId,
         actorEmail,
@@ -34,6 +35,24 @@ export async function logAuditEvent({
         metadata: metadata ? JSON.stringify(metadata) : null,
       },
     });
+
+    // Forward event to Go Core Backend in real-time
+    backendApi.audit
+      .record({
+        actorId,
+        actorEmail,
+        action,
+        entity,
+        entityId,
+        ipAddress,
+        userAgent,
+        metadata,
+      })
+      .catch(() => {
+        // Handled silently if backend server is offline or warming up
+      });
+
+    return localLog;
   } catch (err) {
     console.error("Failed to write audit log:", err);
     return null;

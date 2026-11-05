@@ -8,6 +8,8 @@ import { Input, PasswordInput } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { DextaLogo } from "@/components/ui/DextaLogo";
+import { PasswordStrengthMeter } from "@/components/auth/PasswordStrengthMeter";
+import { evaluatePasswordStrength } from "@/lib/auth/validation";
 
 export default function SetPreferredPasswordPage() {
   const router = useRouter();
@@ -22,8 +24,9 @@ export default function SetPreferredPasswordPage() {
     e.preventDefault();
     setErrorMessage("");
 
-    if (newPassword.length < 8) {
-      setErrorMessage("Preferred password must be at least 8 characters long.");
+    const strength = evaluatePasswordStrength(newPassword);
+    if (strength.errors.length > 0) {
+      setErrorMessage(strength.errors[0]);
       return;
     }
 
@@ -112,6 +115,8 @@ export default function SetPreferredPasswordPage() {
               className="bg-black/50 border-white/10 text-white"
             />
           </div>
+
+          <PasswordStrengthMeter password={newPassword} />
 
           <div className="p-3 rounded-xl bg-white/[0.02] border border-white/5 space-y-1 text-[11px] text-slate-400">
             <div className="flex items-center gap-1.5">

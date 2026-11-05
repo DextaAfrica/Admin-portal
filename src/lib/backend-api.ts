@@ -307,5 +307,77 @@ export const backendApi = {
       return backendFetch<PaginatedResponse<Subscriber>>(`/admin/newsletter/subscribers${qs}`);
     },
   },
+
+  users: {
+    syncUser: async (userData: {
+      id: string;
+      email: string;
+      fullName: string;
+      role: string;
+      department?: string;
+      jobTitle?: string;
+      phone?: string;
+      status?: string;
+      createdAt?: string | Date;
+    }): Promise<{ success: boolean; synced: boolean; error?: string }> => {
+      try {
+        await backendFetch<{ success: boolean }>("/admin/users/sync", {
+          method: "POST",
+          body: JSON.stringify(userData),
+          timeoutMs: 4000,
+        });
+        return { success: true, synced: true };
+      } catch (err: any) {
+        try {
+          await backendFetch<{ success: boolean }>("/admin/users", {
+            method: "POST",
+            body: JSON.stringify(userData),
+            timeoutMs: 4000,
+          });
+          return { success: true, synced: true };
+        } catch (innerErr: any) {
+          console.warn(
+            `[Backend Integration] User sync deferred (Backend service may be starting or offline):`,
+            innerErr?.message || innerErr
+          );
+          return { success: true, synced: false, error: innerErr?.message };
+        }
+      }
+    },
+    list: (params: { page?: number; perPage?: number } = {}) => {
+      const sp = new URLSearchParams();
+      if (params.page) sp.set("page", String(params.page));
+      if (params.perPage) sp.set("perPage", String(params.perPage));
+      const qs = sp.toString() ? `?${sp.toString()}` : "";
+      return backendFetch<PaginatedResponse<any>>(`/admin/users${qs}`);
+    },
+  },
+
+  audit: {
+    record: async (eventData: {
+      actorId?: string | null;
+      actorEmail?: string | null;
+      action: string;
+      entity: string;
+      entityId?: string | null;
+      ipAddress?: string | null;
+      userAgent?: string | null;
+      metadata?: Record<string, unknown> | null;
+    }): Promise<{ success: boolean; synced: boolean; error?: string }> => {
+      try {
+        await backendFetch<{ success: boolean }>("/admin/audit-logs", {
+          method: "POST",
+          body: JSON.stringify({
+            ...eventData,
+            timestamp: new Date().toISOString(),
+          }),
+          timeoutMs: 3000,
+        });
+        return { success: true, synced: true };
+      } catch (err: any) {
+        return { success: false, synced: false, error: err?.message };
+      }
+    },
+  },
 };
 

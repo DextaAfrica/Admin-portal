@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
+import { evaluatePasswordStrength } from "@/lib/auth/validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,9 +14,17 @@ export async function POST(req: NextRequest) {
 
     const { currentPassword, newPassword } = await req.json();
 
-    if (!newPassword || newPassword.length < 8) {
+    if (!newPassword) {
       return NextResponse.json(
-        { error: "New password must be at least 8 characters long." },
+        { error: "New password is required." },
+        { status: 400 }
+      );
+    }
+
+    const passwordAnalysis = evaluatePasswordStrength(newPassword);
+    if (passwordAnalysis.errors.length > 0) {
+      return NextResponse.json(
+        { error: passwordAnalysis.errors[0] },
         { status: 400 }
       );
     }

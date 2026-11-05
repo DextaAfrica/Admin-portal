@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { createSession, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { logPolicyAlert } from "@/lib/auth/policy-alerts";
+import { evaluatePasswordStrength } from "@/lib/auth/validation";
 
 const db = prisma as any;
 
@@ -18,9 +19,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (preferredPassword.length < 8) {
+    const passwordAnalysis = evaluatePasswordStrength(preferredPassword);
+    if (passwordAnalysis.errors.length > 0) {
       return NextResponse.json(
-        { error: "Preferred password must be at least 8 characters long." },
+        { error: passwordAnalysis.errors[0] },
         { status: 400 }
       );
     }
