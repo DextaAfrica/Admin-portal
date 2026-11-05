@@ -100,20 +100,20 @@ export const CorporateDepartments = [
 export const RegisterSchema = z
   .object({
     fullName: z
-      .string({ required_error: "Full Name is required" })
+      .string()
       .trim()
       .min(2, "Full Name must be at least 2 characters")
       .max(80, "Full Name must not exceed 80 characters"),
     email: z
-      .string({ required_error: "Corporate Email is required" })
+      .string()
       .trim()
       .toLowerCase()
       .email("Please provide a valid corporate email address"),
     password: z
-      .string({ required_error: "Password is required" })
+      .string()
       .min(8, "Password must be at least 8 characters long"),
     confirmPassword: z
-      .string({ required_error: "Please confirm your password" })
+      .string()
       .min(1, "Please confirm your password"),
     department: z
       .string()
@@ -159,31 +159,31 @@ export const RegisterSchema = z
 
 export const LoginSchema = z.object({
   email: z
-    .string({ required_error: "Email is required" })
+    .string()
     .trim()
     .toLowerCase()
     .email("Please provide a valid email address"),
   password: z
-    .string({ required_error: "Password is required" })
+    .string()
     .min(1, "Password is required"),
 });
 
 export const ActivationSchema = z
   .object({
     email: z
-      .string({ required_error: "Email is required" })
+      .string()
       .trim()
       .toLowerCase()
       .email("Please provide a valid email address"),
     activationKey: z
-      .string({ required_error: "IT Activation Key is required" })
+      .string()
       .trim()
       .min(1, "IT Activation Key is required"),
     preferredPassword: z
-      .string({ required_error: "Preferred Password is required" })
+      .string()
       .min(8, "Password must be at least 8 characters long"),
     confirmPassword: z
-      .string({ required_error: "Please confirm your password" })
+      .string()
       .min(1, "Please confirm your password"),
   })
   .superRefine((data, ctx) => {
@@ -209,10 +209,10 @@ export const UpdatePasswordSchema = z
   .object({
     currentPassword: z.string().optional(),
     newPassword: z
-      .string({ required_error: "New password is required" })
+      .string()
       .min(8, "Password must be at least 8 characters long"),
     confirmPassword: z
-      .string({ required_error: "Please confirm your new password" })
+      .string()
       .min(1, "Please confirm your new password"),
   })
   .superRefine((data, ctx) => {

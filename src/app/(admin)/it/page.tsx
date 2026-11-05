@@ -405,23 +405,23 @@ export default function ItGovernancePage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="rounded-2xl border border-amber-500/20 bg-amber-500/[0.04] p-5 shadow-sm">
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/[0.04] p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold tracking-wider uppercase text-amber-700 dark:text-amber-400">
+            <span className="text-xs font-semibold tracking-wider uppercase text-red-700 dark:text-red-400">
               Pending Authorization
             </span>
             <div className="relative flex h-3 w-3">
               {stats.pendingCount > 0 && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#ED2618] opacity-75"></span>
               )}
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#ED2618]"></span>
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
               {stats.pendingCount}
             </span>
-            <span className="text-xs text-amber-700 dark:text-amber-400/90 font-medium">
+            <span className="text-xs text-red-700 dark:text-red-400/90 font-medium">
               awaiting IT grant
             </span>
           </div>
@@ -510,7 +510,7 @@ export default function ItGovernancePage() {
           <Lock className="h-4 w-4" />
           <span>Credential Requests & Authorizations</span>
           {stats.pendingCount > 0 && (
-            <span className="ml-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-xs font-bold border border-amber-500/20">
+            <span className="ml-1 rounded-full bg-red-500/10 text-red-700 dark:text-red-400 px-2 py-0.5 text-xs font-bold border border-red-500/20">
               {stats.pendingCount}
             </span>
           )}
@@ -660,7 +660,7 @@ export default function ItGovernancePage() {
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300">
-                            {req.requestType === "PASSWORD_RESET" && <KeyRound className="h-3 w-3 text-amber-500" />}
+                            {req.requestType === "PASSWORD_RESET" && <KeyRound className="h-3 w-3 text-[#ED2618]" />}
                             {req.requestType === "ACCOUNT_PROVISION" && <UserPlus className="h-3 w-3 text-indigo-500" />}
                             {req.requestType === "MFA_RESET" && <Fingerprint className="h-3 w-3 text-red-500" />}
                             {req.requestType === "ROLE_ELEVATION" && <Lock className="h-3 w-3 text-purple-500" />}
@@ -673,7 +673,7 @@ export default function ItGovernancePage() {
                               req.priority === "URGENT"
                                 ? "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20"
                                 : req.priority === "HIGH"
-                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                                ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
                                 : "bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300"
                             }`}
                           >
@@ -684,7 +684,7 @@ export default function ItGovernancePage() {
                           <span
                             className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
                               req.status === "PENDING"
-                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                                ? "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20"
                                 : req.status === "APPROVED" || req.status === "FULFILLED"
                                 ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20"
                                 : "bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
@@ -990,7 +990,7 @@ export default function ItGovernancePage() {
                               alert.severity === "CRITICAL" || alert.severity === "BREACH_ATTEMPT"
                                 ? "bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20"
                                 : alert.severity === "WARNING"
-                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20"
+                                ? "bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20"
                                 : "bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20"
                             }`}
                           >
@@ -1020,7 +1020,7 @@ export default function ItGovernancePage() {
                               alert.status === "OPEN"
                                 ? "bg-red-500/10 text-red-700 dark:text-red-400"
                                 : alert.status === "INVESTIGATING"
-                                ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                                ? "bg-rose-500/10 text-rose-700 dark:text-rose-400"
                                 : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                             }`}
                           >
@@ -1153,7 +1153,7 @@ export default function ItGovernancePage() {
                 </div>
                 <div>
                   <span className="text-slate-500">Request Type:</span>
-                  <p className="font-semibold text-amber-600 dark:text-amber-400">
+                  <p className="font-semibold text-[#ED2618] dark:text-red-400">
                     {selectedTicket.requestType.replace(/_/g, " ")}
                   </p>
                 </div>
@@ -1547,7 +1547,7 @@ export default function ItGovernancePage() {
                 variant="outline"
                 disabled={isResolvingAlert}
                 onClick={() => handleResolveAlert("INVESTIGATING")}
-                className="text-xs border-amber-500/30 text-amber-600 hover:bg-amber-500/10"
+                className="text-xs border-red-500/30 text-red-600 hover:bg-red-500/10"
               >
                 Mark Investigating
               </Button>

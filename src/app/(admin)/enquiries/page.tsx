@@ -144,9 +144,9 @@ export default function EnquiriesPage() {
             {countNew}
           </p>
         </div>
-        <div className="rounded-2xl border border-amber-200/60 dark:border-amber-500/20 bg-amber-50/40 dark:bg-amber-500/5 p-4">
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">In Active Discussion</p>
-          <p className="text-2xl font-bold text-amber-800 dark:text-amber-300 mt-1">
+        <div className="rounded-2xl border border-red-200/60 dark:border-red-500/20 bg-red-50/40 dark:bg-red-500/5 p-4">
+          <p className="text-xs font-semibold text-red-700 dark:text-red-400">In Active Discussion</p>
+          <p className="text-2xl font-bold text-red-800 dark:text-red-300 mt-1">
             {countInProgress}
           </p>
         </div>
@@ -262,7 +262,7 @@ export default function EnquiriesPage() {
                           enquiry.status === "new"
                             ? "bg-red-50 dark:bg-red-500/15 text-[#ED2618] border border-red-200 dark:border-red-500/30"
                             : enquiry.status === "in_progress"
-                            ? "bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                            ? "bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400"
                             : enquiry.status === "resolved"
                             ? "bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
                             : "bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-400"

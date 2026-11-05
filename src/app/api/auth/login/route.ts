@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     const validationResult = LoginSchema.safeParse(body);
 
     if (!validationResult.success) {
-      const firstError = validationResult.error.errors[0]?.message || "Email and password are required";
+      const firstError = validationResult.error.issues?.[0]?.message || (validationResult.error as any).errors?.[0]?.message || "Email and password are required";
       return NextResponse.json(
         { error: firstError },
         { status: 400 }

@@ -2151,7 +2151,7 @@ export function EmailComposerStudio({
               </div>
             ) : state.useCustomHtmlOverride ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 px-3.5 py-2 text-xs text-amber-900">
+                <div className="flex items-center justify-between rounded-xl bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/15 px-3.5 py-2 text-xs text-slate-800 dark:text-slate-200">
                   <span className="font-semibold">
                     Previewing Custom HTML Mode — you can edit the HTML or switch back to Visual Blocks
                   </span>

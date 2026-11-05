@@ -290,11 +290,11 @@ export default function HrDashboardPage() {
         <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#121318] p-5 shadow-xs">
           <div className="flex items-center justify-between">
             <p className="text-xs font-semibold text-slate-500">Leave Requests Pending</p>
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-[#ED2618]">
               <Clock className="h-4 w-4" />
             </div>
           </div>
-          <p className="mt-2 text-2xl font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+          <p className="mt-2 text-2xl font-bold text-[#ED2618] dark:text-red-400 tabular-nums">
             {pendingLeavesCount}
           </p>
           <p className="mt-1 text-[11px] text-slate-400">Awaiting HR manager decision</p>
@@ -341,7 +341,7 @@ export default function HrDashboardPage() {
           <Calendar className="h-3.5 w-3.5" />
           <span>Time-Off &amp; Leave Approvals</span>
           {pendingLeavesCount > 0 && (
-            <span className="rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-extrabold text-white">
+            <span className="rounded-full bg-[#ED2618] px-1.5 py-0.2 text-[10px] font-extrabold text-white">
               {pendingLeavesCount}
             </span>
           )}
@@ -833,7 +833,7 @@ export default function HrDashboardPage() {
                   <span>{selectedEmployee.location}</span>
                 </p>
                 <p className="flex items-center gap-2">
-                  <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                  <AlertCircle className="h-3.5 w-3.5 text-[#ED2618]" />
                   <span>{selectedEmployee.emergencyContact || "No emergency contact listed"}</span>
                 </p>
               </div>

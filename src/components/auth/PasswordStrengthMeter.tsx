@@ -57,7 +57,7 @@ export function PasswordStrengthMeter({
   const scoreColors = [
     "bg-red-500 text-red-500", // 0
     "bg-red-500 text-red-500", // 1
-    "bg-amber-500 text-amber-500", // 2
+    "bg-slate-400 text-slate-400", // 2
     "bg-sky-500 text-sky-500", // 3
     "bg-emerald-500 text-emerald-500", // 4
   ];
@@ -74,7 +74,7 @@ export function PasswordStrengthMeter({
                 ? seg <= 1
                   ? "bg-red-500"
                   : seg <= 2
-                  ? "bg-amber-500"
+                  ? "bg-slate-400"
                   : seg <= 3
                   ? "bg-sky-500"
                   : "bg-emerald-500"
@@ -94,7 +94,7 @@ export function PasswordStrengthMeter({
             score === 0 || score === 1
               ? "text-red-600 dark:text-red-400"
               : score === 2
-              ? "text-amber-600 dark:text-amber-400"
+              ? "text-slate-600 dark:text-slate-300"
               : score === 3
               ? "text-sky-600 dark:text-sky-400"
               : "text-emerald-600 dark:text-emerald-400"
@@ -103,7 +103,7 @@ export function PasswordStrengthMeter({
           {score >= 4 ? (
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
           ) : score >= 2 ? (
-            <Shield className="h-3.5 w-3.5 text-amber-500" />
+            <Shield className="h-3.5 w-3.5 text-slate-400" />
           ) : (
             <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
           )}

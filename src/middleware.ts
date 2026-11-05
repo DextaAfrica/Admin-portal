@@ -6,13 +6,49 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
   const host = req.headers.get("host") || "";
+  const protocol = req.nextUrl.protocol || "http:";
 
   // 1. Subdomain Host Detection
   const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica");
   const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextafrica");
 
-  // 2. Subdomain Root & Auth Rewrites
+  const buildSubdomainRedirect = (subdomain: "ops" | "admin", subPath = "/") => {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    if (isLocal) {
+      const port = host.split(":")[1] || "3000";
+      return new URL(`${protocol}//${subdomain}.localhost:${port}${subPath}`);
+    }
+    const targetDomain = subdomain === "ops" ? "ops.dextaafrica.org" : "admin.dextafrica.org";
+    return new URL(`https://${targetDomain}${subPath}`);
+  };
+
+  // 2. Strict Subdomain Isolation on Root Host (localhost / dextafrica.org)
+  // If someone accesses /ops or /admin-portal paths on the root host, redirect to the dedicated subdomain!
+  if (!isOpsHost && !isAdminHost) {
+    if (pathname === "/ops" || pathname.startsWith("/ops/")) {
+      const subPath = pathname.replace(/^\/ops/, "") || "/";
+      return NextResponse.redirect(buildSubdomainRedirect("ops", subPath));
+    }
+    if (pathname === "/admin-portal" || pathname.startsWith("/admin-portal/")) {
+      const subPath = pathname.replace(/^\/admin-portal/, "") || "/";
+      return NextResponse.redirect(buildSubdomainRedirect("admin", subPath));
+    }
+  }
+
+  // 3. Subdomain Root & Auth Rewrites on OPS Subdomain
   if (isOpsHost) {
+    // Prevent nested /ops paths on ops subdomain
+    if (pathname === "/ops") {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+    if (pathname === "/ops/login") {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (pathname === "/ops/register") {
+      return NextResponse.redirect(new URL("/register", req.url));
+    }
+
+    // Rewrite clean paths to internal Next.js folder routes
     if (pathname === "/") {
       return NextResponse.rewrite(new URL("/ops", req.url));
     }
@@ -24,7 +60,20 @@ export function middleware(req: NextRequest) {
     }
   }
 
+  // 4. Subdomain Root & Auth Rewrites on ADMIN Subdomain
   if (isAdminHost) {
+    // Prevent nested /admin-portal paths on admin subdomain
+    if (pathname === "/admin-portal") {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+    if (pathname === "/admin-portal/login") {
+      return NextResponse.redirect(new URL("/login", req.url));
+    }
+    if (pathname === "/admin-portal/register") {
+      return NextResponse.redirect(new URL("/register", req.url));
+    }
+
+    // Rewrite clean paths to internal Next.js folder routes
     if (pathname === "/") {
       return NextResponse.rewrite(new URL("/admin-portal", req.url));
     }
@@ -36,7 +85,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // 3. Public Routes Whitelist
+  // 5. Public Routes Whitelist
   const isPublicRoute =
     pathname === "/" ||
     pathname.startsWith("/login") ||
@@ -53,12 +102,12 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/api") ||
     pathname === "/favicon.ico";
 
-  // 4. Redirect unauthenticated users trying to access protected workspace pages
+  // 6. Redirect unauthenticated users trying to access protected workspace pages
   if (!token && !isPublicRoute && !isStaticOrApi) {
     const loginTarget = isOpsHost
-      ? "/ops/login"
+      ? "/login"
       : isAdminHost
-      ? "/admin-portal/login"
+      ? "/login"
       : "/login";
     const url = new URL(loginTarget, req.url);
     return NextResponse.redirect(url);

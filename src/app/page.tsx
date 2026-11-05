@@ -3,7 +3,6 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   ArrowRight,
@@ -11,14 +10,11 @@ import {
   Sun,
   Moon,
   Building2,
-  Users,
   ShieldCheck,
-  LogIn,
-  UserPlus,
   Lock,
-  Briefcase,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
+import { navigateToSubdomain } from "@/lib/routing";
 import { cn } from "@/lib/utils";
 
 interface PortraitSlide {
@@ -64,35 +60,7 @@ const PORTRAITS: PortraitSlide[] = [
   },
 ];
 
-const CORE_PILLARS = [
-  {
-    icon: Building2,
-    title: "Operations Enterprise Portal",
-    badge: "ops.dextaafrica.org",
-    description:
-      "Landmark project delivery, capital allocation, field engineering milestones, and internal workforce logistics.",
-    href: "/ops",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Systems & Web Command",
-    badge: "admin.dextafrica.org",
-    description:
-      "Zero-trust IT access governance, AWS S3 storage vaults, policy watchdog intrusion shields, and web CMS schemas.",
-    href: "/admin-portal",
-  },
-  {
-    icon: Briefcase,
-    title: "Strategic Capital & CRM",
-    badge: "Institutional Deals",
-    description:
-      "Confidential client dossiers, institutional partnership memos, and high-value project pipelines.",
-    href: "/crm-portal",
-  },
-];
-
 export default function LandingPage() {
-  const router = useRouter();
   const [activeSlide, setActiveSlide] = React.useState(0);
   const [zoomToggle, setZoomToggle] = React.useState(false);
   const { theme, setTheme } = useTheme();
@@ -123,31 +91,30 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#09090B] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white overflow-x-hidden">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#09090B]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-10">
-          <Link href="/" className="flex items-center shrink-0">
-            <DextaLogo className="h-7 sm:h-10 w-auto" />
-          </Link>
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#070A0F] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white overflow-x-hidden transition-colors duration-200 relative">
+      {/* Background Ambient Radial Highlights for Dark Mode Depth */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/4 w-[650px] h-[380px] bg-red-600/[0.06] blur-[160px] rounded-full dark:opacity-100 opacity-20" />
+        <div className="absolute top-1/2 -right-32 w-[550px] h-[350px] bg-slate-700/[0.06] blur-[150px] rounded-full dark:opacity-100 opacity-20" />
+      </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/ops"
-              className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
-            >
-              <Building2 className="h-3.5 w-3.5" />
-              <span>Ops Portal</span>
+      {/* Top Navigation Bar - Minimalist, Professional, Clean Header */}
+      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.12] bg-white/95 dark:bg-[#0C0F17]/95 backdrop-blur-md">
+        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center shrink-0">
+              <DextaLogo className="h-7 sm:h-10 w-auto" />
             </Link>
+            <div className="hidden sm:flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">
+              <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
+              <span className="text-[11px] font-mono font-bold tracking-wider text-slate-600 dark:text-slate-300 uppercase">
+                dextafrica.org
+              </span>
+            </div>
+          </div>
 
-            <Link
-              href="/admin-portal"
-              className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-xs font-semibold text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors"
-            >
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Systems IT</span>
-            </Link>
-
+          <div className="flex items-center gap-2 sm:gap-3.5">
+            {/* Light / Dark Mode Toggle */}
             {mounted && (
               <button
                 type="button"
@@ -163,97 +130,122 @@ export default function LandingPage() {
               </button>
             )}
 
+            {/* Direct Quick Launch into Operations */}
             <button
               type="button"
-              onClick={() => router.push("/login")}
-              className="btn-crimson-exec h-9 sm:h-10 rounded-xl px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
+              onClick={() => navigateToSubdomain("ops")}
+              className="btn-crimson-exec h-9 sm:h-10 rounded-xl px-4 sm:px-6 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <LogIn className="h-3.5 w-3.5 shrink-0" />
-              <span>Sign In</span>
+              <Building2 className="h-3.5 w-3.5 shrink-0" />
+              <span>Operations Desk</span>
             </button>
 
+            {/* Direct Quick Launch into Systems IT */}
             <button
               type="button"
-              onClick={() => router.push("/register")}
-              className="btn-fill-up h-9 sm:h-10 rounded-xl px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
+              onClick={() => navigateToSubdomain("admin")}
+              className="btn-fill-up h-9 sm:h-10 rounded-xl px-4 sm:px-6 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <UserPlus className="h-3.5 w-3.5 shrink-0 text-[#ED2618] transition-colors" />
-              <span className="hidden sm:inline">Create Team Account</span>
-              <span className="inline sm:hidden">Register</span>
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#ED2618] transition-colors" />
+              <span className="hidden sm:inline">Systems Command</span>
+              <span className="inline sm:hidden">IT Command</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-10 py-10 sm:py-14 lg:py-16 space-y-14 lg:space-y-16">
-        {/* Hero Split Section */}
-        <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          {/* Left Column: Clean Executive Introduction */}
+      {/* Main Single-Viewport Hero Section (Direct Gateway + Slant-Curvy Visual) */}
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-10 py-10 sm:py-16 flex items-center">
+        <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          {/* Left Column: Focused Executive Gateway Selection */}
           <div className="lg:col-span-6 space-y-6 animate-fade-in">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#ED2618]" />
-                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400 whitespace-nowrap">
-                  Dexta Africa Team Portal
-                </span>
-              </div>
-
-              <Link
-                href="/crm-portal"
-                className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-[11px] font-bold text-amber-500 dark:text-amber-400 hover:bg-amber-500/20 transition-all cursor-pointer"
-              >
-                <Briefcase className="h-3 w-3" />
-                <span>Strategic Capital CRM &rarr;</span>
-              </Link>
+            <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1.5">
+              <span className="h-2 w-2 rounded-full bg-[#ED2618]" />
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400 whitespace-nowrap">
+                Dexta Africa Enterprise Gateway
+              </span>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.14]">
-              Putting People, Quality &amp; Partnerships First.
+            <h1 className="text-3xl sm:text-4xl lg:text-[46px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
+              Executing African Infrastructure, Capital &amp; Operations.
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed max-w-xl">
-              Welcome to the official Dexta Africa team workspace. Sign in with
-              your verified work credentials or establish your team profile to manage
-              landmark developments, institutional investor deals, and operational workflows.
+              The unified corporate gateway for Dexta Africa. Select your designated operational environment
+              below to authenticate and access real-time infrastructure delivery, procurement, or systems command.
             </p>
 
-            {/* Framed Executive Action Bar (Sign In + Fill-Up Create Account) */}
-            <div className="pt-2">
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5">
-                <button
-                  type="button"
-                  onClick={() => router.push("/login")}
-                  className="btn-crimson-exec h-12 rounded-xl px-6 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer shadow-lg shadow-red-500/20"
-                >
-                  <span className="whitespace-nowrap">Sign In to Workspace</span>
-                  <ArrowRight className="h-4 w-4 shrink-0" />
-                </button>
+            {/* Direct Dual Workspace Launchers */}
+            <div className="pt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Operations Portal Button */}
+              <button
+                type="button"
+                onClick={() => navigateToSubdomain("ops")}
+                className="group flex flex-col items-start p-5 rounded-2xl border border-red-500/35 dark:border-red-500/40 bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#181C28] dark:to-[#11141E] hover:border-[#ED2618] dark:hover:border-[#ED2618] shadow-md dark:shadow-[0_12px_32px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/[0.08] hover:shadow-xl hover:shadow-red-500/10 transition-all text-left cursor-pointer relative overflow-hidden"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200/60 dark:border-red-500/30 text-[#ED2618] group-hover:bg-[#ED2618] group-hover:text-white transition-all mb-3.5">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-red-50 dark:bg-red-500/15 border border-red-200/60 dark:border-red-500/30 mb-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618]" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-[#ED2618] dark:text-red-400">
+                    ops.dextaafrica.org
+                  </span>
+                </div>
+                <span className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors mt-0.5">
+                  Operations Command Desk
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed line-clamp-2">
+                  Landmark deliveries, field engineering milestones, and procurement treasury.
+                </span>
+                <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-[#ED2618] group-hover:translate-x-0.5 transition-transform">
+                  <span>Sign In &rarr;</span>
+                </div>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => router.push("/register")}
-                  className="btn-fill-up h-12 rounded-xl px-6 text-sm font-bold whitespace-nowrap shrink-0 cursor-pointer"
-                >
-                  <UserPlus className="h-4 w-4 shrink-0 text-[#ED2618] transition-colors" />
-                  <span className="whitespace-nowrap">Create Team Account</span>
-                </button>
-              </div>
+              {/* Systems IT Command Button */}
+              <button
+                type="button"
+                onClick={() => navigateToSubdomain("admin")}
+                className="group flex flex-col items-start p-5 rounded-2xl border border-slate-200/90 dark:border-white/[0.14] bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#181C28] dark:to-[#11141E] hover:border-[#ED2618] dark:hover:border-[#ED2618] shadow-md dark:shadow-[0_12px_32px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/[0.08] hover:shadow-xl hover:shadow-red-500/10 transition-all text-left cursor-pointer relative overflow-hidden"
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/10 border border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200 group-hover:bg-[#ED2618] group-hover:text-white transition-all mb-3.5">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/10 mb-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-300" />
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                    admin.dextafrica.org
+                  </span>
+                </div>
+                <span className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors mt-0.5">
+                  Systems &amp; IT Command
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed line-clamp-2">
+                  Zero-trust IT access, AWS S3 storage vaults, and core web CMS schemas.
+                </span>
+                <div className="mt-4 flex items-center gap-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 group-hover:text-[#ED2618] group-hover:translate-x-0.5 transition-transform">
+                  <span>Authenticate &rarr;</span>
+                </div>
+              </button>
             </div>
 
-            {/* Security Notice: Only Verified Signed-In Users Gain Access */}
-            <div className="pt-1 flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+            {/* Zero-Trust Notice */}
+            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 pt-1">
               <Lock className="h-3.5 w-3.5 text-[#ED2618] shrink-0" />
               <span>
-                Workspace access is restricted to signed-in Dexta Africa team
-                members with two-step OTP verification.
+                Protected by Dexta Zero-Trust Identity &bull; 256-Bit Encrypted &bull; Mandatory 2FA Support
               </span>
             </div>
           </div>
 
-          {/* Right Column: Cinematic Portrait Showcase with Docked Caption Bar */}
+          {/* Right Column: Cinematic Slant-Curvy Showcase (Pure Red & Slate Palette) */}
           <div className="lg:col-span-6 animate-fade-in delay-100">
-            <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden rounded-3xl border border-slate-200/90 dark:border-white/10 bg-slate-950 shadow-2xl">
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] w-full overflow-hidden rounded-[2.5rem] rounded-tr-[5.5rem] rounded-bl-[4.5rem] border border-slate-200/90 dark:border-white/[0.16] bg-slate-950 shadow-2xl dark:shadow-[0_24px_60px_rgba(0,0,0,0.85)] dark:ring-1 dark:ring-white/[0.1]">
+              {/* Slant-Curvy Architectural Accent Waves */}
+              <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-bl from-red-500/20 via-transparent to-transparent rounded-bl-[100px] pointer-events-none z-20" />
+              <div className="absolute bottom-0 left-0 w-36 h-36 bg-gradient-to-tr from-red-500/10 via-transparent to-transparent rounded-tr-[80px] pointer-events-none z-20" />
+
               {PORTRAITS.map((slide, index) => {
                 const isActive = index === activeSlide;
                 const scaleValue = isActive
@@ -284,12 +276,13 @@ export default function LandingPage() {
                         transform: `scale(${scaleValue})`,
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+                    {/* Dark Vignette Gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/25 to-transparent" />
                   </div>
                 );
               })}
 
-              {/* Integrated Bottom Caption & Slider Controls inside Portrait Frame */}
+              {/* Integrated Bottom Caption & Curved Slider Controls */}
               <div className="absolute bottom-0 inset-x-0 z-20 p-5 sm:p-7 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div className="space-y-1 max-w-lg">
                   <span className="inline-block rounded-full bg-[#ED2618] px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white">
@@ -325,41 +318,20 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-
-        {/* Clean 3-Column Pillars Strip */}
-        <section className="pt-8 border-t border-slate-200/80 dark:border-white/[0.08]">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {CORE_PILLARS.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.title}
-                  href={item.href}
-                  className="group block rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#121318] p-6 shadow-sm hover:border-red-500/40 hover:shadow-md transition-all cursor-pointer"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3.5">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/10 text-[#ED2618] group-hover:bg-[#ED2618] group-hover:text-white transition-all">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                        {item.title}
-                      </h3>
-                    </div>
-
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                      {item.badge}
-                    </span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                    {item.description}
-                  </p>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
       </main>
+
+      {/* Clean Minimalist Footer */}
+      <footer className="border-t border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#09090B] py-5 text-center text-xs text-slate-500">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <DextaLogo className="h-5 w-auto" />
+            <span>&copy; {new Date().getFullYear()} Dexta Africa Enterprise &bull; dextafrica.org</span>
+          </div>
+          <div className="text-slate-500 dark:text-slate-400 text-xs">
+            <span>Zero-Trust Enterprise Gateway</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

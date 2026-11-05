@@ -344,7 +344,7 @@ export default function CrmDashboardPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-white/[0.08] pb-6">
         <div>
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-500 border border-amber-500/20">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-500/10 text-[#ED2618] border border-red-500/20">
               <Briefcase className="h-6 w-6" />
             </div>
             <div>
@@ -361,10 +361,10 @@ export default function CrmDashboardPage() {
         <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <a
             href="/crm-portal"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 text-xs font-semibold transition-colors"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Executive CRM Landing</span>
+            <span>Executive CRM Portal</span>
           </a>
 
           <Button
@@ -412,7 +412,7 @@ export default function CrmDashboardPage() {
             <span className="text-xs font-semibold tracking-wider uppercase text-slate-500 dark:text-slate-400">
               Contracted Accounts
             </span>
-            <Award className="h-5 w-5 text-amber-500" />
+            <Award className="h-5 w-5 text-[#ED2618]" />
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900 dark:text-white">
@@ -963,8 +963,8 @@ export default function CrmDashboardPage() {
 
             {/* Notes */}
             {selectedClient.notes && (
-              <div className="p-3.5 rounded-xl bg-amber-500/[0.05] border border-amber-500/20 text-xs">
-                <span className="font-semibold text-amber-800 dark:text-amber-400">Internal Strategy Note:</span>
+              <div className="p-3.5 rounded-xl bg-red-500/[0.05] border border-red-500/20 text-xs">
+                <span className="font-semibold text-red-700 dark:text-red-400">Internal Strategy Note:</span>
                 <p className="mt-1 text-slate-700 dark:text-slate-300 leading-relaxed">
                   {selectedClient.notes}
                 </p>

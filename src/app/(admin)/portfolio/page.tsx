@@ -268,9 +268,9 @@ export default function PortfolioPage() {
             {countConstruction}
           </p>
         </div>
-        <div className="rounded-2xl border border-amber-200/60 dark:border-amber-500/20 bg-amber-50/40 dark:bg-amber-500/5 p-4">
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Planning &amp; Design</p>
-          <p className="text-2xl font-bold text-amber-800 dark:text-amber-300 mt-1">
+        <div className="rounded-2xl border border-red-200/60 dark:border-red-500/20 bg-red-50/40 dark:bg-red-500/5 p-4">
+          <p className="text-xs font-semibold text-red-700 dark:text-red-400">Planning &amp; Design</p>
+          <p className="text-2xl font-bold text-red-800 dark:text-red-300 mt-1">
             {countPlanning}
           </p>
         </div>
@@ -351,7 +351,7 @@ export default function PortfolioPage() {
                         ? "bg-emerald-500/80 text-white"
                         : dev.status === "under_construction"
                         ? "bg-sky-500/80 text-white"
-                        : "bg-amber-500/80 text-white"
+                        : "bg-rose-500/80 text-white"
                     }`}
                   >
                     {dev.status.replace("_", " ")}

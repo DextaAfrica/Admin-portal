@@ -83,7 +83,7 @@ export default function CrmLandingPortalPage() {
       {/* Dynamic ambient gradients */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute -top-40 -left-40 w-96 h-96 bg-red-600/10 rounded-full blur-[140px]" />
-        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-amber-500/10 rounded-full blur-[140px]" />
+        <div className="absolute top-1/3 -right-40 w-96 h-96 bg-red-500/10 rounded-full blur-[140px]" />
         <div className="absolute -bottom-40 left-1/3 w-96 h-96 bg-red-900/15 rounded-full blur-[140px]" />
       </div>
 
@@ -95,7 +95,7 @@ export default function CrmLandingPortalPage() {
               <DextaLogo className="h-9 w-auto" />
             </Link>
             <div className="hidden sm:flex items-center gap-2 border-l border-white/10 pl-4">
-              <span className="text-xs uppercase tracking-widest font-extrabold text-amber-500">
+              <span className="text-xs uppercase tracking-widest font-extrabold text-[#ED2618]">
                 Strategic Capital CRM
               </span>
               <span className="text-[10px] text-slate-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-full">
@@ -120,7 +120,7 @@ export default function CrmLandingPortalPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           {/* Left Column: Strategic Value Proposition */}
           <div className="lg:col-span-7 space-y-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-xs font-semibold">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-red-500/25 bg-red-500/10 text-red-400 text-xs font-semibold">
               <Sparkles className="h-3.5 w-3.5" />
               <span>Institutional Real Estate &amp; Private Equity CRM</span>
             </div>
@@ -144,7 +144,7 @@ export default function CrmLandingPortalPage() {
               </div>
 
               <div>
-                <span className="text-2xl sm:text-3xl font-extrabold text-amber-400 font-mono">
+                <span className="text-2xl sm:text-3xl font-extrabold text-[#ED2618] font-mono">
                   100%
                 </span>
                 <p className="text-xs text-slate-400 mt-1">Audit Traceability</p>
@@ -190,7 +190,7 @@ export default function CrmLandingPortalPage() {
                     Authorized Investor &amp; Deal Lead Sign In
                   </p>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500/10 border border-red-500/20 text-[#ED2618]">
                   <Briefcase className="h-5 w-5" />
                 </div>
               </div>
