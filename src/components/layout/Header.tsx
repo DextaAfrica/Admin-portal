@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -292,7 +293,14 @@ export function Header({
           >
             <div className="relative flex h-8 w-8 items-center justify-center rounded-xl bg-red-100 dark:bg-red-500/15 text-[#ED2618] dark:text-red-400 border border-red-200 dark:border-red-500/25 font-bold text-xs shadow-sm overflow-hidden">
               {profileData.avatarUrl ? (
-                <img src={profileData.avatarUrl} alt={profileData.fullName} className="h-full w-full object-cover" />
+                <Image
+                  src={profileData.avatarUrl}
+                  alt={profileData.fullName}
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
               ) : (
                 <span>{profileData.fullName.charAt(0) || "A"}</span>
               )}
@@ -474,7 +482,14 @@ export function Header({
               <div className="relative group shrink-0">
                 <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ED2618] to-[#8a1209] text-white text-xl font-black shadow-md overflow-hidden">
                   {profileData.avatarUrl ? (
-                    <img src={profileData.avatarUrl} alt={profileData.fullName} className="h-full w-full object-cover" />
+                    <Image
+                      src={profileData.avatarUrl}
+                      alt={profileData.fullName}
+                      width={64}
+                      height={64}
+                      className="h-full w-full object-cover"
+                      unoptimized
+                    />
                   ) : (
                     <span>{profileData.fullName.charAt(0) || "A"}</span>
                   )}
@@ -637,7 +652,14 @@ export function Header({
             <div className="relative group shrink-0">
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ED2618] to-[#8a1209] text-white text-xl font-black shadow-md overflow-hidden">
                 {profileData.avatarUrl ? (
-                  <img src={profileData.avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                  <Image
+                    src={profileData.avatarUrl}
+                    alt="Avatar"
+                    width={64}
+                    height={64}
+                    className="h-full w-full object-cover"
+                    unoptimized
+                  />
                 ) : (
                   <span>{profileData.fullName.charAt(0) || "A"}</span>
                 )}

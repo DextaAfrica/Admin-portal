@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   User,
@@ -312,7 +313,14 @@ export function EnterpriseProfileWizard({
                 }`}
               >
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar Preview" className="h-full w-full object-cover" />
+                  <Image
+                    src={avatarUrl}
+                    alt="Avatar Preview"
+                    width={80}
+                    height={80}
+                    className="h-full w-full object-cover"
+                    unoptimized
+                  />
                 ) : (
                   <span>{initials}</span>
                 )}
@@ -770,7 +778,14 @@ export function EnterpriseProfileWizard({
                   <div className="flex flex-col sm:flex-row items-center gap-4">
                     {mfaQrUrl && (
                       <div className="p-2 rounded-xl bg-white shadow-sm shrink-0">
-                        <img src={mfaQrUrl} alt="Authenticator QR" className="h-28 w-28" />
+                        <Image
+                          src={mfaQrUrl}
+                          alt="Authenticator QR"
+                          width={112}
+                          height={112}
+                          className="h-28 w-28"
+                          unoptimized
+                        />
                       </div>
                     )}
                     <div className="space-y-1 text-center sm:text-left">
@@ -862,7 +877,14 @@ export function EnterpriseProfileWizard({
                 }`}
               >
                 {createdUser.avatarUrl ? (
-                  <img src={createdUser.avatarUrl} alt={createdUser.fullName} className="h-full w-full object-cover" />
+                  <Image
+                    src={createdUser.avatarUrl}
+                    alt={createdUser.fullName}
+                    width={80}
+                    height={80}
+                    className="h-full w-full object-cover"
+                    unoptimized
+                  />
                 ) : (
                   <span>{initials}</span>
                 )}
