@@ -32,6 +32,12 @@ export default function OperationsLoginPage() {
   const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const [errorDetails, setErrorDetails] = React.useState<{
+    title?: string;
+    targetUrl?: string;
+    targetWorkspace?: string;
+    buttonText?: string;
+  } | null>(null);
   const [inactivityNotice, setInactivityNotice] = React.useState(false);
 
   React.useEffect(() => {
@@ -76,7 +82,16 @@ export default function OperationsLoginPage() {
 
       if (!res.ok) {
         setErrorMessage(data.error || "Sign in failed");
-        toastError("Sign In Failed", data.error || "Invalid credentials");
+        if (data.targetUrl) {
+          setErrorDetails({
+            title: data.code === "WRONG_WORKSPACE" ? "Different Workspace Required" : "Access Notice",
+            targetUrl: data.targetUrl,
+            targetWorkspace: data.targetWorkspace,
+            buttonText: data.buttonText,
+          });
+        } else {
+          setErrorDetails(null);
+        }
         setIsLoading(false);
         return;
       }
@@ -130,6 +145,15 @@ export default function OperationsLoginPage() {
       const data = await res.json();
       if (!res.ok) {
         setOtpError(data.error || "Verification failed");
+        if (data.targetUrl) {
+          setErrorDetails({
+            title: data.code === "WRONG_WORKSPACE" ? "Different Workspace Required" : "Access Notice",
+            targetUrl: data.targetUrl,
+            targetWorkspace: data.targetWorkspace,
+            buttonText: data.buttonText,
+          });
+          setErrorMessage(data.error || "Verification failed");
+        }
         setIsVerifyingOtp(false);
         return;
       }
@@ -218,9 +242,31 @@ export default function OperationsLoginPage() {
           )}
 
           {errorMessage && (
-            <div className="flex items-center gap-2.5 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-500 dark:text-red-400 animate-fade-in">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{errorMessage}</span>
+            <div className="p-4 rounded-2xl bg-red-500/[0.08] dark:bg-red-500/[0.12] border border-red-500/25 dark:border-red-500/30 text-xs space-y-3 animate-fade-in">
+              <div className="flex items-start gap-3">
+                <div className="p-1.5 rounded-xl bg-red-500/15 text-[#ED2618] shrink-0 mt-0.5">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <p className="font-bold text-slate-900 dark:text-white text-xs">
+                    {errorDetails?.title || "Sign-In Notice"}
+                  </p>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">
+                    {errorMessage}
+                  </p>
+                </div>
+              </div>
+              {errorDetails?.targetUrl && (
+                <div className="pt-0.5 pl-8">
+                  <a
+                    href={errorDetails.targetUrl}
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white font-semibold text-xs transition-all shadow-sm group cursor-pointer"
+                  >
+                    <span>{errorDetails.buttonText || `Open ${errorDetails.targetWorkspace || "Workspace"} Desk`}</span>
+                    <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </a>
+                </div>
+              )}
             </div>
           )}
 

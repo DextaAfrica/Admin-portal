@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Sparkles,
   Clock,
+  AlertCircle,
 } from "lucide-react";
 import { Input, PasswordInput } from "@/components/ui/Input";
 import { OTPInput } from "@/components/ui/OTPInput";
@@ -31,6 +32,12 @@ export default function LoginPage() {
   const [password, setPassword] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState("");
+  const [errorDetails, setErrorDetails] = React.useState<{
+    title?: string;
+    targetUrl?: string;
+    targetWorkspace?: string;
+    buttonText?: string;
+  } | null>(null);
   const [inactivityNotice, setInactivityNotice] = React.useState(false);
 
   React.useEffect(() => {
@@ -76,7 +83,16 @@ export default function LoginPage() {
 
       if (!res.ok) {
         setErrorMessage(data.error || "Sign in failed");
-        toastError("Sign In Failed", data.error || "Invalid email or password");
+        if (data.targetUrl) {
+          setErrorDetails({
+            title: data.code === "WRONG_WORKSPACE" ? "Different Workspace Required" : "Access Notice",
+            targetUrl: data.targetUrl,
+            targetWorkspace: data.targetWorkspace,
+            buttonText: data.buttonText,
+          });
+        } else {
+          setErrorDetails(null);
+        }
         setIsLoading(false);
         return;
       }
@@ -135,7 +151,15 @@ export default function LoginPage() {
         setOtpError(
           data.error || "Incorrect 6-digit code. Please check and try again."
         );
-        toastError("Verification Failed", data.error || "Invalid code");
+        if (data.targetUrl) {
+          setErrorDetails({
+            title: data.code === "WRONG_WORKSPACE" ? "Different Workspace Required" : "Access Notice",
+            targetUrl: data.targetUrl,
+            targetWorkspace: data.targetWorkspace,
+            buttonText: data.buttonText,
+          });
+          setErrorMessage(data.error || "Verification failed");
+        }
         setIsVerifyingOtp(false);
         return;
       }
@@ -263,8 +287,31 @@ export default function LoginPage() {
           </div>
 
           {errorMessage && (
-            <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3 border border-red-200 dark:border-red-500/20 text-xs font-medium text-red-600 dark:text-red-400 text-center animate-fade-in">
-              {errorMessage}
+            <div className="p-4 rounded-2xl bg-red-500/[0.08] dark:bg-red-500/[0.12] border border-red-500/25 dark:border-red-500/30 text-xs space-y-3 animate-fade-in text-left">
+              <div className="flex items-start gap-3">
+                <div className="p-1.5 rounded-xl bg-red-500/15 text-[#ED2618] shrink-0 mt-0.5">
+                  <AlertCircle className="h-4 w-4" />
+                </div>
+                <div className="space-y-1 flex-1">
+                  <p className="font-bold text-slate-900 dark:text-white text-xs">
+                    {errorDetails?.title || "Sign-In Notice"}
+                  </p>
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">
+                    {errorMessage}
+                  </p>
+                </div>
+              </div>
+              {errorDetails?.targetUrl && (
+                <div className="pt-0.5 pl-8">
+                  <a
+                    href={errorDetails.targetUrl}
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white font-semibold text-xs transition-all shadow-sm group cursor-pointer"
+                  >
+                    <span>{errorDetails.buttonText || `Open ${errorDetails.targetWorkspace || "Workspace"} Desk`}</span>
+                    <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </a>
+                </div>
+              )}
             </div>
           )}
 

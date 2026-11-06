@@ -1,4 +1,4 @@
-import { getCurrentSession } from "@/lib/auth/session";
+import { getCurrentSession, createSsoTicket } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -10,7 +10,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await getCurrentSession();
+  const { user, sessionToken } = await getCurrentSession();
 
   if (!user) {
     redirect("/login");
@@ -29,20 +29,28 @@ export default async function AdminLayout({
   if (isAdminHost && !isSuperAdmin && dept !== "IT") {
     const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
     const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
-    const redirectUrl = isLocal
-      ? `http://ops.localhost${port}/dashboard`
-      : `https://ops.dextaafrica.org/dashboard`;
-    redirect(redirectUrl);
+    const opsBase = isLocal ? `http://ops.localhost${port}` : `https://ops.dextaafrica.org`;
+
+    if (sessionToken) {
+      const ticket = await createSsoTicket(sessionToken);
+      redirect(`${opsBase}/api/auth/sso?ticket=${ticket}&next=/dashboard`);
+    } else {
+      redirect(`${opsBase}/login`);
+    }
   }
 
   // 2. Systems IT account on Operations subdomain -> automatically redirect to Systems IT Console
   if (isOpsHost && !isSuperAdmin && dept === "IT") {
     const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
     const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
-    const redirectUrl = isLocal
-      ? `http://admin.localhost${port}/dashboard`
-      : `https://admin.dextaafrica.org/dashboard`;
-    redirect(redirectUrl);
+    const adminBase = isLocal ? `http://admin.localhost${port}` : `https://admin.dextafrica.org`;
+
+    if (sessionToken) {
+      const ticket = await createSsoTicket(sessionToken);
+      redirect(`${adminBase}/api/auth/sso?ticket=${ticket}&next=/dashboard`);
+    } else {
+      redirect(`${adminBase}/login`);
+    }
   }
 
   return (

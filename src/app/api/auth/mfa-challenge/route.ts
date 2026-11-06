@@ -90,20 +90,32 @@ export async function POST(req: NextRequest) {
 
     const dept = ((user as any).department || "").toUpperCase();
     const isSuperAdmin = user.role === "SUPER_ADMIN";
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
 
     if (isAdminHost && !isSuperAdmin && dept !== "IT") {
+      const targetUrl = isLocal ? `http://ops.localhost${port}/login` : "https://ops.dextaafrica.org/login";
       return NextResponse.json(
         {
-          error: "Access Denied: This account is registered under Operations Directorate. Please authenticate via the Operations Command Desk at ops.dextaafrica.org.",
+          error: "This account belongs to the Operations workspace. Please sign in through the Operations Desk.",
+          code: "WRONG_WORKSPACE",
+          targetWorkspace: "Operations",
+          targetUrl,
+          buttonText: "Open Operations Desk",
         },
         { status: 403 }
       );
     }
 
     if (isOpsHost && !isSuperAdmin && dept === "IT") {
+      const targetUrl = isLocal ? `http://admin.localhost${port}/login` : "https://admin.dextaafrica.org/login";
       return NextResponse.json(
         {
-          error: "Access Denied: This account is registered under Systems IT Directorate. Please authenticate via the Systems Command Console at admin.dextaafrica.org.",
+          error: "This account belongs to the Systems IT workspace. Please sign in through the Systems Portal.",
+          code: "WRONG_WORKSPACE",
+          targetWorkspace: "Systems IT",
+          targetUrl,
+          buttonText: "Open Systems Portal",
         },
         { status: 403 }
       );
