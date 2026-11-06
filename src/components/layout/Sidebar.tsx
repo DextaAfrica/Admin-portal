@@ -328,16 +328,16 @@ export function Sidebar({
       const port = window.location.port ? `:${window.location.port}` : "";
       const protocol = window.location.protocol;
 
-      // Cross-subdomain navigation for seamless portal switching
+      // Cross-subdomain navigation for seamless portal switching with SSO ticket transfer
       if (currentHost.includes("localhost") || currentHost.includes("127.0.0.1")) {
         if (portalId === "operations" && !currentHost.startsWith("ops.")) {
-          window.location.href = `${protocol}//ops.localhost${port}/dashboard?tab=operations`;
+          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//ops.localhost${port}/api/auth/sso`)}&next=/dashboard?tab=operations`;
           return;
         } else if (portalId === "systems" && !currentHost.startsWith("admin.")) {
-          window.location.href = `${protocol}//admin.localhost${port}/dashboard?tab=systems`;
+          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//admin.localhost${port}/api/auth/sso`)}&next=/dashboard?tab=systems`;
           return;
         } else if (portalId === "executive" && (currentHost.startsWith("ops.") || currentHost.startsWith("admin."))) {
-          window.location.href = `${protocol}//localhost${port}/dashboard?tab=overview`;
+          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//localhost${port}/api/auth/sso`)}&next=/dashboard?tab=overview`;
           return;
         }
       } else if (currentHost.includes("dextaafrica.org") || currentHost.includes("dextafrica.org")) {
