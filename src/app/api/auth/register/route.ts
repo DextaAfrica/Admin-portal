@@ -35,24 +35,13 @@ export async function POST(req: NextRequest) {
       department = "Operations",
       jobTitle,
       phone,
-      accessPasscode,
+      avatarUrl,
+      bio,
       mfaSecret,
       mfaCode,
     } = validationResult.data;
 
-    // 2. Organization Passcode Verification
-    const validPasscodes = ["DEXTA-2026", "DEXTA-AFRICA", "DEXTA", "DEXTA2026"];
-    if (accessPasscode) {
-      const cleanPasscode = String(accessPasscode).trim().toUpperCase();
-      if (!validPasscodes.includes(cleanPasscode)) {
-        return NextResponse.json(
-          { error: "Invalid Organization Access Key. (Hint: Leave blank or use DEXTA-2026)" },
-          { status: 403 }
-        );
-      }
-    }
-
-    // 3. Email Uniqueness Check
+    // 2. Email Uniqueness Check
     const normalizedEmail = email.toLowerCase().trim();
     const existingUser = await db.user.findUnique({
       where: { email: normalizedEmail },
@@ -69,7 +58,7 @@ export async function POST(req: NextRequest) {
     let validatedSecret: string | null = null;
     let recoveryCodes: string[] = [];
 
-    // 4. TOTP Verification (if enabled during registration)
+    // 3. TOTP Verification (if enabled during registration)
     if (mfaSecret && mfaCode) {
       const isTotpValid = verifyTotpToken({
         token: mfaCode,
@@ -86,10 +75,10 @@ export async function POST(req: NextRequest) {
       validatedSecret = mfaSecret;
     }
 
-    // 5. Secure Cryptographic Password Hashing
+    // 4. Secure Cryptographic Password Hashing
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // 6. Create User in Database
+    // 5. Create User Profile in Database
     const newUser = await db.user.create({
       data: {
         email: normalizedEmail,
@@ -99,6 +88,8 @@ export async function POST(req: NextRequest) {
         department: (department || "OPERATIONS").toUpperCase(),
         jobTitle: jobTitle ? jobTitle.trim() : "Team Member",
         phone: phone ? phone.trim() : null,
+        avatarUrl: avatarUrl || null,
+        bio: bio ? bio.trim() : null,
         status: "ACTIVE",
         twoFactorEnabled,
         twoFactorSecret: validatedSecret,
@@ -107,7 +98,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 7. Auto-create HR EmployeeProfile
+    // 6. Auto-create HR EmployeeProfile Record
     try {
       const empNumber = `DXT-${(department || "OP").slice(0, 3).toUpperCase()}-${Math.floor(1000 + Math.random() * 9000)}`;
       await db.employeeProfile.create({
@@ -115,14 +106,14 @@ export async function POST(req: NextRequest) {
           userId: newUser.id,
           employeeNumber: empNumber,
           fullName: newUser.fullName,
-          email: newUser.email,
+          workEmail: newUser.email,
           department: newUser.department || "Operations",
           jobTitle: newUser.jobTitle || "Team Member",
-          role: "STAFF",
+          employmentType: "FULL_TIME",
           status: "ACTIVE",
-          phone: newUser.phone,
+          phone: newUser.phone || "+234 800 000 0000",
           startDate: new Date(),
-          annualLeaveDays: 20,
+          annualLeaveBalance: 20,
           usedLeaveDays: 0,
         },
       });

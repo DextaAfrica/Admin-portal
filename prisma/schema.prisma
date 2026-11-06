@@ -16,6 +16,8 @@ model User {
   department          String                   @default("OPERATIONS") // HR, IT, OPERATIONS, EXECUTIVE, FINANCE, ARCHITECTURE
   jobTitle            String?
   phone               String?
+  avatarUrl           String?
+  bio                 String?
   status              String                   @default("ACTIVE") // ACTIVE, SUSPENDED, PENDING_APPROVAL
   twoFactorEnabled    Boolean                  @default(false)
   twoFactorSecret     String?

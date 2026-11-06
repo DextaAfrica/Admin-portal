@@ -124,6 +124,8 @@ export const RegisterSchema = z
       .trim()
       .max(60, "Job title cannot exceed 60 characters")
       .optional(),
+    avatarUrl: z.string().optional(),
+    bio: z.string().trim().max(300, "Bio cannot exceed 300 characters").optional(),
     phone: z
       .string()
       .trim()
