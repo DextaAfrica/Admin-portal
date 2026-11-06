@@ -14,10 +14,17 @@ import {
   Menu,
   LogOut,
   ShieldAlert,
+  Globe,
+  Building2,
+  ShieldCheck,
+  User,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
 import { CommandPalette } from "./CommandPalette";
+import { NotificationCenter } from "./NotificationCenter";
+import { navigateToSubdomain } from "@/lib/routing";
 
 const PAGE_LABELS: Record<string, string> = {
   dashboard: "Dashboard Overview",
@@ -50,6 +57,8 @@ export function Header({
   const [mounted, setMounted] = React.useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = React.useState(false);
   const [signOutModalOpen, setSignOutModalOpen] = React.useState(false);
+  const [workspaceSwitchModalOpen, setWorkspaceSwitchModalOpen] = React.useState(false);
+  const [userProfileModalOpen, setUserProfileModalOpen] = React.useState(false);
   const [isSigningOut, setIsSigningOut] = React.useState(false);
 
   React.useEffect(() => {
@@ -168,6 +177,19 @@ export function Header({
             <Search className="h-4 w-4" />
           </button>
 
+          {/* Workspace & Portal Switcher Modal Trigger */}
+          <button
+            type="button"
+            onClick={() => setWorkspaceSwitchModalOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-600 hover:text-[#ED2618] hover:border-[#ED2618]/30 dark:text-slate-300 dark:hover:text-white dark:hover:border-white/20 transition-all cursor-pointer"
+            title="Switch Workspace Portal"
+          >
+            <Globe className="h-4 w-4" />
+          </button>
+
+          {/* Automated Notification Hub */}
+          <NotificationCenter />
+
           {/* Theme Switcher */}
           {mounted && (
             <button
@@ -183,8 +205,13 @@ export function Header({
             </button>
           )}
 
-          {/* User Badge */}
-          <div className="hidden sm:flex items-center gap-2.5 pl-2.5 border-l border-slate-200 dark:border-white/10">
+          {/* User Badge -> Opens User Profile & Security Quick Modal */}
+          <button
+            type="button"
+            onClick={() => setUserProfileModalOpen(true)}
+            className="hidden sm:flex items-center gap-2.5 pl-2.5 border-l border-slate-200 dark:border-white/10 text-left hover:opacity-80 transition-opacity cursor-pointer"
+            title="View User Profile & Security Status"
+          >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#ED2618] text-white font-bold text-xs shadow-sm">
               {user?.fullName?.charAt(0) || "A"}
             </div>
@@ -192,9 +219,9 @@ export function Header({
               <p className="text-xs font-semibold text-slate-900 dark:text-white leading-tight">
                 {user?.fullName || "Team Member"}
               </p>
-              <p className="text-[10px] text-slate-400">Dexta Africa</p>
+              <p className="text-[10px] text-slate-400">Dexta Africa &bull; {user?.role || "Admin"}</p>
             </div>
-          </div>
+          </button>
 
           {/* Explicit Top-Bar Sign Out Button -> Opens Confirmation Modal */}
           <button
@@ -248,6 +275,140 @@ export function Header({
             . Signing out will lock your workspace until you sign back in with
             your password and 6-digit verification code.
           </p>
+        </div>
+      </Modal>
+
+      {/* Workspace & Portal Quick Switcher Modal */}
+      <Modal
+        isOpen={workspaceSwitchModalOpen}
+        onClose={() => setWorkspaceSwitchModalOpen(false)}
+        title="Switch Workspace Portal"
+        description="Jump seamlessly between Dexta Africa specialized subdomains and command consoles."
+        maxWidth="md"
+      >
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => {
+              setWorkspaceSwitchModalOpen(false);
+              navigateToSubdomain("ops", "/");
+            }}
+            className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] hover:border-[#ED2618]/60 hover:bg-red-50/20 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-500/10 text-[#ED2618]">
+                <Building2 className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  Operations Command Desk
+                </p>
+                <p className="text-[11px] text-slate-500 font-mono">ops.dextaafrica.org</p>
+              </div>
+            </div>
+            <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] transition-colors" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setWorkspaceSwitchModalOpen(false);
+              navigateToSubdomain("admin", "/");
+            }}
+            className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] hover:border-[#ED2618]/60 hover:bg-red-50/20 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-500/10 text-[#ED2618]">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  Systems &amp; IT Command
+                </p>
+                <p className="text-[11px] text-slate-500 font-mono">admin.dextafrica.org</p>
+              </div>
+            </div>
+            <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] transition-colors" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setWorkspaceSwitchModalOpen(false);
+              navigateToSubdomain("root", "/");
+            }}
+            className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] hover:border-[#ED2618]/60 hover:bg-red-50/20 transition-all text-left group cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300">
+                <Globe className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  Dexta Africa Unified Gateway
+                </p>
+                <p className="text-[11px] text-slate-500 font-mono">dextafrica.org</p>
+              </div>
+            </div>
+            <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] transition-colors" />
+          </button>
+        </div>
+      </Modal>
+
+      {/* User Security & Profile Modal */}
+      <Modal
+        isOpen={userProfileModalOpen}
+        onClose={() => setUserProfileModalOpen(false)}
+        title="Workspace Profile & Security"
+        description="Active authenticated session details and zero-trust policy telemetry."
+        maxWidth="sm"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <Link
+              href="/security"
+              onClick={() => setUserProfileModalOpen(false)}
+              className="text-xs font-bold text-[#ED2618] hover:underline"
+            >
+              Security Settings &rarr;
+            </Link>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setUserProfileModalOpen(false);
+                setSignOutModalOpen(true);
+              }}
+            >
+              Sign Out
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3 text-xs">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/[0.06]">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#ED2618] text-white font-bold text-base shadow-sm">
+              {user?.fullName?.charAt(0) || "A"}
+            </div>
+            <div>
+              <p className="font-bold text-sm text-slate-900 dark:text-white">{user?.fullName || "Team Member"}</p>
+              <p className="text-slate-400 font-mono text-[11px]">{user?.email || "staff@dextaafrica.com"}</p>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-100 dark:border-white/[0.06] space-y-2">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Assigned Role:</span>
+              <span className="font-bold text-slate-900 dark:text-white">{user?.role || "ADMIN"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Security Standard:</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">Zero-Trust Protected</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Authentication:</span>
+              <span className="font-mono text-[11px]">Password + 6-digit MFA</span>
+            </div>
+          </div>
         </div>
       </Modal>
 

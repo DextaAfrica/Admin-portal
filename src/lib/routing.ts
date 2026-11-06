@@ -42,3 +42,4 @@ export function navigateToSubdomain(subdomain: PortalSubdomain, path = "/"): voi
   const targetUrl = getSubdomainUrl(subdomain, path);
   window.location.href = targetUrl;
 }
+

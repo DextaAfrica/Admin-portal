@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { getCurrentSession } from "@/lib/auth/session";
 import { backendApi } from "@/lib/backend-api";
 import { DepartmentDashboardView } from "@/components/dashboard/DepartmentDashboardView";
+import { ensureDefaultAutomationRules, ensureInitialEnterpriseData } from "@/lib/automation/engine";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -26,6 +27,10 @@ export default async function DashboardPage() {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
   sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  const db = prisma as any;
+  await ensureDefaultAutomationRules();
+  await ensureInitialEnterpriseData();
 
   // 2. Query Local Database Records & Aggregations (Production Backed, 0 Mock Data)
   let totalUsers = 0;
@@ -49,6 +54,13 @@ export default async function DashboardPage() {
   let openAlertsCount = 0;
   let staffCount = 0;
 
+  let financialTransactionsList: any[] = [];
+  let approvalsList: any[] = [];
+  let corporateEmailsList: any[] = [];
+  let automationRulesList: any[] = [];
+  let totalInflow = 0;
+  let totalDisbursed = 0;
+
   try {
     const [
       tu,
@@ -65,6 +77,12 @@ export default async function DashboardPage() {
       plc,
       oac,
       sc,
+      txns,
+      apprs,
+      emls,
+      autms,
+      infAgg,
+      disbAgg,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { twoFactorEnabled: true } }),
@@ -99,6 +117,32 @@ export default async function DashboardPage() {
       prisma.leaveRequest.count({ where: { status: "PENDING" } }),
       prisma.policyAlert.count({ where: { status: "OPEN" } }),
       prisma.employeeProfile.count(),
+      db.financialTransaction.findMany({
+        take: 20,
+        orderBy: { transactionDate: "desc" },
+      }),
+      db.interDeptApproval.findMany({
+        take: 20,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.corporateEmail.findMany({
+        take: 15,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.workflowAutomationRule.findMany({
+        orderBy: { executionCount: "desc" },
+      }),
+      db.financialTransaction.aggregate({
+        where: { type: "CAPITAL_INFLOW", status: "SETTLED" },
+        _sum: { amount: true },
+      }),
+      db.financialTransaction.aggregate({
+        where: {
+          type: { in: ["PROJECT_DISBURSEMENT", "CONTRACTOR_PAYOUT", "PAYROLL", "TREASURY_TRANSFER"] },
+          status: "SETTLED",
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
     totalUsers = tu;
@@ -115,6 +159,13 @@ export default async function DashboardPage() {
     pendingLeavesCount = plc;
     openAlertsCount = oac;
     staffCount = sc;
+
+    financialTransactionsList = txns || [];
+    approvalsList = apprs || [];
+    corporateEmailsList = emls || [];
+    automationRulesList = autms || [];
+    totalInflow = infAgg?._sum?.amount || 0;
+    totalDisbursed = disbAgg?._sum?.amount || 0;
   } catch (error) {
     console.warn("[Dashboard] Database queries deferred or unavailable during initial bootstrap:", error);
   }
@@ -180,73 +231,8 @@ export default async function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 pb-12 animate-fade-in w-full min-w-0">
-      {/* Executive Command Workspace Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#121217] p-6 sm:p-7 shadow-sm">
-        <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              Operations &amp; Executive Command
-            </h1>
-            <Badge
-              variant={backendHealthy ? "success" : "warning"}
-              pulse={backendHealthy}
-            >
-              {backendHealthy
-                ? `Go Core Connected (${backendLatency}ms)`
-                : "Live Database Mode"}
-            </Badge>
-          </div>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            Welcome back, <strong className="text-slate-800 dark:text-slate-200">{currentUser.fullName}</strong> &bull;{" "}
-            {currentUser.department} &bull; Role: {currentUser.role}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Link href="/crm">
-            <Button
-              size="sm"
-              variant="secondary"
-              leftIcon={<Briefcase className="h-4 w-4 text-[#ED2618]" />}
-            >
-              Strategic CRM
-            </Button>
-          </Link>
-
-          <Link href="/portfolio">
-            <Button
-              size="sm"
-              variant="outline"
-              leftIcon={<Building2 className="h-4 w-4 text-[#ED2618]" />}
-            >
-              Developments
-            </Button>
-          </Link>
-
-          <Link href="/hr">
-            <Button
-              size="sm"
-              variant="outline"
-              leftIcon={<Users className="h-4 w-4 text-blue-500" />}
-            >
-              People &amp; Culture
-            </Button>
-          </Link>
-
-          <Link href="/it">
-            <Button
-              size="sm"
-              variant="outline"
-              leftIcon={<ShieldCheck className="h-4 w-4 text-emerald-500" />}
-            >
-              IT Security
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* Multi-Department Interactive Dashboard (MD/CEO, Operations, Finance, Systems IT) */}
+    <div className="pb-12 animate-fade-in w-full min-w-0">
+      {/* Unified Executive & Operations Command Workspace */}
       <DepartmentDashboardView
         currentUser={currentUser}
         executiveMetrics={{
@@ -290,6 +276,15 @@ export default async function DashboardPage() {
         recentLogs={recentLogs}
         recentAssets={recentAssets}
         recentDeals={recentDealsList}
+        treasuryMetrics={{
+          totalInflow,
+          totalDisbursed,
+          netBalance: totalInflow - totalDisbursed,
+        }}
+        financialTransactions={financialTransactionsList}
+        approvals={approvalsList}
+        corporateEmails={corporateEmailsList}
+        automationRules={automationRulesList}
       />
     </div>
   );

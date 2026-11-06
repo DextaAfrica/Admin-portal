@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
+import { sendEmail } from "@/lib/email/dispatcher";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -96,6 +97,37 @@ export async function POST(req: NextRequest) {
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent"),
       metadata: { fullName, email: normalizedEmail, department, role, provisionedBy: user.fullName },
+    });
+
+    // Dispatch real activation credentials to Mailpit / employee inbox
+    await sendEmail({
+      to: normalizedEmail,
+      subject: "Welcome to Dexta Africa - Your Workspace Activation Credentials",
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 580px; margin: 0 auto; padding: 36px 32px; border: 1px solid #e4e4e7; border-radius: 12px; background: #ffffff; color: #09090b;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid #f4f4f5; padding-bottom: 16px;">
+            <span style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #09090b;">De<span style="color: #ED2618;">x</span>ta</span>
+            <span style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #71717a; margin-left: 8px;">Workspace Onboarding</span>
+          </div>
+          <h2 style="font-size: 20px; font-weight: 700; color: #09090b; margin: 0 0 12px 0;">Your Account Has Been Provisioned</h2>
+          <p style="font-size: 14px; line-height: 1.6; color: #52525b; margin: 0 0 20px 0;">
+            Hello <strong>${fullName}</strong>,<br/>
+            An enterprise account has been created for you under the <strong>${department}</strong> department with the role <strong>${role}</strong>.
+          </p>
+          <div style="margin: 24px 0; padding: 20px; background: #fafafa; border-radius: 8px; border: 1px solid #e4e4e7;">
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #71717a; margin-bottom: 8px;">Activation Key</div>
+            <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 24px; font-weight: 800; color: #ED2618; margin-bottom: 16px;">${activationKey}</div>
+            <div style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #71717a; margin-bottom: 8px;">Temporary Password</div>
+            <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 16px; font-weight: 700; color: #09090b;">${temporaryPassword}</div>
+          </div>
+          <p style="font-size: 13px; line-height: 1.6; color: #71717a; margin: 0 0 16px 0;">
+            Please log in and update your password immediately upon first sign-in.
+          </p>
+          <div style="border-top: 1px solid #f4f4f5; padding-top: 16px; margin-top: 24px; font-size: 11px; color: #a1a1aa; text-align: center;">
+            &copy; 2026 Dexta Africa Enterprise Gateway &bull; IT Governance &amp; Identity Provisioning
+          </div>
+        </div>
+      `,
     });
 
     return NextResponse.json(
