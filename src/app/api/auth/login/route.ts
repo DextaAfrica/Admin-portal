@@ -59,6 +59,62 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Strict Subdomain & Directorate Platform Gate Enforcement
+    const host = (req.headers.get("host") || "").toLowerCase();
+    const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.localhost");
+    const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
+
+    const dept = ((user as any).department || "").toUpperCase();
+    const isSuperAdmin = user.role === "SUPER_ADMIN";
+
+    // 1. Operations account trying to log into Systems IT portal
+    if (isAdminHost && !isSuperAdmin && dept !== "IT") {
+      await logAuditEvent({
+        actorEmail: email,
+        action: "AUTH_PLATFORM_GATE_REJECTED",
+        entity: "User",
+        entityId: user.id,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent"),
+        metadata: {
+          reason: "Operations account attempted login on Systems IT portal",
+          attemptedHost: host,
+          userDepartment: dept,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: "Access Denied: This account is registered under Operations Directorate. You are not authorized on the Systems IT console. Please authenticate via the Operations Command Desk at ops.dextaafrica.org (or http://ops.localhost:3000/login).",
+        },
+        { status: 403 }
+      );
+    }
+
+    // 2. Systems IT account trying to log into Operations portal
+    if (isOpsHost && !isSuperAdmin && dept === "IT") {
+      await logAuditEvent({
+        actorEmail: email,
+        action: "AUTH_PLATFORM_GATE_REJECTED",
+        entity: "User",
+        entityId: user.id,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent"),
+        metadata: {
+          reason: "Systems IT account attempted login on Operations portal",
+          attemptedHost: host,
+          userDepartment: dept,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: "Access Denied: This account is registered under Systems IT Directorate. You are not authorized on the Operations Fleet Desk. Please authenticate via the Systems Command Console at admin.dextaafrica.org (or http://admin.localhost:3000/login).",
+        },
+        { status: 403 }
+      );
+    }
+
     // Zero-trust authentication flow:
     // If user has 2FA enabled, they use their authenticator app (TOTP) or backup recovery codes.
     // If user does not have 2FA enabled, an email OTP is dispatched securely to their inbox.

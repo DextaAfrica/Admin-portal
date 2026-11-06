@@ -83,6 +83,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Strict Subdomain & Directorate Platform Gate Enforcement
+    const host = (req.headers.get("host") || "").toLowerCase();
+    const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.localhost");
+    const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
+
+    const dept = ((user as any).department || "").toUpperCase();
+    const isSuperAdmin = user.role === "SUPER_ADMIN";
+
+    if (isAdminHost && !isSuperAdmin && dept !== "IT") {
+      return NextResponse.json(
+        {
+          error: "Access Denied: This account is registered under Operations Directorate. Please authenticate via the Operations Command Desk at ops.dextaafrica.org.",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (isOpsHost && !isSuperAdmin && dept === "IT") {
+      return NextResponse.json(
+        {
+          error: "Access Denied: This account is registered under Systems IT Directorate. Please authenticate via the Systems Command Console at admin.dextaafrica.org.",
+        },
+        { status: 403 }
+      );
+    }
+
     // Success: create authenticated workspace session
     const session = await createSession({
       userId: user.id,

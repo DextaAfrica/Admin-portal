@@ -1,5 +1,6 @@
 import { getCurrentSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SessionInactivityGuard } from "@/components/auth/SessionInactivityGuard";
@@ -13,6 +14,35 @@ export default async function AdminLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Strict Subdomain Gate Enforcement
+  const headersList = await headers();
+  const host = (headersList.get("host") || "").toLowerCase();
+  const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.localhost");
+  const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
+
+  const dept = (user.department || "").toUpperCase();
+  const isSuperAdmin = user.role === "SUPER_ADMIN";
+
+  // 1. Operations account on Systems IT subdomain -> automatically redirect to Operations Fleet Desk
+  if (isAdminHost && !isSuperAdmin && dept !== "IT") {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
+    const redirectUrl = isLocal
+      ? `http://ops.localhost${port}/dashboard`
+      : `https://ops.dextaafrica.org/dashboard`;
+    redirect(redirectUrl);
+  }
+
+  // 2. Systems IT account on Operations subdomain -> automatically redirect to Systems IT Console
+  if (isOpsHost && !isSuperAdmin && dept === "IT") {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
+    const redirectUrl = isLocal
+      ? `http://admin.localhost${port}/dashboard`
+      : `https://admin.dextaafrica.org/dashboard`;
+    redirect(redirectUrl);
   }
 
   return (

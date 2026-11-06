@@ -54,7 +54,10 @@ export async function PATCH(req: NextRequest) {
     if (phone !== undefined) dataToUpdate.phone = typeof phone === "string" ? phone.trim() : null;
     if (avatarUrl !== undefined) dataToUpdate.avatarUrl = typeof avatarUrl === "string" ? avatarUrl : null;
     if (bio !== undefined) dataToUpdate.bio = typeof bio === "string" ? bio.trim() : null;
-    if (department && typeof department === "string") dataToUpdate.department = department.toUpperCase();
+    // Department reassignment is an administrative privilege reserved exclusively for SUPER_ADMIN
+    if (department && typeof department === "string" && user.role === "SUPER_ADMIN") {
+      dataToUpdate.department = department.toUpperCase();
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },

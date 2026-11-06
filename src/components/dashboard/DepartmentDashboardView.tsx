@@ -148,23 +148,29 @@ export function DepartmentDashboardView({
       const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.localhost");
       const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
 
-      // Platform host strictly dictates the workspace context
-      let currentPlatform: "systems" | "operations" | "executive" = "executive";
-      if (isAdminHost) {
+      // The authenticated account's verified department strictly dictates their workspace
+      const userDept = (currentUser?.department || "").toUpperCase();
+      const userRole = (currentUser?.role || "").toUpperCase();
+
+      let currentPlatform: "systems" | "operations" | "executive" = "operations";
+      if (userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE") {
+        currentPlatform = isAdminHost ? "systems" : isOpsHost ? "operations" : "executive";
+      } else if (userDept === "IT") {
         currentPlatform = "systems";
-      } else if (isOpsHost) {
+      } else if (userDept === "OPERATIONS" || userDept === "ENGINEERING" || userDept === "ARCHITECTURE") {
         currentPlatform = "operations";
       } else {
-        const userDept = (currentUser?.department || "").toUpperCase();
-        if (userDept === "IT") currentPlatform = "systems";
-        else if (userDept === "OPERATIONS") currentPlatform = "operations";
-        else currentPlatform = "executive";
+        currentPlatform = "operations";
       }
       setPlatform(currentPlatform);
 
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get("tab");
-      if (
+
+      // Guard: non-IT users cannot view Systems IT tab
+      if (tabParam === "systems" && userRole !== "SUPER_ADMIN" && userDept !== "IT") {
+        setActiveTab("operations");
+      } else if (
         tabParam === "systems" ||
         tabParam === "operations" ||
         tabParam === "approvals" ||
@@ -176,23 +182,7 @@ export function DepartmentDashboardView({
       } else if (tabParam === "dispatch") {
         setActiveTab("communications");
       } else {
-        // Platform host strictly dictates default workspace view!
-        if (isAdminHost) {
-          setActiveTab("systems");
-        } else if (isOpsHost) {
-          setActiveTab("operations");
-        } else {
-          const userDept = (currentUser?.department || "").toUpperCase();
-          if (userDept === "OPERATIONS") {
-            setActiveTab("operations");
-          } else if (userDept === "IT") {
-            setActiveTab("systems");
-          } else if (userDept === "HR") {
-            setActiveTab("approvals");
-          } else {
-            setActiveTab("overview");
-          }
-        }
+        setActiveTab(currentPlatform === "systems" ? "systems" : "operations");
       }
     };
 
@@ -220,7 +210,7 @@ export function DepartmentDashboardView({
       window.removeEventListener("dexta:switch-tab", handleSwitchTab);
       window.removeEventListener("popstate", syncFromUrl);
     };
-  }, [currentUser?.department]);
+  }, [currentUser?.department, currentUser?.role]);
 
   // Dynamic Data State
   const [transactionsList, setTransactionsList] = React.useState<any[]>(financialTransactions);
@@ -669,18 +659,20 @@ export function DepartmentDashboardView({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => setActiveTab("overview")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "overview"
-                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <Crown className="h-3.5 w-3.5 text-[#ED2618]" />
-            <span>Executive Overview</span>
-          </button>
+          {platform === "executive" && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("overview")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "overview"
+                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <Crown className="h-3.5 w-3.5 text-[#ED2618]" />
+              <span>Executive Overview</span>
+            </button>
+          )}
         </div>
       </div>
 

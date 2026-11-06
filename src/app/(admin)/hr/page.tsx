@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Users,
   UserPlus,
@@ -97,6 +98,7 @@ export default function HrDashboardPage() {
   const [employees, setEmployees] = React.useState<Employee[]>([]);
   const [leaves, setLeaves] = React.useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isAccessDenied, setIsAccessDenied] = React.useState(false);
 
   // Filters
   const [selectedDept, setSelectedDept] = React.useState("ALL");
@@ -132,6 +134,12 @@ export default function HrDashboardPage() {
         fetch(`/api/hr/employees?department=${selectedDept}&status=${selectedStatus}&search=${encodeURIComponent(searchQuery)}`),
         fetch("/api/hr/leaves"),
       ]);
+
+      if (empRes.status === 403 || leaveRes.status === 403) {
+        setIsAccessDenied(true);
+        setIsLoading(false);
+        return;
+      }
 
       if (empRes.ok) {
         const empData = await empRes.json();
@@ -218,6 +226,37 @@ export default function HrDashboardPage() {
   };
 
   const pendingLeavesCount = leaves.filter((l) => l.status === "PENDING").length;
+
+  if (isAccessDenied) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4">
+        <div className="w-full max-w-md p-8 rounded-3xl border border-red-200 dark:border-red-500/20 bg-white dark:bg-[#0D1017] shadow-xl text-center space-y-5 animate-fade-in">
+          <div className="h-16 w-16 mx-auto rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 flex items-center justify-center text-[#ED2618]">
+            <Shield className="h-8 w-8" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
+              Departmental Access Restricted
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              The People &amp; HR Directorate manages confidential workforce records, personnel documents, and employee leaves. Access is strictly restricted to designated HR Officers and Executive Directors.
+            </p>
+          </div>
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] text-xs text-slate-600 dark:text-slate-300 font-mono">
+            Security Policy: ZERO_TRUST_RBAC_ENFORCED
+          </div>
+          <div className="pt-2">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center justify-center w-full px-5 py-2.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
+            >
+              Return to Your Designated Workspace &rarr;
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-w-0 space-y-8 animate-fade-in">

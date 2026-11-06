@@ -31,27 +31,30 @@ export default async function DashboardPage() {
   const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextafrica") || host.includes("admin.localhost");
   const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
 
-  let initialPlatform: "systems" | "operations" | "executive" = "executive";
-  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" = "overview";
+  const userDept = (user?.department || "").toUpperCase();
+  const userRole = (user?.role || "").toUpperCase();
 
-  if (isAdminHost) {
+  let initialPlatform: "systems" | "operations" | "executive" = "operations";
+  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" = "operations";
+
+  if (userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE") {
+    // Super Admins & Executive Leadership have cross-directorate oversight
+    initialPlatform = isAdminHost ? "systems" : isOpsHost ? "operations" : "executive";
+    initialTab = isAdminHost ? "systems" : isOpsHost ? "operations" : "overview";
+  } else if (userDept === "IT") {
+    // IT Officers are locked to Systems IT Command
     initialPlatform = "systems";
     initialTab = "systems";
-  } else if (isOpsHost) {
+  } else if (userDept === "OPERATIONS" || userDept === "ENGINEERING" || userDept === "ARCHITECTURE") {
+    // Operations personnel are strictly locked to Operations Fleet
     initialPlatform = "operations";
     initialTab = "operations";
+  } else if (userDept === "HR") {
+    initialPlatform = "operations";
+    initialTab = "approvals";
   } else {
-    const userDept = (user?.department || "").toUpperCase();
-    if (userDept === "IT") {
-      initialPlatform = "systems";
-      initialTab = "systems";
-    } else if (userDept === "OPERATIONS") {
-      initialPlatform = "operations";
-      initialTab = "operations";
-    } else {
-      initialPlatform = "executive";
-      initialTab = "overview";
-    }
+    initialPlatform = "operations";
+    initialTab = "operations";
   }
 
   // 1. Calculate Real 7-Day Activity Aggregation from AuditLog
