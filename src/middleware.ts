@@ -45,9 +45,15 @@ export function middleware(req: NextRequest) {
 
     // Rewrite clean paths to internal Next.js folder routes
     if (pathname === "/") {
+      if (token) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
       return NextResponse.rewrite(new URL("/ops", req.url));
     }
     if (pathname === "/login") {
+      if (token) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
       return NextResponse.rewrite(new URL("/ops/login", req.url));
     }
     if (pathname === "/register") {
@@ -65,9 +71,15 @@ export function middleware(req: NextRequest) {
 
     // Rewrite clean paths to internal Next.js folder routes
     if (pathname === "/") {
+      if (token) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
       return NextResponse.rewrite(new URL("/admin-portal", req.url));
     }
     if (pathname === "/login") {
+      if (token) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
       return NextResponse.rewrite(new URL("/admin-portal/login", req.url));
     }
     if (pathname === "/register") {

@@ -3,13 +3,28 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { logAuditEvent } from "@/lib/auth/audit";
+import { ensureInitialEnterpriseData } from "@/lib/automation/engine";
+
+const MOCK_EMAILS = [
+  "amina.arch@dextaafrica.com",
+  "chidi.eng@dextaafrica.com",
+  "olufemi@dextaafrica.com",
+  "tariq.it@dextaafrica.com",
+  "sadia@dextaafrica.com",
+  "esther.ade@dextaafrica.com",
+];
 
 export async function GET() {
   try {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    await ensureInitialEnterpriseData();
+
     const users = await prisma.user.findMany({
+      where: {
+        email: { notIn: MOCK_EMAILS },
+      },
       select: {
         id: true,
         email: true,

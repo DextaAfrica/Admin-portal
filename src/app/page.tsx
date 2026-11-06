@@ -14,7 +14,7 @@ import {
   Lock,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
-import { navigateToSubdomain } from "@/lib/routing";
+import { navigateToSubdomain, navigateToSubdomainWithSso } from "@/lib/routing";
 import { cn } from "@/lib/utils";
 
 interface PortraitSlide {
@@ -133,7 +133,7 @@ export default function LandingPage() {
             {/* Direct Quick Launch into Operations */}
             <button
               type="button"
-              onClick={() => navigateToSubdomain("ops")}
+              onClick={() => navigateToSubdomainWithSso("ops", "/dashboard")}
               className="btn-crimson-exec h-9 sm:h-10 rounded-xl px-4 sm:px-6 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Building2 className="h-3.5 w-3.5 shrink-0" />
@@ -143,7 +143,7 @@ export default function LandingPage() {
             {/* Direct Quick Launch into Systems IT */}
             <button
               type="button"
-              onClick={() => navigateToSubdomain("admin")}
+              onClick={() => navigateToSubdomainWithSso("admin", "/dashboard")}
               className="btn-fill-up h-9 sm:h-10 rounded-xl px-4 sm:px-6 text-xs sm:text-sm whitespace-nowrap shrink-0 cursor-pointer"
             >
               <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#ED2618] transition-colors" />
@@ -180,7 +180,7 @@ export default function LandingPage() {
               {/* Operations Portal Button */}
               <button
                 type="button"
-                onClick={() => navigateToSubdomain("ops")}
+                onClick={() => navigateToSubdomainWithSso("ops", "/dashboard")}
                 className="group flex flex-col items-start p-5 rounded-2xl border border-red-500/35 dark:border-red-500/40 bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#181C28] dark:to-[#11141E] hover:border-[#ED2618] dark:hover:border-[#ED2618] shadow-md dark:shadow-[0_12px_32px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/[0.08] hover:shadow-xl hover:shadow-red-500/10 transition-all text-left cursor-pointer relative overflow-hidden"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200/60 dark:border-red-500/30 text-[#ED2618] group-hover:bg-[#ED2618] group-hover:text-white transition-all mb-3.5">
@@ -206,7 +206,7 @@ export default function LandingPage() {
               {/* Systems IT Command Button */}
               <button
                 type="button"
-                onClick={() => navigateToSubdomain("admin")}
+                onClick={() => navigateToSubdomainWithSso("admin", "/dashboard")}
                 className="group flex flex-col items-start p-5 rounded-2xl border border-slate-200/90 dark:border-white/[0.14] bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#181C28] dark:to-[#11141E] hover:border-[#ED2618] dark:hover:border-[#ED2618] shadow-md dark:shadow-[0_12px_32px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-white/[0.08] hover:shadow-xl hover:shadow-red-500/10 transition-all text-left cursor-pointer relative overflow-hidden"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 dark:bg-white/10 border border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200 group-hover:bg-[#ED2618] group-hover:text-white transition-all mb-3.5">
@@ -215,7 +215,7 @@ export default function LandingPage() {
                 <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 border border-slate-200/60 dark:border-white/10 mb-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-slate-400 dark:bg-slate-300" />
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                    admin.dextafrica.org
+                    admin.dextaafrica.org
                   </span>
                 </div>
                 <span className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors mt-0.5">

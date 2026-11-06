@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { createSession, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS } from "@/lib/auth/session";
+import { createSession, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS, getCookieDomain } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { logPolicyAlert } from "@/lib/auth/policy-alerts";
 import { evaluatePasswordStrength } from "@/lib/auth/validation";
@@ -154,12 +154,14 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const cookieDomain = getCookieDomain(req.headers.get("host"));
     res.cookies.set(SESSION_COOKIE_NAME, session.sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: SESSION_DURATION_DAYS * 24 * 60 * 60,
       path: "/",
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
     });
 
     return res;

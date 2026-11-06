@@ -28,6 +28,7 @@ import {
   KeyRound,
   HardHat,
   Check,
+  Send,
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,7 @@ const OPERATIONS_NAV: NavSection[] = [
       { title: "Equipment & Asset Vault", href: "/storage", icon: HardDrive, badge: "S3" },
       { title: "Capital Procurement Deals", href: "/crm", icon: Briefcase, badge: "Deals" },
       { title: "Corporate Field Dispatch", href: "/dashboard?tab=dispatch", tabId: "dispatch", icon: Mail, badge: "SMTP" },
+      { title: "Email Campaign Broadcasts", href: "/marketing", icon: Send, badge: "Broadcast" },
     ],
   },
   {
@@ -99,7 +101,7 @@ const SYSTEMS_NAV: NavSection[] = [
   {
     label: "Systems Workspace",
     items: [
-      { title: "IT Command Overview", href: "/dashboard?tab=overview", tabId: "overview", icon: LayoutDashboard, badge: "Gov" },
+      { title: "IT Command Overview", href: "/dashboard?tab=systems", tabId: "systems", icon: LayoutDashboard, badge: "Gov" },
       { title: "Systems Landing", href: "/", icon: Home },
     ],
   },
@@ -124,6 +126,7 @@ const SYSTEMS_NAV: NavSection[] = [
     label: "Web Core CMS",
     items: [
       { title: "Editorial CMS & Pages", href: "/content", icon: FileCode2 },
+      { title: "Email Campaigns & Marketing", href: "/marketing", icon: Mail, badge: "SMTP" },
       { title: "Journal & Insights", href: "/journal", icon: BookOpen },
       { title: "Career Openings", href: "/careers", icon: Briefcase },
     ],
@@ -152,6 +155,7 @@ const EXECUTIVE_NAV: NavSection[] = [
     items: [
       { title: "Clearance Authorizations", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2, badge: "Clearance" },
       { title: "Corporate Dispatch & Broadcast", href: "/dashboard?tab=dispatch", tabId: "dispatch", icon: Mail, badge: "Broadcast" },
+      { title: "Email Campaigns & Scheduling", href: "/marketing", icon: Send, badge: "Marketing" },
       { title: "Workforce & Culture", href: "/hr", icon: Users },
     ],
   },
@@ -324,11 +328,42 @@ export function Sidebar({
       localStorage.setItem("dexta_active_portal", portalId);
       window.dispatchEvent(new CustomEvent("dexta:portal-change", { detail: portalId }));
 
-      // If user switches to Operations while on dashboard, switch tab to operations
+      const currentHost = window.location.hostname.toLowerCase();
+      const port = window.location.port ? `:${window.location.port}` : "";
+      const protocol = window.location.protocol;
+
+      // Cross-subdomain navigation for seamless portal switching with SSO ticket transfer
+      if (currentHost.includes("localhost") || currentHost.includes("127.0.0.1")) {
+        if (portalId === "operations" && !currentHost.startsWith("ops.")) {
+          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//ops.localhost${port}/api/auth/sso`)}&next=/dashboard?tab=operations`;
+          return;
+        } else if (portalId === "systems" && !currentHost.startsWith("admin.")) {
+          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//admin.localhost${port}/api/auth/sso`)}&next=/dashboard?tab=systems`;
+          return;
+        } else if (portalId === "executive" && (currentHost.startsWith("ops.") || currentHost.startsWith("admin."))) {
+          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//localhost${port}/api/auth/sso`)}&next=/dashboard?tab=overview`;
+          return;
+        }
+      } else if (currentHost.includes("dextaafrica.org") || currentHost.includes("dextafrica.org")) {
+        if (portalId === "operations" && !currentHost.startsWith("ops.")) {
+          window.location.href = `https://ops.dextaafrica.org/dashboard?tab=operations`;
+          return;
+        } else if (portalId === "systems" && !currentHost.startsWith("admin.")) {
+          window.location.href = `https://admin.dextafrica.org/dashboard?tab=systems`;
+          return;
+        } else if (portalId === "executive" && (currentHost.startsWith("ops.") || currentHost.startsWith("admin."))) {
+          window.location.href = `https://dextaafrica.org/dashboard?tab=overview`;
+          return;
+        }
+      }
+
+      // If already on the matching host or running locally without subdomains
       if (pathname === "/dashboard") {
         if (portalId === "operations") {
           window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "operations" }));
-        } else if (portalId === "executive" || portalId === "systems" || portalId === "hr") {
+        } else if (portalId === "systems") {
+          window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "systems" }));
+        } else if (portalId === "executive" || portalId === "hr") {
           window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "overview" }));
         }
       }

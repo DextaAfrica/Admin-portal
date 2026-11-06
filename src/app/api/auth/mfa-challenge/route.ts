@@ -8,6 +8,7 @@ import {
   createSession,
   SESSION_COOKIE_NAME,
   SESSION_DURATION_DAYS,
+  getCookieDomain,
 } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 
@@ -105,17 +106,21 @@ export async function POST(req: NextRequest) {
       metadata: { method: isRecoveryCode ? "RECOVERY_CODE" : "OTP" },
     });
 
+    const mustChangePassword = Boolean((user as any).mustChangePassword);
+
     const res = NextResponse.json({
       success: true,
-      mustChangePassword: user.mustChangePassword,
+      mustChangePassword,
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
         role: user.role,
-        mustChangePassword: user.mustChangePassword,
+        mustChangePassword,
       },
     });
+
+    const cookieDomain = getCookieDomain(req.headers.get("host"));
 
     res.cookies.set(SESSION_COOKIE_NAME, session.sessionToken, {
       httpOnly: true,
@@ -123,6 +128,7 @@ export async function POST(req: NextRequest) {
       sameSite: "lax",
       maxAge: SESSION_DURATION_DAYS * 24 * 60 * 60,
       path: "/",
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
     });
 
     res.cookies.delete("dexta_mfa_challenge");

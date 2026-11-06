@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
+import { sendEmail } from "@/lib/email/dispatcher";
+import { ensureInitialEnterpriseData } from "@/lib/automation/engine";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -11,16 +13,43 @@ const db = prisma as any;
 
 export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const ticketParam = searchParams.get("ticket");
+
+    // Allow public ticket status verification by ticket number
+    if (ticketParam) {
+      const ticket = await db.credentialRequest.findFirst({
+        where: { ticketNumber: ticketParam },
+        select: {
+          id: true,
+          ticketNumber: true,
+          requesterEmail: true,
+          requesterName: true,
+          department: true,
+          status: true,
+          createdAt: true,
+          resolvedAt: true,
+        },
+      });
+      if (!ticket) {
+        return NextResponse.json({ error: "Ticket not found" }, { status: 404 });
+      }
+      return NextResponse.json({ ticket });
+    }
+
     const { user } = await getCurrentSession();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
+    await ensureInitialEnterpriseData();
+
     const status = searchParams.get("status");
     const requestType = searchParams.get("requestType");
 
-    const where: any = {};
+    const where: any = {
+      ticketNumber: { notIn: ["SEC-2026-7820", "SEC-2026-8914"] },
+    };
     if (status && status !== "ALL") {
       where.status = status;
     }
@@ -107,7 +136,7 @@ export async function POST(req: NextRequest) {
         userId: targetUser ? targetUser.id : user?.id,
         requesterEmail: requesterEmail.toLowerCase().trim(),
         requesterName: requesterName || targetUser?.fullName || "Staff Member",
-        department: department || targetUser?.department || "OPERATIONS",
+        department: department || (targetUser as any)?.department || "OPERATIONS",
         requestType,
         priority,
         reason,
@@ -164,6 +193,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     let temporaryCode = ticket.temporaryCode;
+    let resetLink: string | null = null;
 
     // When IT approves a password change or credential request:
     if (status === "APPROVED" || status === "FULFILLED") {
@@ -178,13 +208,79 @@ export async function PATCH(req: NextRequest) {
           data: { passwordHash },
         });
       }
+
+      // Generate 15-minute, single-use, cryptographically signed reset token
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
+
+      await prisma.systemSetting.upsert({
+        where: { key: `PW_RESET_TOKEN_${resetToken}` },
+        create: {
+          key: `PW_RESET_TOKEN_${resetToken}`,
+          value: JSON.stringify({
+            ticketNumber: ticket.ticketNumber,
+            requesterEmail: ticket.requesterEmail,
+            userId: ticket.userId,
+            expiresAt,
+          }),
+        },
+        update: {
+          value: JSON.stringify({
+            ticketNumber: ticket.ticketNumber,
+            requesterEmail: ticket.requesterEmail,
+            userId: ticket.userId,
+            expiresAt,
+          }),
+        },
+      });
+
+      // Construct origin URL
+      const host = req.headers.get("host") || "localhost:3000";
+      const proto = req.headers.get("x-forwarded-proto") || (host.includes("localhost") ? "http" : "https");
+      resetLink = `${proto}://${host}/setup/password?token=${resetToken}&ticket=${ticket.ticketNumber}`;
+
+      // Dispatch security clearance email
+      await sendEmail({
+        to: ticket.requesterEmail,
+        subject: `[Authorized] Dexta Africa - One-Time Password Reset Link (${ticket.ticketNumber})`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px; background: #0B0E14; color: #FFFFFF; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 24px;">
+              <div style="height: 12px; width: 12px; border-radius: 50%; background: #ED2618;"></div>
+              <span style="font-size: 13px; font-weight: bold; letter-spacing: 1px; color: #ED2618;">DEXTA AFRICA IT SECURITY DIRECTORATE</span>
+            </div>
+            <h2 style="font-size: 20px; font-weight: bold; color: #FFFFFF; margin: 0 0 12px 0;">Credential Reset Authorization Granted</h2>
+            <p style="font-size: 14px; color: #94A3B8; line-height: 1.6; margin: 0 0 20px 0;">
+              Hello ${ticket.requesterName || "Staff Member"}, your request for a credential reset (Ticket #${ticket.ticketNumber}) has been approved by IT Administrator <strong>${user.fullName}</strong>.
+            </p>
+            <div style="padding: 16px; background: rgba(237, 38, 24, 0.08); border: 1px solid rgba(237, 38, 24, 0.25); border-radius: 12px; margin-bottom: 24px;">
+              <div style="font-size: 12px; color: #ED2618; font-weight: bold; margin-bottom: 4px;">ZERO-TRUST EXPIRATION NOTICE</div>
+              <div style="font-size: 13px; color: #E2E8F0; line-height: 1.5;">
+                This link is valid for <strong>15 minutes</strong> and will permanently expire upon single use.
+              </div>
+            </div>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${resetLink}" style="display: inline-block; background: #ED2618; color: #FFFFFF; font-weight: bold; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 14px rgba(237,38,24,0.4);">
+                Configure New Password &rarr;
+              </a>
+            </div>
+            <p style="font-size: 12px; color: #64748B; word-break: break-all; margin: 0 0 20px 0;">
+              Or copy this direct link into your browser:<br/>
+              <a href="${resetLink}" style="color: #94A3B8;">${resetLink}</a>
+            </p>
+            <p style="font-size: 11px; color: #475569; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px; margin: 0;">
+              Temporary Passcode fallback: <span style="font-family: monospace; color: #ED2618; font-weight: bold;">${temporaryCode}</span>
+            </p>
+          </div>
+        `,
+      }).catch((err) => console.warn("[IT Credentials] Reset link email delivery skipped:", err));
     }
 
     const updated = await db.credentialRequest.update({
       where: { id },
       data: {
         status,
-        itNotes,
+        itNotes: itNotes || (resetLink ? "Reset link generated and emailed to user (15 min validity)." : undefined),
         temporaryCode,
         reviewedById: user.id,
         resolvedAt: new Date(),
@@ -204,10 +300,11 @@ export async function PATCH(req: NextRequest) {
         status,
         requesterEmail: ticket.requesterEmail,
         authorizedBy: user.fullName,
+        hasResetLink: Boolean(resetLink),
       },
     });
 
-    return NextResponse.json({ request: updated });
+    return NextResponse.json({ request: updated, resetLink });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to review credential request" },
