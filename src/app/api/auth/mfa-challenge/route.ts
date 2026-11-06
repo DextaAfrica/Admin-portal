@@ -106,15 +106,17 @@ export async function POST(req: NextRequest) {
       metadata: { method: isRecoveryCode ? "RECOVERY_CODE" : "OTP" },
     });
 
+    const mustChangePassword = Boolean((user as any).mustChangePassword);
+
     const res = NextResponse.json({
       success: true,
-      mustChangePassword: user.mustChangePassword,
+      mustChangePassword,
       user: {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
         role: user.role,
-        mustChangePassword: user.mustChangePassword,
+        mustChangePassword,
       },
     });
 
