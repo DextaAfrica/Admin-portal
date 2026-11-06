@@ -241,14 +241,26 @@ export default function LoginPage() {
             required
           />
 
-          <PasswordInput
-            label="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            leftIcon={<Lock className="h-4 w-4" />}
-            placeholder="••••••••••••"
-            required
-          />
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Password *
+              </label>
+              <Link
+                href="/setup/password"
+                className="text-xs text-[#ED2618] hover:underline font-medium"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+            <PasswordInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              leftIcon={<Lock className="h-4 w-4" />}
+              placeholder="••••••••••••"
+              required
+            />
+          </div>
 
           {errorMessage && (
             <div className="rounded-xl bg-red-50 dark:bg-red-500/10 p-3 border border-red-200 dark:border-red-500/20 text-xs font-medium text-red-600 dark:text-red-400 text-center animate-fade-in">
@@ -276,7 +288,7 @@ export default function LoginPage() {
             className="btn-fill-up h-11 w-full rounded-xl px-4 text-xs sm:text-sm cursor-pointer"
           >
             <KeyRound className="h-3.5 w-3.5 text-[#ED2618] transition-colors" />
-            <span>Staff Access: Activate IT-Provisioned Account</span>
+            <span>New Team Member? Create Profile &rarr;</span>
           </button>
 
           <div>

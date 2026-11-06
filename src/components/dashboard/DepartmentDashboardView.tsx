@@ -46,7 +46,7 @@ import { Button } from "@/components/ui/Button";
 import { TelemetryChart } from "@/components/ui/TelemetryChart";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { formatBytes, timeAgo } from "@/lib/utils";
+import { formatBytes, timeAgo, formatDate } from "@/lib/utils";
 
 export interface DepartmentDashboardViewProps {
   currentUser: {
@@ -106,6 +106,9 @@ export interface DepartmentDashboardViewProps {
   approvals?: any[];
   corporateEmails?: any[];
   automationRules?: any[];
+  initialPlatform?: "systems" | "operations" | "executive";
+  initialTab?: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications";
+  portfolioItems?: any[];
 }
 
 export function DepartmentDashboardView({
@@ -123,24 +126,27 @@ export function DepartmentDashboardView({
   approvals = [],
   corporateEmails = [],
   automationRules = [],
+  initialPlatform = "executive",
+  initialTab = "overview",
+  portfolioItems = [],
 }: DepartmentDashboardViewProps) {
   const { success: toastSuccess, error: toastError } = useToast();
 
   // Tab State: Overview (default), Systems IT, Operations, Approvals, Treasury, Communications
   const [activeTab, setActiveTab] = React.useState<
     "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications"
-  >("overview");
+  >(initialTab);
 
   // Platform State: systems (admin.), operations (ops.), executive (root/CEO)
-  const [platform, setPlatform] = React.useState<"systems" | "operations" | "executive">("executive");
+  const [platform, setPlatform] = React.useState<"systems" | "operations" | "executive">(initialPlatform);
 
   // Sync tab and platform with URL search parameter (?tab=...), hostname, and sidebar events
   React.useEffect(() => {
     const syncFromUrl = () => {
       if (typeof window === "undefined") return;
       const host = window.location.hostname.toLowerCase();
-      const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextafrica");
-      const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica");
+      const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.localhost");
+      const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
 
       // Platform host strictly dictates the workspace context
       let currentPlatform: "systems" | "operations" | "executive" = "executive";
@@ -727,15 +733,15 @@ export function DepartmentDashboardView({
               </div>
               <div>
                 <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                  3 Active Sites
+                  {operationsMetrics.developmentsCount} {operationsMetrics.developmentsCount === 1 ? "Active Site" : "Active Sites"}
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
                   <Check className="h-3.5 w-3.5" />
-                  <span>All Sites Meeting Safety Standards</span>
+                  <span>{operationsMetrics.developmentsCount > 0 ? "Production Backed Portfolio" : "Zero Unverified Sites"}</span>
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                Eko Atlantic &bull; Lekki &bull; Victoria Island
+                {portfolioItems.length > 0 ? portfolioItems.slice(0, 3).map((p: any) => p.name).join(" • ") : "No Landmark Developments Registered"}
               </p>
             </div>
 
@@ -785,68 +791,57 @@ export function DepartmentDashboardView({
               </div>
 
               <div className="space-y-4">
-                {[
-                  {
-                    name: "Eko Atlantic Horizon Tower",
-                    zone: "Coastal Boulevard, Lagos",
-                    progress: 74,
-                    budget: "$4.8M",
-                    spent: "$3.4M",
-                    phase: "Foundation Complete & Core Rising",
-                    contractor: "Lafarge Holcim & Horizon Civil",
-                  },
-                  {
-                    name: "Lekki Peninsula Logistics Hub",
-                    zone: "Free Trade Zone, Lekki",
-                    progress: 58,
-                    budget: "$2.2M",
-                    spent: "$1.3M",
-                    phase: "Structural Steel Frame Installation",
-                    contractor: "GeoTech Africa Ltd",
-                  },
-                  {
-                    name: "Victoria Island Institutional Core",
-                    zone: "Ozumba Mbadiwe Ave, VI",
-                    progress: 92,
-                    budget: "$3.5M",
-                    spent: "$3.2M",
-                    phase: "Interior Fitout & Facade Glazing",
-                    contractor: "Dexta Premier Fitouts",
-                  },
-                ].map((site, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] space-y-3"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                          {site.name}
-                        </h4>
-                        <p className="text-[11px] text-slate-500">
-                          {site.zone} &bull; <strong className="text-slate-700 dark:text-slate-300">{site.contractor}</strong>
-                        </p>
+                {portfolioItems && portfolioItems.length > 0 ? (
+                  portfolioItems.slice(0, 3).map((site: any, idx: number) => (
+                    <div
+                      key={site.id || idx}
+                      className="p-4 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                            {site.name}
+                          </h4>
+                          <p className="text-[11px] text-slate-500">
+                            {site.location || "Coastline Corridor"} &bull;{" "}
+                            <span className="capitalize text-[#ED2618] font-semibold">
+                              {(site.status || "active").replace("_", " ")}
+                            </span>
+                          </p>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">
+                          {site.published ? "Published Catalog" : "Internal Engineering"}
+                        </span>
                       </div>
-                      <span className="text-xs font-mono font-bold text-[#ED2618]">
-                        {site.spent} <span className="text-slate-400 font-normal">/ {site.budget}</span>
-                      </span>
-                    </div>
 
-                    {/* Progress Indicator */}
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-400">
-                        <span>{site.phase}</span>
-                        <span className="font-mono">{site.progress}%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden">
-                        <div
-                          className="h-full bg-gradient-to-r from-red-600 to-[#ED2618] rounded-full transition-all duration-500"
-                          style={{ width: `${site.progress}%` }}
-                        />
-                      </div>
+                      {site.summary && (
+                        <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">
+                          {site.summary}
+                        </p>
+                      )}
                     </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-3">
+                    <div className="h-10 w-10 mx-auto rounded-xl bg-slate-100 dark:bg-white/[0.05] flex items-center justify-center text-slate-400">
+                      <Building2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                        No Landmark Developments Registered
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Production database has zero registered site developments.
+                      </p>
+                    </div>
+                    <Link
+                      href="/portfolio"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
+                    >
+                      <span>Deploy Landmark Project &rarr;</span>
+                    </Link>
                   </div>
-                ))}
+                )}
               </div>
             </div>
 
@@ -1299,94 +1294,100 @@ export function DepartmentDashboardView({
                   Real-time logistics coordination across coastal towers and industrial commercial zones.
                 </p>
               </div>
-              <Badge variant="success">All 3 Sites Active</Badge>
+              <Badge variant={portfolioItems.length > 0 ? "success" : "outline"}>
+                {portfolioItems.length} {portfolioItems.length === 1 ? "Site Active" : "Sites Active"}
+              </Badge>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[
-                {
-                  title: "Eko Atlantic Horizon Tower",
-                  location: "Coastal Boulevard, Zone 1",
-                  status: "Foundation Complete & Core Rising",
-                  budget: "$4,800,000",
-                  disbursed: "$3,400,000",
-                  lead: "Engr. Olufemi Adeyemi",
-                  inspectors: "6 Certified Inspectors",
-                  completion: "Q4 2027",
-                },
-                {
-                  title: "Lekki Peninsula Logistics Hub",
-                  location: "Free Trade Zone, Lekki",
-                  status: "Structural Steel Frame Installation",
-                  budget: "$2,200,000",
-                  disbursed: "$1,300,000",
-                  lead: "GeoTech Africa Consultants",
-                  inspectors: "4 Environmental Auditors",
-                  completion: "Q2 2027",
-                },
-                {
-                  title: "Victoria Island Core",
-                  location: "Ozumba Mbadiwe Ave, VI",
-                  status: "Interior Fitout & Facade Glazing",
-                  budget: "$3,500,000",
-                  disbursed: "$3,200,000",
-                  lead: "Dexta Premier Fitouts",
-                  inspectors: "Architectural Lead Team",
-                  completion: "Q1 2027",
-                },
-              ].map((site, i) => (
-                <div
-                  key={i}
-                  className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] space-y-4"
-                >
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-mono font-bold text-[#ED2618] uppercase">
-                      Site Project #0{i + 1}
-                    </span>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                      {site.title}
-                    </h4>
-                    <p className="text-xs text-slate-400">{site.location}</p>
-                  </div>
+            {portfolioItems && portfolioItems.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {portfolioItems.map((site: any, i: number) => (
+                  <div
+                    key={site.id || i}
+                    className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] space-y-4"
+                  >
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-mono font-bold text-[#ED2618] uppercase">
+                        Site Project #0{i + 1}
+                      </span>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        {site.name}
+                      </h4>
+                      <p className="text-xs text-slate-400">{site.location || "Coastal Corridor"}</p>
+                    </div>
 
-                  <div className="p-3 rounded-xl bg-white dark:bg-[#12151E] border border-slate-200/60 dark:border-white/[0.05] space-y-2 text-xs">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Status:</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{site.status}</span>
+                    <div className="p-3 rounded-xl bg-white dark:bg-[#12151E] border border-slate-200/60 dark:border-white/[0.05] space-y-2 text-xs">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Status:</span>
+                        <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize">
+                          {(site.status || "active").replace("_", " ")}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Catalog Access:</span>
+                        <span className="font-bold text-slate-900 dark:text-white font-mono">
+                          {site.published ? "Public Catalog" : "Internal Engineering"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">Created:</span>
+                        <span className="font-mono text-slate-700 dark:text-slate-300">
+                          {formatDate(site.createdAt || new Date())}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Total Budget:</span>
-                      <span className="font-bold text-slate-900 dark:text-white font-mono">{site.budget}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Disbursed:</span>
-                      <span className="font-bold text-[#ED2618] font-mono">{site.disbursed}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Field Lead:</span>
-                      <span className="text-slate-700 dark:text-slate-300">{site.lead}</span>
-                    </div>
-                  </div>
 
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full text-xs"
+                      onClick={() => {
+                        setApprovalForm({
+                          ...approvalForm,
+                          title: `Logistics Clearance for ${site.name}`,
+                          toDepartment: "OPERATIONS",
+                          category: "PROCUREMENT_LOGISTICS",
+                        });
+                        setNewApprovalModalOpen(true);
+                      }}
+                    >
+                      Request Site Clearance
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-12 text-center rounded-3xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-4">
+                <div className="h-12 w-12 mx-auto rounded-2xl bg-red-500/10 text-[#ED2618] flex items-center justify-center">
+                  <Building2 className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                    No Field Engineering Projects Registered
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                    There are currently no active landmark development projects in the database. Deploy a new development to begin site inspections and contractor disbursements.
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-3">
+                  <Link
+                    href="/portfolio"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    <span>Register Development Project</span>
+                  </Link>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="w-full text-xs"
-                    onClick={() => {
-                      setApprovalForm({
-                        ...approvalForm,
-                        title: `Logistics Clearance for ${site.title}`,
-                        toDepartment: "OPERATIONS",
-                        category: "PROCUREMENT_LOGISTICS",
-                      });
-                      setNewApprovalModalOpen(true);
-                    }}
+                    onClick={() => setNewApprovalModalOpen(true)}
+                    className="text-xs font-bold"
                   >
-                    Request Site Clearance
+                    <span>Request Site Clearance</span>
                   </Button>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}

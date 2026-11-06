@@ -251,7 +251,7 @@ export default function OperationsLoginPage() {
                   href="/setup/password"
                   className="text-xs text-[#ED2618] hover:underline font-medium"
                 >
-                  Forgot or need key?
+                  Forgot Password?
                 </Link>
               </div>
               <div className="relative">
@@ -287,18 +287,11 @@ export default function OperationsLoginPage() {
           </form>
 
           {/* Links */}
-          <div className="pt-2 border-t border-slate-200 dark:border-white/10 text-center text-xs text-slate-600 dark:text-slate-400 space-y-2">
-            <div>
-              Need an operations account?{" "}
-              <Link href={registerPath} className="font-bold text-[#ED2618] hover:underline">
-                Establish Team Profile &rarr;
-              </Link>
-            </div>
-            <div>
-              <Link href="/setup/password" className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
-                First time here? Activate account with IT key &rarr;
-              </Link>
-            </div>
+          <div className="pt-3 border-t border-slate-200 dark:border-white/10 text-center text-xs text-slate-600 dark:text-slate-400">
+            Need an operations account?{" "}
+            <Link href={registerPath} className="font-bold text-[#ED2618] hover:underline">
+              Establish Team Profile &rarr;
+            </Link>
           </div>
         </div>
       </main>

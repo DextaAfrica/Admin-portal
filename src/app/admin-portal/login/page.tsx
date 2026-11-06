@@ -249,7 +249,7 @@ export default function AdminPortalLoginPage() {
                   href="/setup/password"
                   className="text-xs text-[#ED2618] hover:underline font-medium"
                 >
-                  Forgot or need key?
+                  Forgot Password?
                 </Link>
               </div>
               <div className="relative">
@@ -285,18 +285,11 @@ export default function AdminPortalLoginPage() {
           </form>
 
           {/* Links */}
-          <div className="pt-2 border-t border-slate-200 dark:border-white/10 text-center text-xs text-slate-600 dark:text-slate-400 space-y-2">
-            <div>
-              Need systems authorization?{" "}
-              <Link href={registerPath} className="font-bold text-[#ED2618] hover:underline">
-                Create Account / Activate Key &rarr;
-              </Link>
-            </div>
-            <div>
-              <Link href="/setup/password" className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors">
-                First time here? Activate account with IT key &rarr;
-              </Link>
-            </div>
+          <div className="pt-3 border-t border-slate-200 dark:border-white/10 text-center text-xs text-slate-600 dark:text-slate-400">
+            Need systems authorization?{" "}
+            <Link href={registerPath} className="font-bold text-[#ED2618] hover:underline">
+              Create Account &rarr;
+            </Link>
           </div>
         </div>
       </main>

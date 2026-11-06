@@ -28,6 +28,7 @@ import {
   KeyRound,
   HardHat,
   Check,
+  Send,
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,7 @@ const OPERATIONS_NAV: NavSection[] = [
       { title: "Equipment & Asset Vault", href: "/storage", icon: HardDrive, badge: "S3" },
       { title: "Capital Procurement Deals", href: "/crm", icon: Briefcase, badge: "Deals" },
       { title: "Corporate Field Dispatch", href: "/dashboard?tab=dispatch", tabId: "dispatch", icon: Mail, badge: "SMTP" },
+      { title: "Email Campaign Broadcasts", href: "/marketing", icon: Send, badge: "Broadcast" },
     ],
   },
   {
@@ -124,6 +126,7 @@ const SYSTEMS_NAV: NavSection[] = [
     label: "Web Core CMS",
     items: [
       { title: "Editorial CMS & Pages", href: "/content", icon: FileCode2 },
+      { title: "Email Campaigns & Marketing", href: "/marketing", icon: Mail, badge: "SMTP" },
       { title: "Journal & Insights", href: "/journal", icon: BookOpen },
       { title: "Career Openings", href: "/careers", icon: Briefcase },
     ],
@@ -152,6 +155,7 @@ const EXECUTIVE_NAV: NavSection[] = [
     items: [
       { title: "Clearance Authorizations", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2, badge: "Clearance" },
       { title: "Corporate Dispatch & Broadcast", href: "/dashboard?tab=dispatch", tabId: "dispatch", icon: Mail, badge: "Broadcast" },
+      { title: "Email Campaigns & Scheduling", href: "/marketing", icon: Send, badge: "Marketing" },
       { title: "Workforce & Culture", href: "/hr", icon: Users },
     ],
   },

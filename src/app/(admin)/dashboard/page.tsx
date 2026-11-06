@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { headers } from "next/headers";
 import Link from "next/link";
 import {
   Building2,
@@ -22,6 +23,36 @@ export const revalidate = 0;
 
 export default async function DashboardPage() {
   const { user } = await getCurrentSession();
+
+  // Detect Host / Portal Subdomain from Incoming Request
+  const headersList = await headers();
+  const host = (headersList.get("host") || "").toLowerCase();
+
+  const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextafrica") || host.includes("admin.localhost");
+  const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
+
+  let initialPlatform: "systems" | "operations" | "executive" = "executive";
+  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" = "overview";
+
+  if (isAdminHost) {
+    initialPlatform = "systems";
+    initialTab = "systems";
+  } else if (isOpsHost) {
+    initialPlatform = "operations";
+    initialTab = "operations";
+  } else {
+    const userDept = (user?.department || "").toUpperCase();
+    if (userDept === "IT") {
+      initialPlatform = "systems";
+      initialTab = "systems";
+    } else if (userDept === "OPERATIONS") {
+      initialPlatform = "operations";
+      initialTab = "operations";
+    } else {
+      initialPlatform = "executive";
+      initialTab = "overview";
+    }
+  }
 
   // 1. Calculate Real 7-Day Activity Aggregation from AuditLog
   const sevenDaysAgo = new Date();
@@ -196,8 +227,8 @@ export default async function DashboardPage() {
   // 3. Query Go Core Backend API Surface with zero crash fallback
   const [backendHealthRes, portfolioRes, enquiriesRes] = await Promise.allSettled([
     backendApi.health(),
-    backendApi.portfolio.list({ perPage: 1 }),
-    backendApi.enquiries.list({ perPage: 1 }),
+    backendApi.portfolio.list({ perPage: 20 }),
+    backendApi.enquiries.list({ perPage: 20 }),
   ]);
 
   const backendHealthy =
@@ -207,6 +238,11 @@ export default async function DashboardPage() {
 
   const developmentsCount =
     portfolioRes.status === "fulfilled" ? portfolioRes.value.meta.totalItems : 0;
+
+  const portfolioItems =
+    portfolioRes.status === "fulfilled" && Array.isArray(portfolioRes.value?.data)
+      ? portfolioRes.value.data
+      : [];
 
   const enquiriesCount =
     enquiriesRes.status === "fulfilled" ? enquiriesRes.value.meta.totalItems : 0;
@@ -235,6 +271,9 @@ export default async function DashboardPage() {
       {/* Unified Executive & Operations Command Workspace */}
       <DepartmentDashboardView
         currentUser={currentUser}
+        initialPlatform={initialPlatform}
+        initialTab={initialTab}
+        portfolioItems={portfolioItems}
         executiveMetrics={{
           grossPipelineValue,
           totalDeals,
