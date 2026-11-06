@@ -53,8 +53,15 @@ export async function GET(req: NextRequest) {
 
   // Mode 2: Ticket Issuance (Leaving source domain to transfer session to another subdomain)
   if (target) {
-    const cookieStore = cookies();
-    const currentToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    let currentToken = req.cookies.get(SESSION_COOKIE_NAME)?.value;
+    if (!currentToken) {
+      try {
+        const cookieStore = await cookies();
+        currentToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+      } catch {
+        // Fallback
+      }
+    }
 
     if (!currentToken) {
       const targetUrl = new URL(target);

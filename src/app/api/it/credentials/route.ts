@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { sendEmail } from "@/lib/email/dispatcher";
+import { ensureInitialEnterpriseData } from "@/lib/automation/engine";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -41,10 +42,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await ensureInitialEnterpriseData();
+
     const status = searchParams.get("status");
     const requestType = searchParams.get("requestType");
 
-    const where: any = {};
+    const where: any = {
+      ticketNumber: { notIn: ["SEC-2026-7820", "SEC-2026-8914"] },
+    };
     if (status && status !== "ALL") {
       where.status = status;
     }

@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { navigateToSubdomainWithSso } from "@/lib/routing";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 import { evaluatePasswordStrength } from "@/lib/auth/validation";
 
@@ -210,19 +211,12 @@ export function EnterpriseProfileWizard({
 
   // Launch Target Workspace Dashboard
   const handleLaunchWorkspace = () => {
-    const host = typeof window !== "undefined" ? window.location.hostname : "";
-    const port = typeof window !== "undefined" && window.location.port ? `:${window.location.port}` : "";
-    const protocol = typeof window !== "undefined" ? window.location.protocol : "http:";
-
-    // If local development with subdomains
-    if (host.includes("localhost") || host.includes("127.0.0.1")) {
-      if (department === "OPERATIONS") {
-        window.location.href = `${protocol}//ops.localhost${port}/dashboard?tab=operations`;
-        return;
-      } else if (department === "IT") {
-        window.location.href = `${protocol}//admin.localhost${port}/dashboard?tab=systems`;
-        return;
-      }
+    if (department === "OPERATIONS") {
+      navigateToSubdomainWithSso("ops", "/dashboard?tab=operations");
+      return;
+    } else if (department === "IT") {
+      navigateToSubdomainWithSso("admin", "/dashboard?tab=systems");
+      return;
     }
 
     router.push("/dashboard");

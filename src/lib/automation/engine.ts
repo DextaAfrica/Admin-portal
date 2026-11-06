@@ -64,10 +64,55 @@ export async function ensureDefaultAutomationRules(): Promise<void> {
 
 /**
  * Production hygiene: strictly zero mock data generation.
+ * Purges all historical mock seeds across users, credentials, tickets, and alerts.
  * Real records are created exclusively through authorized user and workflow actions.
  */
 export async function ensureInitialEnterpriseData(): Promise<void> {
-  return;
+  try {
+    const mockEmails = [
+      "amina.arch@dextaafrica.com",
+      "chidi.eng@dextaafrica.com",
+      "olufemi@dextaafrica.com",
+      "tariq.it@dextaafrica.com",
+      "sadia@dextaafrica.com",
+      "esther.ade@dextaafrica.com",
+    ];
+
+    await (db.credentialRequest?.deleteMany?.({
+      where: {
+        OR: [
+          { ticketNumber: { in: ["SEC-2026-7820", "SEC-2026-8914"] } },
+          { requesterEmail: { in: mockEmails } },
+        ],
+      },
+    }) ?? Promise.resolve());
+
+    await (db.policyAlert?.deleteMany?.({
+      where: { userEmail: { in: mockEmails } },
+    }) ?? Promise.resolve());
+
+    await (db.leaveRequest?.deleteMany?.({
+      where: { employee: { workEmail: { in: mockEmails } } },
+    }) ?? Promise.resolve());
+
+    await (db.employeeDocument?.deleteMany?.({
+      where: { employee: { workEmail: { in: mockEmails } } },
+    }) ?? Promise.resolve());
+
+    await (db.employeeProfile?.deleteMany?.({
+      where: { workEmail: { in: mockEmails } },
+    }) ?? Promise.resolve());
+
+    await (db.session?.deleteMany?.({
+      where: { user: { email: { in: mockEmails } } },
+    }) ?? Promise.resolve());
+
+    await (db.user?.deleteMany?.({
+      where: { email: { in: mockEmails } },
+    }) ?? Promise.resolve());
+  } catch (err) {
+    console.error("[Database Hygiene] Failed to purge mock seed data:", err);
+  }
 }
 
 /**

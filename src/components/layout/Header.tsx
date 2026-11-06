@@ -32,7 +32,7 @@ import { Modal } from "../ui/Modal";
 import { useToast } from "../ui/Toast";
 import { CommandPalette } from "./CommandPalette";
 import { NotificationCenter } from "./NotificationCenter";
-import { navigateToSubdomain } from "@/lib/routing";
+import { navigateToSubdomain, navigateToSubdomainWithSso } from "@/lib/routing";
 
 const PAGE_LABELS: Record<string, string> = {
   dashboard: "Dashboard Overview",
@@ -377,7 +377,7 @@ export function Header({
             type="button"
             onClick={() => {
               setWorkspaceSwitchModalOpen(false);
-              navigateToSubdomain("ops", "/");
+              navigateToSubdomainWithSso("ops", "/dashboard");
             }}
             className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] hover:border-[#ED2618]/60 hover:bg-red-50/20 transition-all text-left group cursor-pointer"
           >
@@ -399,7 +399,7 @@ export function Header({
             type="button"
             onClick={() => {
               setWorkspaceSwitchModalOpen(false);
-              navigateToSubdomain("admin", "/");
+              navigateToSubdomainWithSso("admin", "/dashboard");
             }}
             className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] hover:border-[#ED2618]/60 hover:bg-red-50/20 transition-all text-left group cursor-pointer"
           >
@@ -411,7 +411,7 @@ export function Header({
                 <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
                   Systems &amp; IT Command
                 </p>
-                <p className="text-[11px] text-slate-500 font-mono">admin.dextafrica.org</p>
+                <p className="text-[11px] text-slate-500 font-mono">admin.dextaafrica.org</p>
               </div>
             </div>
             <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] transition-colors" />
@@ -421,7 +421,7 @@ export function Header({
             type="button"
             onClick={() => {
               setWorkspaceSwitchModalOpen(false);
-              navigateToSubdomain("root", "/");
+              navigateToSubdomainWithSso("root", "/dashboard");
             }}
             className="w-full flex items-center justify-between p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] hover:border-[#ED2618]/60 hover:bg-red-50/20 transition-all text-left group cursor-pointer"
           >
@@ -433,7 +433,7 @@ export function Header({
                 <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
                   Dexta Africa Unified Gateway
                 </p>
-                <p className="text-[11px] text-slate-500 font-mono">dextafrica.org</p>
+                <p className="text-[11px] text-slate-500 font-mono">dextaafrica.org</p>
               </div>
             </div>
             <ExternalLink className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] transition-colors" />

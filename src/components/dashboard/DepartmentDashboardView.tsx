@@ -495,14 +495,18 @@ export function DepartmentDashboardView({
               <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
                 {platform === "systems"
-                  ? "admin.dextafrica.org • Zero-Trust IT Command"
+                  ? "admin.dextaafrica.org • Zero-Trust Systems Command"
                   : platform === "operations"
                   ? "ops.dextaafrica.org • Operations Fleet Desk"
                   : "dextaafrica.org • Executive Leadership Suite"}
               </span>
               <span className="text-slate-300 dark:text-white/20">&bull;</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-                {currentUser.role || "Executive Staff"} &bull; {currentUser.department || "Operations"}
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
+                {platform === "systems"
+                  ? `SYSTEMS & IT • ${currentUser.role || "ADMIN"}`
+                  : platform === "operations"
+                  ? `OPERATIONS • ${currentUser.role || "ADMIN"}`
+                  : `${currentUser.department || "EXECUTIVE"} • ${currentUser.role || "ADMIN"}`}
               </span>
             </div>
 
@@ -583,8 +587,88 @@ export function DepartmentDashboardView({
           </div>
         </div>
 
-        {/* Clean, Modern Navigation Tabs */}
+        {/* Clean, Modern Navigation Tabs (Subdomain Context Aware) */}
         <div className="flex items-center gap-2 pt-6 mt-6 border-t border-slate-100 dark:border-white/[0.06] overflow-x-auto no-scrollbar">
+          {(platform === "systems" || platform === "executive") && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("systems")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "systems"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <ShieldCheck className="h-3.5 w-3.5" />
+              <span>Systems IT Command</span>
+            </button>
+          )}
+
+          {(platform === "operations" || platform === "executive") && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("operations")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "operations"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <Building2 className="h-3.5 w-3.5" />
+              <span>Site Operations</span>
+            </button>
+          )}
+
+          {(platform === "operations" || platform === "executive") && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("approvals")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "approvals"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>Approval Desk</span>
+              {pendingApprovalsCount > 0 && (
+                <span className="h-4 min-w-[16px] px-1 rounded-full bg-red-500/20 text-[#ED2618] dark:bg-white/20 dark:text-white text-[10px] font-black flex items-center justify-center">
+                  {pendingApprovalsCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {(platform === "operations" || platform === "executive") && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("treasury")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "treasury"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <DollarSign className="h-3.5 w-3.5" />
+              <span>Treasury &amp; Ledger</span>
+            </button>
+          )}
+
+          {(platform === "operations" || platform === "executive") && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("communications")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "communications"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              <span>Corporate Dispatch</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setActiveTab("overview")}
@@ -596,76 +680,6 @@ export function DepartmentDashboardView({
           >
             <Crown className="h-3.5 w-3.5 text-[#ED2618]" />
             <span>Executive Overview</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("systems")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "systems"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Systems IT Command</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("operations")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "operations"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <Building2 className="h-3.5 w-3.5" />
-            <span>Site Operations</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("approvals")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "approvals"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>Approval Desk</span>
-            {pendingApprovalsCount > 0 && (
-              <span className="h-4 min-w-[16px] px-1 rounded-full bg-red-500/20 text-[#ED2618] dark:bg-white/20 dark:text-white text-[10px] font-black flex items-center justify-center">
-                {pendingApprovalsCount}
-              </span>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("treasury")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "treasury"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <DollarSign className="h-3.5 w-3.5" />
-            <span>Treasury &amp; Ledger</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab("communications")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "communications"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <Mail className="h-3.5 w-3.5" />
-            <span>Corporate Dispatch</span>
           </button>
         </div>
       </div>
