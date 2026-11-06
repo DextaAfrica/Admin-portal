@@ -147,6 +147,18 @@ export function DepartmentDashboardView({
         setActiveTab(tabParam as any);
       } else if (tabParam === "dispatch") {
         setActiveTab("communications");
+      } else {
+        // Personalized default tab tailored per logged-in user department & host
+        const isOps =
+          window.location.hostname.startsWith("ops.") ||
+          (currentUser?.department || "").toUpperCase() === "OPERATIONS";
+        if (isOps) {
+          setActiveTab("operations");
+        } else if ((currentUser?.department || "").toUpperCase() === "HR") {
+          setActiveTab("approvals");
+        } else {
+          setActiveTab("overview");
+        }
       }
     };
 
@@ -173,7 +185,7 @@ export function DepartmentDashboardView({
       window.removeEventListener("dexta:switch-tab", handleSwitchTab);
       window.removeEventListener("popstate", syncFromUrl);
     };
-  }, []);
+  }, [currentUser?.department]);
 
   // Dynamic Data State
   const [transactionsList, setTransactionsList] = React.useState<any[]>(financialTransactions);
@@ -239,12 +251,12 @@ export function DepartmentDashboardView({
     }).format(val);
   };
 
-  // Robust metric values (ensures fallback to realistic enterprise ledger if empty)
-  const effectiveInflow = treasuryMetrics.totalInflow > 0 ? treasuryMetrics.totalInflow : 1250000;
-  const effectiveDisbursed = treasuryMetrics.totalDisbursed > 0 ? treasuryMetrics.totalDisbursed : 295500;
+  // True live database metrics (zero fabricated mock values)
+  const effectiveInflow = treasuryMetrics.totalInflow || 0;
+  const effectiveDisbursed = treasuryMetrics.totalDisbursed || 0;
   const effectiveTreasuryBalance = effectiveInflow - effectiveDisbursed;
-  const effectivePipelineValue = executiveMetrics.grossPipelineValue > 0 ? executiveMetrics.grossPipelineValue : 4500000;
-  const effectiveDealsCount = executiveMetrics.totalDeals > 0 ? executiveMetrics.totalDeals : 2;
+  const effectivePipelineValue = executiveMetrics.grossPipelineValue || 0;
+  const effectiveDealsCount = executiveMetrics.totalDeals || 0;
 
   // Submit Approval
   const handleCreateApproval = async (e: React.FormEvent) => {
@@ -447,11 +459,11 @@ export function DepartmentDashboardView({
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
-                Dexta Africa Enterprise Workspace
+                {currentUser.department || "Operations"} Directorate
               </span>
               <span className="text-slate-300 dark:text-white/20">&bull;</span>
               <span className="text-xs text-slate-500 dark:text-slate-400">
-                Lagos Executive Hub
+                {currentUser.role || "Executive Staff"}
               </span>
             </div>
 
@@ -460,8 +472,11 @@ export function DepartmentDashboardView({
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-              Unified command center governing infrastructure site deliveries, capital treasury settlements,
-              inter-department approvals, and official corporate messaging.
+              {(currentUser.department || "").toUpperCase() === "OPERATIONS"
+                ? "Your personalized operational workspace for managing Landmark site developments, logistics procurement, and field contractor clearances."
+                : (currentUser.department || "").toUpperCase() === "IT"
+                ? "Your zero-trust IT console managing access tokens, identity verification, active sessions, and cloud microservices."
+                : "Personalized executive command center governing infrastructure site deliveries, capital treasury settlements, and official communications."}
             </p>
           </div>
 

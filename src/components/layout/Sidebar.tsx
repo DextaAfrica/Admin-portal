@@ -261,14 +261,10 @@ export function Sidebar({
     updateSearch();
     window.addEventListener("popstate", updateSearch);
 
-    // Initial portal determination
-    const stored = localStorage.getItem("dexta_active_portal") as PortalType | null;
-    if (stored && PORTALS[stored]) {
-      setActivePortal(stored);
-      return;
-    }
-
     const host = window.location.hostname;
+    const dept = (user?.department || "").toUpperCase();
+
+    // 1. Dedicated host subdomains take top priority
     if (host.startsWith("ops.")) {
       setActivePortal("operations");
       return;
@@ -278,18 +274,32 @@ export function Sidebar({
       return;
     }
 
-    const dept = (user?.department || "").toUpperCase();
+    // 2. User's designated organizational department determines their tailored workspace
     if (dept === "OPERATIONS") {
       setActivePortal("operations");
-    } else if (dept === "IT") {
-      setActivePortal("systems");
-    } else if (dept === "HR") {
-      setActivePortal("hr");
-    } else if (dept === "EXECUTIVE" || user?.role === "SUPER_ADMIN" || user?.role === "EXECUTIVE") {
-      setActivePortal("executive");
-    } else {
-      setActivePortal("operations");
+      return;
     }
+    if (dept === "IT") {
+      setActivePortal("systems");
+      return;
+    }
+    if (dept === "HR") {
+      setActivePortal("hr");
+      return;
+    }
+    if (dept === "EXECUTIVE" || user?.role === "SUPER_ADMIN" || user?.role === "EXECUTIVE") {
+      setActivePortal("executive");
+      return;
+    }
+
+    // 3. Stored workspace selection fallback
+    const stored = localStorage.getItem("dexta_active_portal") as PortalType | null;
+    if (stored && PORTALS[stored]) {
+      setActivePortal(stored);
+      return;
+    }
+
+    setActivePortal("operations");
 
     return () => window.removeEventListener("popstate", updateSearch);
   }, [user]);

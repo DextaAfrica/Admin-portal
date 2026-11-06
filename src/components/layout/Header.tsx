@@ -49,7 +49,7 @@ const PAGE_LABELS: Record<string, string> = {
 export function Header({
   user,
 }: {
-  user?: { fullName: string; email: string; role: string };
+  user?: { fullName: string; email: string; role: string; department?: string };
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -102,8 +102,8 @@ export function Header({
   return (
     <>
       <header className="sticky top-0 z-20 flex h-16 w-full items-center justify-between border-b border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#0c0d12]/95 px-4 sm:px-6 backdrop-blur-md">
-        {/* Left Navigation Controls: Mobile Menu + Back Button + Home Link + Breadcrumb */}
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+        {/* Left Navigation Controls: Mobile Menu + Clean Breadcrumb */}
+        <div className="flex items-center gap-2.5 min-w-0">
           {/* Mobile Menu Hamburger Button */}
           <button
             type="button"
@@ -114,42 +114,26 @@ export function Header({
             <Menu className="h-4 w-4" />
           </button>
 
-          {/* Universal Back Button */}
-          <button
-            type="button"
-            onClick={() => {
-              if (pathname === "/dashboard") {
-                router.push("/");
-              } else {
-                router.back();
-              }
-            }}
-            title={
-              pathname === "/dashboard"
-                ? "Return to Home Page"
-                : "Go back to previous page"
-            }
-            className="group inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:border-[#ED2618]/40 hover:bg-red-50/60 hover:text-[#ED2618] dark:hover:bg-red-500/10 dark:hover:text-red-400 transition-all cursor-pointer"
-          >
-            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" />
-            <span className="hidden sm:inline">Back</span>
-          </button>
+          {/* Conditional Back Button: Only on sub-pages, NOT on Dashboard root */}
+          {pathname !== "/dashboard" && (
+            <button
+              type="button"
+              onClick={() => router.back()}
+              title="Return to previous page"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:border-[#ED2618]/40 hover:text-[#ED2618] transition-all cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Back</span>
+            </button>
+          )}
 
-          {/* Direct Home Link */}
-          <Link
-            href="/"
-            title="Visit Dexta Africa Home Page"
-            className="hidden sm:inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-500 hover:border-[#ED2618]/40 hover:text-[#ED2618] dark:hover:text-white transition-colors"
-          >
-            <Home className="h-3.5 w-3.5" />
-          </Link>
-
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />
-
-          {/* Current Page Title */}
-          <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate max-w-[140px] sm:max-w-none capitalize">
-            {breadcrumbTitle}
-          </span>
+          {/* Clean Current Page Indicator */}
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse shrink-0" />
+            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate max-w-[160px] sm:max-w-none capitalize">
+              {breadcrumbTitle}
+            </span>
+          </div>
         </div>
 
         {/* Center Quick Search Trigger */}
@@ -159,14 +143,14 @@ export function Header({
             className="flex items-center gap-3 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50 dark:bg-white/[0.03] px-3.5 py-1.5 text-xs text-slate-500 hover:border-red-500/30 hover:bg-white dark:hover:bg-white/[0.06] transition-all cursor-pointer"
           >
             <Search className="h-3.5 w-3.5 text-slate-400" />
-            <span>Search pages, files, or team...</span>
+            <span>Search workspace, files, actions...</span>
             <kbd className="rounded border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-1.5 py-0.5 font-sans text-[10px] text-slate-400">
               ⌘K
             </kbd>
           </button>
         </div>
 
-        {/* Right Controls: Search + Theme + User Profile + Prominent Sign Out Button */}
+        {/* Right Controls: Quick Switcher + Notifications + Theme + Unified User Pill */}
         <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Mobile Search Icon */}
           <button
@@ -205,33 +189,28 @@ export function Header({
             </button>
           )}
 
-          {/* User Badge -> Opens User Profile & Security Quick Modal */}
+          {/* Streamlined Unified User Profile Pill -> Opens Profile, Security & Sign Out Modal */}
           <button
             type="button"
             onClick={() => setUserProfileModalOpen(true)}
-            className="hidden sm:flex items-center gap-2.5 pl-2.5 border-l border-slate-200 dark:border-white/10 text-left hover:opacity-80 transition-opacity cursor-pointer"
-            title="View User Profile & Security Status"
+            className="flex items-center gap-2.5 pl-2 border-l border-slate-200 dark:border-white/10 text-left hover:opacity-85 transition-opacity cursor-pointer group"
+            title="User Profile & Session Security"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#ED2618] text-white font-bold text-xs shadow-sm">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-100 dark:bg-red-500/15 text-[#ED2618] dark:text-red-400 border border-red-200 dark:border-red-500/25 font-bold text-xs shadow-sm">
               {user?.fullName?.charAt(0) || "A"}
             </div>
-            <div className="hidden lg:block text-left">
-              <p className="text-xs font-semibold text-slate-900 dark:text-white leading-tight">
+            <div className="hidden sm:block text-left">
+              <p className="text-xs font-bold text-slate-900 dark:text-white leading-tight truncate max-w-[120px] lg:max-w-[160px]">
                 {user?.fullName || "Team Member"}
               </p>
-              <p className="text-[10px] text-slate-400">Dexta Africa &bull; {user?.role || "Admin"}</p>
+              <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
+                <span className="truncate">{user?.department || "Operations"}</span>
+                <span>&bull;</span>
+                <span className="font-semibold text-slate-500 dark:text-slate-300 uppercase">
+                  {user?.role || "Staff"}
+                </span>
+              </div>
             </div>
-          </button>
-
-          {/* Explicit Top-Bar Sign Out Button -> Opens Confirmation Modal */}
-          <button
-            type="button"
-            onClick={() => setSignOutModalOpen(true)}
-            title="Sign out of your workspace"
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/15 bg-white dark:bg-white/[0.05] px-3 py-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-600 hover:bg-red-600 hover:text-white dark:hover:border-red-600 dark:hover:bg-red-600 transition-all shadow-sm cursor-pointer"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            <span>Sign Out</span>
           </button>
         </div>
       </header>
