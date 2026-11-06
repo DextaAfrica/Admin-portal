@@ -34,24 +34,29 @@ export default async function DashboardPage() {
   const userDept = (user?.department || "").toUpperCase();
   const userRole = (user?.role || "").toUpperCase();
 
-  let initialPlatform: "systems" | "operations" | "executive" = "operations";
-  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" = "operations";
+  let initialPlatform: "systems" | "operations" | "executive" | "finance" | "hr" = "operations";
+  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" | "hr" = "operations";
 
   if (userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE") {
     // Super Admins & Executive Leadership have cross-directorate oversight
     initialPlatform = isAdminHost ? "systems" : isOpsHost ? "operations" : "executive";
     initialTab = isAdminHost ? "systems" : isOpsHost ? "operations" : "overview";
+  } else if (userDept === "FINANCE" || userDept === "ACCOUNTING" || userDept === "ACCOUNTS") {
+    // Finance & Accounts personnel strictly default to Treasury & Ledger
+    initialPlatform = "finance";
+    initialTab = "treasury";
   } else if (userDept === "IT") {
     // IT Officers are locked to Systems IT Command
     initialPlatform = "systems";
     initialTab = "systems";
+  } else if (userDept === "HR") {
+    // People & Culture personnel strictly default to HR & Workforce
+    initialPlatform = "hr";
+    initialTab = "hr";
   } else if (userDept === "OPERATIONS" || userDept === "ENGINEERING" || userDept === "ARCHITECTURE") {
     // Operations personnel are strictly locked to Operations Fleet
     initialPlatform = "operations";
     initialTab = "operations";
-  } else if (userDept === "HR") {
-    initialPlatform = "operations";
-    initialTab = "approvals";
   } else {
     initialPlatform = "operations";
     initialTab = "operations";
@@ -267,7 +272,61 @@ export default async function DashboardPage() {
     email: "executive@dextaafrica.com",
     role: "SUPER_ADMIN",
     department: "EXECUTIVE",
+    seniorityLevel: "EXECUTIVE",
   };
+
+  // 4. Personalized User Context (Requisitions submitted by user, actions pending for their department, personal audit trail)
+  let userSubmittedApprovals: any[] = [];
+  let userPendingActionApprovals: any[] = [];
+  let userAuditLogs: any[] = [];
+  let userLeaveRequests: any[] = [];
+
+  if (user?.id) {
+    try {
+      const [usa, upa, ual, ulr] = await Promise.all([
+        db.interDeptApproval.findMany({
+          where: {
+            OR: [
+              { requesterId: user.id },
+              { requesterEmail: user.email },
+            ],
+          },
+          take: 8,
+          orderBy: { createdAt: "desc" },
+        }),
+        db.interDeptApproval.findMany({
+          where: {
+            toDepartment: userDept,
+            status: "PENDING",
+          },
+          take: 8,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.auditLog.findMany({
+          where: {
+            OR: [
+              { actorId: user.id },
+              { actorEmail: user.email },
+            ],
+          },
+          take: 8,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.leaveRequest.findMany({
+          where: { userId: user.id },
+          take: 5,
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
+
+      userSubmittedApprovals = usa || [];
+      userPendingActionApprovals = upa || [];
+      userAuditLogs = ual || [];
+      userLeaveRequests = ulr || [];
+    } catch {
+      // Deferred
+    }
+  }
 
   return (
     <div className="pb-12 animate-fade-in w-full min-w-0">
@@ -277,6 +336,10 @@ export default async function DashboardPage() {
         initialPlatform={initialPlatform}
         initialTab={initialTab}
         portfolioItems={portfolioItems}
+        userSubmittedApprovals={userSubmittedApprovals}
+        userPendingActionApprovals={userPendingActionApprovals}
+        userAuditLogs={userAuditLogs}
+        userLeaveRequests={userLeaveRequests}
         executiveMetrics={{
           grossPipelineValue,
           totalDeals,

@@ -39,6 +39,9 @@ import {
   ArrowDownRight,
   Calendar,
   AlertCircle,
+  UserCheck,
+  Award,
+  Landmark,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -55,6 +58,8 @@ export interface DepartmentDashboardViewProps {
     email: string;
     role: string;
     department?: string;
+    seniorityLevel?: string;
+    jobTitle?: string | null;
   };
   executiveMetrics: {
     grossPipelineValue: number;
@@ -106,9 +111,13 @@ export interface DepartmentDashboardViewProps {
   approvals?: any[];
   corporateEmails?: any[];
   automationRules?: any[];
-  initialPlatform?: "systems" | "operations" | "executive";
-  initialTab?: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications";
+  initialPlatform?: "systems" | "operations" | "executive" | "finance" | "hr";
+  initialTab?: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" | "personal";
   portfolioItems?: any[];
+  userSubmittedApprovals?: any[];
+  userPendingActionApprovals?: any[];
+  userAuditLogs?: any[];
+  userLeaveRequests?: any[];
 }
 
 export function DepartmentDashboardView({
@@ -129,16 +138,43 @@ export function DepartmentDashboardView({
   initialPlatform = "executive",
   initialTab = "overview",
   portfolioItems = [],
+  userSubmittedApprovals = [],
+  userPendingActionApprovals = [],
+  userAuditLogs = [],
+  userLeaveRequests = [],
 }: DepartmentDashboardViewProps) {
   const { success: toastSuccess, error: toastError } = useToast();
 
-  // Tab State: Overview (default), Systems IT, Operations, Approvals, Treasury, Communications
+  // Tab State: Overview (default), Systems IT, Operations, Approvals, Treasury, Communications, Personal Hub
   const [activeTab, setActiveTab] = React.useState<
-    "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications"
-  >(initialTab);
+    "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" | "personal"
+  >(initialTab || "operations");
 
-  // Platform State: systems (admin.), operations (ops.), executive (root/CEO)
-  const [platform, setPlatform] = React.useState<"systems" | "operations" | "executive">(initialPlatform);
+  // Platform State: systems (admin.), operations (ops.), executive (root/CEO), finance, hr
+  const [platform, setPlatform] = React.useState<"systems" | "operations" | "executive" | "finance" | "hr">(initialPlatform);
+
+  // Seniority & Clearance Gating Evaluation
+  const userSeniority = (currentUser.seniorityLevel || "SENIOR").toUpperCase();
+  const isExec = currentUser.role === "SUPER_ADMIN" || userSeniority === "EXECUTIVE" || currentUser.department?.toUpperCase() === "EXECUTIVE";
+  const isSenior = isExec || userSeniority === "SENIOR" || currentUser.role === "ADMIN";
+  const isMid = !isSenior && (userSeniority === "MID" || currentUser.role === "OPERATIONS");
+  const isJunior = !isSenior && !isMid;
+
+  const seniorityBadgeLabel = isExec
+    ? "Executive Director"
+    : isSenior
+    ? "Senior Lead • Level 3"
+    : isMid
+    ? "Specialist • Level 2"
+    : "Staff Analyst • Level 1";
+
+  const seniorityAuthorityLabel = isExec
+    ? "Full Cross-Directorate Sovereign Clearance Authority"
+    : isSenior
+    ? "Authorized Department Clearance & Disbursement Sign-Off"
+    : isMid
+    ? "Operational Review & Requisition Processing Authority"
+    : "Staff Task Execution & Requisition Submission Authority";
 
   // Sync tab and platform with URL search parameter (?tab=...), hostname, and sidebar events
   React.useEffect(() => {
@@ -152,11 +188,15 @@ export function DepartmentDashboardView({
       const userDept = (currentUser?.department || "").toUpperCase();
       const userRole = (currentUser?.role || "").toUpperCase();
 
-      let currentPlatform: "systems" | "operations" | "executive" = "operations";
+      let currentPlatform: "systems" | "operations" | "executive" | "finance" | "hr" = "operations";
       if (userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE") {
         currentPlatform = isAdminHost ? "systems" : isOpsHost ? "operations" : "executive";
+      } else if (userDept === "FINANCE" || userDept === "ACCOUNTING" || userDept === "ACCOUNTS") {
+        currentPlatform = "finance";
       } else if (userDept === "IT") {
         currentPlatform = "systems";
+      } else if (userDept === "HR") {
+        currentPlatform = "hr";
       } else if (userDept === "OPERATIONS" || userDept === "ENGINEERING" || userDept === "ARCHITECTURE") {
         currentPlatform = "operations";
       } else {
@@ -169,20 +209,25 @@ export function DepartmentDashboardView({
 
       // Guard: non-IT users cannot view Systems IT tab
       if (tabParam === "systems" && userRole !== "SUPER_ADMIN" && userDept !== "IT") {
-        setActiveTab("operations");
+        setActiveTab(currentPlatform === "finance" ? "treasury" : "operations");
       } else if (
         tabParam === "systems" ||
         tabParam === "operations" ||
         tabParam === "approvals" ||
         tabParam === "treasury" ||
         tabParam === "communications" ||
-        tabParam === "overview"
+        tabParam === "overview" ||
+        tabParam === "personal"
       ) {
         setActiveTab(tabParam as any);
       } else if (tabParam === "dispatch") {
         setActiveTab("communications");
       } else {
-        setActiveTab(currentPlatform === "systems" ? "systems" : "operations");
+        if (currentPlatform === "systems") setActiveTab("systems");
+        else if (currentPlatform === "finance") setActiveTab("treasury");
+        else if (currentPlatform === "hr") setActiveTab("approvals");
+        else if (currentPlatform === "executive") setActiveTab(isAdminHost ? "systems" : isOpsHost ? "operations" : "overview");
+        else setActiveTab("operations");
       }
     };
 
@@ -196,7 +241,8 @@ export function DepartmentDashboardView({
         tab === "approvals" ||
         tab === "treasury" ||
         tab === "communications" ||
-        tab === "overview"
+        tab === "overview" ||
+        tab === "personal"
       ) {
         setActiveTab(tab);
       } else if (tab === "dispatch") {
@@ -480,12 +526,16 @@ export function DepartmentDashboardView({
       <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Greeting & Identity */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
                 {platform === "systems"
                   ? "admin.dextaafrica.org • Zero-Trust Systems Command"
+                  : platform === "finance"
+                  ? "dextaafrica.org • Treasury & Financial Accounts Desk"
+                  : platform === "hr"
+                  ? "dextaafrica.org • People & Culture Desk"
                   : platform === "operations"
                   ? "ops.dextaafrica.org • Operations Fleet Desk"
                   : "dextaafrica.org • Executive Leadership Suite"}
@@ -494,9 +544,17 @@ export function DepartmentDashboardView({
               <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
                 {platform === "systems"
                   ? `SYSTEMS & IT • ${currentUser.role || "ADMIN"}`
+                  : platform === "finance"
+                  ? `FINANCE & ACCOUNTS • ${currentUser.role || "ADMIN"}`
+                  : platform === "hr"
+                  ? `PEOPLE & HR • ${currentUser.role || "ADMIN"}`
                   : platform === "operations"
                   ? `OPERATIONS • ${currentUser.role || "ADMIN"}`
                   : `${currentUser.department || "EXECUTIVE"} • ${currentUser.role || "ADMIN"}`}
+              </span>
+              <span className="text-slate-300 dark:text-white/20">&bull;</span>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 uppercase tracking-wider border border-amber-500/25">
+                {seniorityBadgeLabel}
               </span>
             </div>
 
@@ -507,10 +565,19 @@ export function DepartmentDashboardView({
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
               {platform === "systems"
                 ? "Your zero-trust IT command center governing user access tokens, identity verification, watchdog firewalls, active sessions, and cloud microservices."
+                : platform === "finance"
+                ? "Your personalized corporate ledger hub governing capital inflows, contractor disbursements, escrow balances, and financial authorizations."
+                : platform === "hr"
+                ? "Your personalized workforce operations hub governing employee profiles, leave clearances, talent onboarding, and corporate staff dispatch."
                 : platform === "operations"
                 ? "Your personalized operational workspace for managing Landmark site developments, logistics procurement, and field contractor clearances."
                 : "Personalized executive command center governing infrastructure site deliveries, capital treasury settlements, and official communications."}
             </p>
+
+            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+              <span>{seniorityAuthorityLabel}</span>
+            </div>
           </div>
 
           {/* Quick Action Buttons */}
@@ -542,6 +609,73 @@ export function DepartmentDashboardView({
                   <span className="hidden sm:inline">Audit Logs (CSV)</span>
                   <span className="inline sm:hidden">CSV</span>
                 </a>
+              </>
+            ) : platform === "finance" ? (
+              <>
+                {isSenior ? (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      onClick={() => setNewTxnModalOpen(true)}
+                      leftIcon={<PlusCircle className="h-4 w-4" />}
+                    >
+                      Record Inflow
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setNewApprovalModalOpen(true)}
+                      leftIcon={<CheckCircle2 className="h-4 w-4" />}
+                    >
+                      Disbursement Clearance
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    onClick={() => setNewApprovalModalOpen(true)}
+                    leftIcon={<PlusCircle className="h-4 w-4" />}
+                  >
+                    Submit Expense Voucher
+                  </Button>
+                )}
+                <a
+                  href="/api/reports/executive?format=csv"
+                  download
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Export Ledger</span>
+                  <span className="inline sm:hidden">CSV</span>
+                </a>
+              </>
+            ) : platform === "hr" ? (
+              <>
+                <Link
+                  href="/hr"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white px-3.5 py-2 text-xs font-bold transition-all shadow-sm"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Onboard Staff</span>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  leftIcon={<CheckCircle2 className="h-4 w-4" />}
+                >
+                  Personnel Clearance
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNewEmailModalOpen(true)}
+                  leftIcon={<Mail className="h-4 w-4" />}
+                >
+                  Staff Notice
+                </Button>
               </>
             ) : (
               <>
@@ -579,6 +713,23 @@ export function DepartmentDashboardView({
 
         {/* Clean, Modern Navigation Tabs (Subdomain Context Aware) */}
         <div className="flex items-center gap-2 pt-6 mt-6 border-t border-slate-100 dark:border-white/[0.06] overflow-x-auto no-scrollbar">
+          {/* Executive Overview (Executive only) */}
+          {platform === "executive" && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("overview")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "overview"
+                  ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <Crown className="h-3.5 w-3.5" />
+              <span>Executive Overview</span>
+            </button>
+          )}
+
+          {/* Systems IT Command (IT & Executive) */}
           {(platform === "systems" || platform === "executive") && (
             <button
               type="button"
@@ -594,6 +745,7 @@ export function DepartmentDashboardView({
             </button>
           )}
 
+          {/* Site Operations (Operations & Executive only - NOT shown to Finance/HR) */}
           {(platform === "operations" || platform === "executive") && (
             <button
               type="button"
@@ -609,27 +761,8 @@ export function DepartmentDashboardView({
             </button>
           )}
 
-          {(platform === "operations" || platform === "executive") && (
-            <button
-              type="button"
-              onClick={() => setActiveTab("approvals")}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === "approvals"
-                  ? "bg-[#ED2618] text-white shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-              }`}
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>Approval Desk</span>
-              {pendingApprovalsCount > 0 && (
-                <span className="h-4 min-w-[16px] px-1 rounded-full bg-red-500/20 text-[#ED2618] dark:bg-white/20 dark:text-white text-[10px] font-black flex items-center justify-center">
-                  {pendingApprovalsCount}
-                </span>
-              )}
-            </button>
-          )}
-
-          {(platform === "operations" || platform === "executive") && (
+          {/* Treasury & Ledger (Finance & Executive only - NOT shown to non-exec Operations) */}
+          {(platform === "finance" || platform === "executive") && (
             <button
               type="button"
               onClick={() => setActiveTab("treasury")}
@@ -643,6 +776,59 @@ export function DepartmentDashboardView({
               <span>Treasury &amp; Ledger</span>
             </button>
           )}
+
+          {/* Approval Desk (Available to all workspaces) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("approvals")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "approvals"
+                ? "bg-[#ED2618] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+            }`}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+            <span>Approval Desk</span>
+            {pendingApprovalsCount > 0 && (
+              <span className="h-4 min-w-[16px] px-1 rounded-full bg-red-500/20 text-[#ED2618] dark:bg-white/20 dark:text-white text-[10px] font-black flex items-center justify-center">
+                {pendingApprovalsCount}
+              </span>
+            )}
+          </button>
+
+          {/* Corporate Dispatch (Available across workspaces) */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("communications")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "communications"
+                ? "bg-[#ED2618] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+            }`}
+          >
+            <Mail className="h-3.5 w-3.5" />
+            <span>Corporate Dispatch</span>
+          </button>
+
+          {/* Personalized User Workspace Hub */}
+          <button
+            type="button"
+            onClick={() => setActiveTab("personal")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "personal"
+                ? "bg-[#ED2618] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+            }`}
+          >
+            <UserCheck className="h-3.5 w-3.5" />
+            <span>My Workspace &amp; Tasks</span>
+            {userSubmittedApprovals.length > 0 && (
+              <span className="h-4 min-w-[16px] px-1 rounded-full bg-blue-500/20 text-blue-600 dark:bg-blue-500/30 dark:text-blue-200 text-[10px] font-black flex items-center justify-center">
+                {userSubmittedApprovals.length}
+              </span>
+            )}
+          </button>
+        </div>
 
           {(platform === "operations" || platform === "executive") && (
             <button
@@ -1499,30 +1685,38 @@ export function DepartmentDashboardView({
 
                     {isPending && (
                       <div className="flex items-center gap-2 pt-2 border-t border-slate-200/60 dark:border-white/[0.06]">
-                        <Button
-                          size="sm"
-                          variant="primary"
-                          className="flex-1 text-xs"
-                          onClick={() => {
-                            setSelectedApproval(appr);
-                            setDecisionType("APPROVED");
-                            setDecisionModalOpen(true);
-                          }}
-                        >
-                          Authorize
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-xs"
-                          onClick={() => {
-                            setSelectedApproval(appr);
-                            setDecisionType("REJECTED");
-                            setDecisionModalOpen(true);
-                          }}
-                        >
-                          Decline
-                        </Button>
+                        {isSenior ? (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              className="flex-1 text-xs"
+                              onClick={() => {
+                                setSelectedApproval(appr);
+                                setDecisionType("APPROVED");
+                                setDecisionModalOpen(true);
+                              }}
+                            >
+                              Authorize
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                              onClick={() => {
+                                setSelectedApproval(appr);
+                                setDecisionType("REJECTED");
+                                setDecisionModalOpen(true);
+                              }}
+                            >
+                              Decline
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="w-full text-center py-1.5 px-2 rounded-xl bg-slate-100 dark:bg-white/[0.05] text-[11px] text-slate-500 font-medium">
+                            Awaiting Senior Lead Authorization
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1654,6 +1848,312 @@ export function DepartmentDashboardView({
       )}
 
       {/* ===================================================================== */}
+      {/* 7. TAB: PERSONALIZED USER WORKSPACE & TASK HUB */}
+      {/* ===================================================================== */}
+      {activeTab === "personal" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* User Identity & Clearance Authority Banner */}
+          <div className="p-6 sm:p-7 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100 dark:border-white/[0.06]">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-[#ED2618] text-white font-extrabold text-xl shadow-md">
+                  {currentUser.fullName.charAt(0)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                      {currentUser.fullName}
+                    </h2>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 uppercase border border-amber-500/25">
+                      {seniorityBadgeLabel}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {currentUser.email} &bull; {currentUser.department || "Operations"} &bull; {currentUser.jobTitle || currentUser.role}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  leftIcon={<PlusCircle className="h-4 w-4" />}
+                >
+                  New Requisition
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNewEmailModalOpen(true)}
+                  leftIcon={<Mail className="h-4 w-4" />}
+                >
+                  Send Team Message
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] space-y-1">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Clearance Authority</span>
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                </div>
+                <div className="text-sm font-bold text-slate-900 dark:text-white">
+                  {isExec ? "Sovereign Executive" : isSenior ? "Senior Department Lead" : isMid ? "Operational Specialist" : "Staff Task Execution"}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  {seniorityAuthorityLabel}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] space-y-1">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>My Active Requisitions</span>
+                  <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  {userSubmittedApprovals.length}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  In-flight tickets submitted by your account
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] space-y-1">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Awaiting Department Review</span>
+                  <Clock className="h-4 w-4 text-[#ED2618]" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  {userPendingActionApprovals.length}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  {isSenior ? "Tickets requiring your department authorization" : "Handled by senior department leads"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 2-Column Grid: My Submissions & Pending Department Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: My In-Flight Submissions */}
+            <div className="p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    My In-Flight Requisitions
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Track the live status of requests and clearings you submitted.
+                  </p>
+                </div>
+                <span className="text-xs font-mono font-bold text-slate-500">
+                  {userSubmittedApprovals.length} total
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {userSubmittedApprovals.length > 0 ? (
+                  userSubmittedApprovals.map((req) => (
+                    <div
+                      key={req.id}
+                      className="p-4 rounded-2xl border border-slate-200/70 dark:border-white/[0.06] bg-slate-50/50 dark:bg-white/[0.02] space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-[#ED2618]">
+                          {req.ticketNumber}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            req.status === "APPROVED"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : req.status === "PENDING"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                              : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                        {req.title}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 line-clamp-2">
+                        {req.description}
+                      </p>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-white/[0.04] text-[10px] text-slate-500">
+                        <span>Routed to: {req.toDepartment}</span>
+                        <span>{timeAgo(req.createdAt)}</span>
+                      </div>
+                      {req.decisionNotes && (
+                        <p className="text-[10px] text-slate-500 italic bg-white dark:bg-[#12141C] p-2 rounded-lg border border-slate-200/50 dark:border-white/[0.04]">
+                          &ldquo;{req.decisionNotes}&rdquo; &bull; {req.approvedByName}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 space-y-2">
+                    <CheckCircle2 className="h-8 w-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      No In-Flight Requisitions
+                    </p>
+                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                      You have zero pending clearance requests. Use the New Requisition button to submit inter-department authorizations.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Actions Requiring Attention & Personal Audit Activity */}
+            <div className="space-y-6">
+              {/* Department Action Queue */}
+              <div className="p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Clearances Awaiting {currentUser.department || "Department"} Review
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      {isSenior ? "Authorize or decline requests sent to your department." : "Review pending tasks handled by your department leads."}
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-[#ED2618]">
+                    {userPendingActionApprovals.length} pending
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {userPendingActionApprovals.length > 0 ? (
+                    userPendingActionApprovals.map((req) => (
+                      <div
+                        key={req.id}
+                        className="p-4 rounded-2xl border border-slate-200/70 dark:border-white/[0.06] bg-slate-50/50 dark:bg-white/[0.02] space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-bold text-[#ED2618]">
+                            {req.ticketNumber}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            PENDING
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                            {req.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            From: {req.requesterName} ({req.fromDepartment})
+                          </p>
+                        </div>
+                        {req.amount && (
+                          <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            Amount: {formatCurrency(req.amount, req.currency)}
+                          </div>
+                        )}
+                        {isSenior ? (
+                          <div className="flex items-center gap-2 pt-2 border-t border-slate-200/50 dark:border-white/[0.04]">
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              className="flex-1 text-xs"
+                              onClick={() => {
+                                setSelectedApproval(req);
+                                setDecisionType("APPROVED");
+                                setDecisionModalOpen(true);
+                              }}
+                            >
+                              Authorize
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                              onClick={() => {
+                                setSelectedApproval(req);
+                                setDecisionType("REJECTED");
+                                setDecisionModalOpen(true);
+                              }}
+                            >
+                              Decline
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="py-1.5 px-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] text-center text-[10px] text-slate-400 font-medium">
+                            Awaiting Senior Lead Authorization
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-6 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 space-y-1">
+                      <ShieldCheck className="h-6 w-6 text-emerald-500 mx-auto" />
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Zero In-Flight Department Clearances
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        All inter-department requests routed to {currentUser.department || "your department"} are fully resolved.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Personal Audit Activity */}
+              <div className="p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      My Personal Audit Log
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Recent operations executed by your account.
+                    </p>
+                  </div>
+                  <Link
+                    href="/audit-logs"
+                    className="text-xs font-bold text-[#ED2618] hover:underline"
+                  >
+                    View All &rarr;
+                  </Link>
+                </div>
+
+                <div className="space-y-2.5">
+                  {userAuditLogs.length > 0 ? (
+                    userAuditLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04] text-xs"
+                      >
+                        <div>
+                          <span className="font-mono text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                            {log.action}
+                          </span>
+                          <span className="text-slate-400 text-[10px] block">
+                            Entity: {log.entity}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                          {timeAgo(log.createdAt)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center py-4">
+                      No personal audit events recorded in this session.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
       {/* 6. TAB: CORPORATE COMMUNICATIONS */}
       {/* ===================================================================== */}
       {activeTab === "communications" && (
@@ -1726,6 +2226,312 @@ export function DepartmentDashboardView({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* 7. TAB: PERSONALIZED USER WORKSPACE & TASK HUB */}
+      {/* ===================================================================== */}
+      {activeTab === "personal" && (
+        <div className="space-y-6 animate-fade-in">
+          {/* User Identity & Clearance Authority Banner */}
+          <div className="p-6 sm:p-7 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-slate-100 dark:border-white/[0.06]">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-[#ED2618] text-white font-extrabold text-xl shadow-md">
+                  {currentUser.fullName.charAt(0)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                      {currentUser.fullName}
+                    </h2>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 uppercase border border-amber-500/25">
+                      {seniorityBadgeLabel}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {currentUser.email} &bull; {currentUser.department || "Operations"} &bull; {currentUser.jobTitle || currentUser.role}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  leftIcon={<PlusCircle className="h-4 w-4" />}
+                >
+                  New Requisition
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNewEmailModalOpen(true)}
+                  leftIcon={<Mail className="h-4 w-4" />}
+                >
+                  Send Team Message
+                </Button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-6">
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] space-y-1">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Clearance Authority</span>
+                  <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                </div>
+                <div className="text-sm font-bold text-slate-900 dark:text-white">
+                  {isExec ? "Sovereign Executive" : isSenior ? "Senior Department Lead" : isMid ? "Operational Specialist" : "Staff Task Execution"}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  {seniorityAuthorityLabel}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] space-y-1">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>My Active Requisitions</span>
+                  <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  {userSubmittedApprovals.length}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  In-flight tickets submitted by your account
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] space-y-1">
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span>Awaiting Department Review</span>
+                  <Clock className="h-4 w-4 text-[#ED2618]" />
+                </div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  {userPendingActionApprovals.length}
+                </div>
+                <p className="text-[11px] text-slate-400 leading-snug">
+                  {isSenior ? "Tickets requiring your department authorization" : "Handled by senior department leads"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 2-Column Grid: My Submissions & Pending Department Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: My In-Flight Submissions */}
+            <div className="p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-5">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    My In-Flight Requisitions
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Track the live status of requests and clearings you submitted.
+                  </p>
+                </div>
+                <span className="text-xs font-mono font-bold text-slate-500">
+                  {userSubmittedApprovals.length} total
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {userSubmittedApprovals.length > 0 ? (
+                  userSubmittedApprovals.map((req) => (
+                    <div
+                      key={req.id}
+                      className="p-4 rounded-2xl border border-slate-200/70 dark:border-white/[0.06] bg-slate-50/50 dark:bg-white/[0.02] space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold text-[#ED2618]">
+                          {req.ticketNumber}
+                        </span>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            req.status === "APPROVED"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : req.status === "PENDING"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                              : "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                          }`}
+                        >
+                          {req.status}
+                        </span>
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                        {req.title}
+                      </h4>
+                      <p className="text-[11px] text-slate-400 line-clamp-2">
+                        {req.description}
+                      </p>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-200/50 dark:border-white/[0.04] text-[10px] text-slate-500">
+                        <span>Routed to: {req.toDepartment}</span>
+                        <span>{timeAgo(req.createdAt)}</span>
+                      </div>
+                      {req.decisionNotes && (
+                        <p className="text-[10px] text-slate-500 italic bg-white dark:bg-[#12141C] p-2 rounded-lg border border-slate-200/50 dark:border-white/[0.04]">
+                          &ldquo;{req.decisionNotes}&rdquo; &bull; {req.approvedByName}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-10 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 space-y-2">
+                    <CheckCircle2 className="h-8 w-8 text-slate-300 dark:text-slate-600 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      No In-Flight Requisitions
+                    </p>
+                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                      You have zero pending clearance requests. Use the New Requisition button to submit inter-department authorizations.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Actions Requiring Attention & Personal Audit Activity */}
+            <div className="space-y-6">
+              {/* Department Action Queue */}
+              <div className="p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-5">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      Clearances Awaiting {currentUser.department || "Department"} Review
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      {isSenior ? "Authorize or decline requests sent to your department." : "Review pending tasks handled by your department leads."}
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono font-bold text-[#ED2618]">
+                    {userPendingActionApprovals.length} pending
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {userPendingActionApprovals.length > 0 ? (
+                    userPendingActionApprovals.map((req) => (
+                      <div
+                        key={req.id}
+                        className="p-4 rounded-2xl border border-slate-200/70 dark:border-white/[0.06] bg-slate-50/50 dark:bg-white/[0.02] space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-xs font-bold text-[#ED2618]">
+                            {req.ticketNumber}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            PENDING
+                          </span>
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                            {req.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            From: {req.requesterName} ({req.fromDepartment})
+                          </p>
+                        </div>
+                        {req.amount && (
+                          <div className="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            Amount: {formatCurrency(req.amount, req.currency)}
+                          </div>
+                        )}
+                        {isSenior ? (
+                          <div className="flex items-center gap-2 pt-2 border-t border-slate-200/50 dark:border-white/[0.04]">
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              className="flex-1 text-xs"
+                              onClick={() => {
+                                setSelectedApproval(req);
+                                setDecisionType("APPROVED");
+                                setDecisionModalOpen(true);
+                              }}
+                            >
+                              Authorize
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs"
+                              onClick={() => {
+                                setSelectedApproval(req);
+                                setDecisionType("REJECTED");
+                                setDecisionModalOpen(true);
+                              }}
+                            >
+                              Decline
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="py-1.5 px-2 rounded-xl bg-slate-100 dark:bg-white/[0.04] text-center text-[10px] text-slate-400 font-medium">
+                            Awaiting Senior Lead Authorization
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-6 px-4 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 space-y-1">
+                      <ShieldCheck className="h-6 w-6 text-emerald-500 mx-auto" />
+                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Zero In-Flight Department Clearances
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        All inter-department requests routed to {currentUser.department || "your department"} are fully resolved.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Personal Audit Activity */}
+              <div className="p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      My Personal Audit Log
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Recent operations executed by your account.
+                    </p>
+                  </div>
+                  <Link
+                    href="/audit-logs"
+                    className="text-xs font-bold text-[#ED2618] hover:underline"
+                  >
+                    View All &rarr;
+                  </Link>
+                </div>
+
+                <div className="space-y-2.5">
+                  {userAuditLogs.length > 0 ? (
+                    userAuditLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04] text-xs"
+                      >
+                        <div>
+                          <span className="font-mono text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                            {log.action}
+                          </span>
+                          <span className="text-slate-400 text-[10px] block">
+                            Entity: {log.entity}
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                          {timeAgo(log.createdAt)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-slate-400 text-center py-4">
+                      No personal audit events recorded in this session.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

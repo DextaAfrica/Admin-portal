@@ -57,7 +57,14 @@ const PAGE_LABELS: Record<string, string> = {
 export function Header({
   user,
 }: {
-  user?: { fullName: string; email: string; role: string; department?: string };
+  user?: {
+    fullName: string;
+    email: string;
+    role: string;
+    department?: string;
+    seniorityLevel?: string;
+    jobTitle?: string | null;
+  };
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -78,7 +85,8 @@ export function Header({
     email: user?.email || "",
     role: user?.role || "ADMIN",
     department: user?.department || "OPERATIONS",
-    jobTitle: "",
+    seniorityLevel: user?.seniorityLevel || "SENIOR",
+    jobTitle: user?.jobTitle || "",
     phone: "",
     bio: "",
     avatarUrl: "",
@@ -98,6 +106,7 @@ export function Header({
               email: data.user.email || prev.email,
               role: data.user.role || prev.role,
               department: data.user.department || prev.department,
+              seniorityLevel: data.user.seniorityLevel || prev.seniorityLevel,
               jobTitle: data.user.jobTitle || "",
               phone: data.user.phone || "",
               bio: data.user.bio || "",
@@ -316,7 +325,7 @@ export function Header({
                 <span className="truncate">{profileData.department}</span>
                 <span>&bull;</span>
                 <span className="font-semibold text-slate-500 dark:text-slate-300 uppercase">
-                  {profileData.role}
+                  {profileData.seniorityLevel ? `${profileData.seniorityLevel} ` : ""}{profileData.role}
                 </span>
               </div>
             </div>

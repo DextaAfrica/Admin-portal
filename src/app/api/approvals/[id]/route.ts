@@ -18,6 +18,19 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Seniority & Clearance Gating: Authorizing or rejecting inter-department requests requires Senior Lead or Executive authority
+    const userRole = (user.role || "").toUpperCase();
+    const userSeniority = (user.seniorityLevel || "SENIOR").toUpperCase();
+    const isExec = userRole === "SUPER_ADMIN" || userSeniority === "EXECUTIVE" || user.department?.toUpperCase() === "EXECUTIVE";
+    const isSenior = isExec || userSeniority === "SENIOR" || userRole === "ADMIN";
+
+    if (!isSenior) {
+      return NextResponse.json(
+        { error: "Forbidden: Inter-department clearance authorization requires Senior Lead or Executive clearance." },
+        { status: 403 }
+      );
+    }
+
     const { id } = params;
     const body = await req.json();
     const { status, decisionNotes } = body;

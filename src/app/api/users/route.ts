@@ -30,6 +30,9 @@ export async function GET() {
         email: true,
         fullName: true,
         role: true,
+        department: true,
+        seniorityLevel: true,
+        jobTitle: true,
         status: true,
         twoFactorEnabled: true,
         lastLoginAt: true,
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { email, fullName, password, role } = await req.json();
+    const { email, fullName, password, role, department, seniorityLevel, jobTitle } = await req.json();
 
     if (!email || !fullName || !password) {
       return NextResponse.json(
@@ -84,6 +87,9 @@ export async function POST(req: NextRequest) {
         fullName,
         passwordHash,
         role: role || "ADMIN",
+        department: (department || "OPERATIONS").toUpperCase(),
+        seniorityLevel: (seniorityLevel || "SENIOR").toUpperCase(),
+        jobTitle: jobTitle || null,
         status: "ACTIVE",
         twoFactorEnabled: false,
       },
@@ -97,7 +103,7 @@ export async function POST(req: NextRequest) {
       entityId: newUser.id,
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent"),
-      metadata: { targetEmail: newUser.email, assignedRole: newUser.role },
+      metadata: { targetEmail: newUser.email, assignedRole: newUser.role, department: newUser.department, seniorityLevel: newUser.seniorityLevel },
     });
 
     return NextResponse.json({
@@ -107,6 +113,8 @@ export async function POST(req: NextRequest) {
         email: newUser.email,
         fullName: newUser.fullName,
         role: newUser.role,
+        department: newUser.department,
+        seniorityLevel: newUser.seniorityLevel,
       },
     });
   } catch (err: unknown) {
@@ -124,11 +132,14 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { userId, status, role } = await req.json();
+    const { userId, status, role, department, seniorityLevel, jobTitle } = await req.json();
 
     const data: Record<string, unknown> = {};
     if (status) data.status = status;
     if (role && user.role === "SUPER_ADMIN") data.role = role;
+    if (department && (user.role === "SUPER_ADMIN" || user.role === "ADMIN")) data.department = department.toUpperCase();
+    if (seniorityLevel && (user.role === "SUPER_ADMIN" || user.role === "ADMIN")) data.seniorityLevel = seniorityLevel.toUpperCase();
+    if (jobTitle !== undefined) data.jobTitle = jobTitle;
 
     const updated = await prisma.user.update({
       where: { id: userId },

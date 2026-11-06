@@ -34,7 +34,7 @@ import {
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 
-export type PortalType = "operations" | "systems" | "executive" | "hr";
+export type PortalType = "operations" | "systems" | "executive" | "hr" | "finance";
 
 interface NavItem {
   title: string;
@@ -197,6 +197,33 @@ const HR_NAV: NavSection[] = [
   },
 ];
 
+// 5. Finance & Accounts Treasury Navigation
+const FINANCE_NAV: NavSection[] = [
+  {
+    label: "Treasury & Capital",
+    items: [
+      { title: "Treasury Liquidity", href: "/dashboard?tab=treasury", tabId: "treasury", icon: Landmark, badge: "Ledger" },
+      { title: "Capital & Inflow Ledger", href: "/dashboard?tab=treasury", tabId: "treasury", icon: DollarSign, badge: "Inflow" },
+      { title: "Sovereign Deals Pipeline", href: "/crm", icon: Briefcase, badge: "Deals" },
+    ],
+  },
+  {
+    label: "Disbursements & Clearances",
+    items: [
+      { title: "Disbursement Approvals", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2, badge: "Payouts" },
+      { title: "Contractor Payout Ledger", href: "/dashboard?tab=treasury", tabId: "treasury", icon: FileText },
+      { title: "Financial Audit Trail", href: "/audit-logs", icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "Corporate Finance Dispatch",
+    items: [
+      { title: "Inter-Office Dispatch", href: "/dashboard?tab=dispatch", tabId: "dispatch", icon: Mail },
+      { title: "Finance Team Directory", href: "/users", icon: Users },
+    ],
+  },
+];
+
 const PORTALS: Record<PortalType, PortalConfig> = {
   operations: {
     id: "operations",
@@ -238,12 +265,29 @@ const PORTALS: Record<PortalType, PortalConfig> = {
     icon: Users,
     sections: HR_NAV,
   },
+  finance: {
+    id: "finance",
+    title: "Finance & Accounts Desk",
+    shortTitle: "Finance & Accounts",
+    badge: "Treasury",
+    subdomain: "dextaafrica.org",
+    description: "Capital inflows, project disbursements, financial ledgers, and escrow",
+    icon: Landmark,
+    sections: FINANCE_NAV,
+  },
 };
 
 export function Sidebar({
   user,
 }: {
-  user?: { fullName: string; email: string; role: string; department?: string };
+  user?: {
+    fullName: string;
+    email: string;
+    role: string;
+    department?: string;
+    seniorityLevel?: string;
+    jobTitle?: string | null;
+  };
 }) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
@@ -258,6 +302,9 @@ export function Sidebar({
   const activePortal: PortalType = React.useMemo(() => {
     if (role === "SUPER_ADMIN" || dept === "EXECUTIVE") {
       return "executive";
+    }
+    if (dept === "FINANCE" || dept === "ACCOUNTING" || dept === "ACCOUNTS") {
+      return "finance";
     }
     if (dept === "IT") {
       return "systems";
@@ -492,10 +539,15 @@ export function Sidebar({
                 <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                   {user?.fullName || "Team Member"}
                 </p>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] text-slate-400 truncate">
                     {user?.department || "Dexta"}
                   </span>
+                  {user?.seniorityLevel && (
+                    <span className="text-[8px] font-mono font-bold px-1 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 uppercase">
+                      {user.seniorityLevel}
+                    </span>
+                  )}
                   <span className="text-[9px] font-mono font-bold px-1 rounded bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                     {user?.role || "STAFF"}
                   </span>
