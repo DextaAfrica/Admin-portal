@@ -7,6 +7,31 @@ export const SESSION_DURATION_DAYS = 7;
 export const DEFAULT_INACTIVITY_TIMEOUT_MINUTES = 15;
 export const INACTIVITY_SETTING_KEY = "SESSION_INACTIVITY_TIMEOUT_MINUTES";
 
+/**
+ * Returns the appropriate cookie domain for unified cross-subdomain SSO.
+ * e.g., "localhost" for *.localhost:3000, ".dextaafrica.org" for *.dextaafrica.org
+ */
+export function getCookieDomain(host?: string | null): string | undefined {
+  if (!host) return undefined;
+  const hostname = host.split(":")[0].toLowerCase();
+
+  if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+    return "localhost";
+  }
+
+  if (hostname.endsWith("dextaafrica.org")) {
+    return ".dextaafrica.org";
+  }
+  if (hostname.endsWith("dextafrica.org")) {
+    return ".dextafrica.org";
+  }
+  if (hostname.endsWith("dextaafrica.com")) {
+    return ".dextaafrica.com";
+  }
+
+  return undefined;
+}
+
 // In-memory cache for inactivity timeout to prevent excessive DB queries
 let cachedTimeoutMinutes = DEFAULT_INACTIVITY_TIMEOUT_MINUTES;
 let cacheExpiresAt = 0;

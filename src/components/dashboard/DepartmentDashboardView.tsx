@@ -118,7 +118,7 @@ export function DepartmentDashboardView({
   recentLogs,
   recentAssets,
   recentDeals,
-  treasuryMetrics = { totalInflow: 1250000, totalDisbursed: 295500, netBalance: 954500 },
+  treasuryMetrics = { totalInflow: 0, totalDisbursed: 0, netBalance: 0 },
   financialTransactions = [],
   approvals = [],
   corporateEmails = [],
@@ -126,18 +126,40 @@ export function DepartmentDashboardView({
 }: DepartmentDashboardViewProps) {
   const { success: toastSuccess, error: toastError } = useToast();
 
-  // Tab State: Overview (default), Operations, Approvals, Treasury, Communications
+  // Tab State: Overview (default), Systems IT, Operations, Approvals, Treasury, Communications
   const [activeTab, setActiveTab] = React.useState<
-    "overview" | "operations" | "approvals" | "treasury" | "communications"
+    "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications"
   >("overview");
 
-  // Sync tab with URL search parameter (?tab=...) and custom events from sidebar
+  // Platform State: systems (admin.), operations (ops.), executive (root/CEO)
+  const [platform, setPlatform] = React.useState<"systems" | "operations" | "executive">("executive");
+
+  // Sync tab and platform with URL search parameter (?tab=...), hostname, and sidebar events
   React.useEffect(() => {
     const syncFromUrl = () => {
       if (typeof window === "undefined") return;
+      const host = window.location.hostname.toLowerCase();
+      const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextafrica");
+      const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica");
+
+      // Platform host strictly dictates the workspace context
+      let currentPlatform: "systems" | "operations" | "executive" = "executive";
+      if (isAdminHost) {
+        currentPlatform = "systems";
+      } else if (isOpsHost) {
+        currentPlatform = "operations";
+      } else {
+        const userDept = (currentUser?.department || "").toUpperCase();
+        if (userDept === "IT") currentPlatform = "systems";
+        else if (userDept === "OPERATIONS") currentPlatform = "operations";
+        else currentPlatform = "executive";
+      }
+      setPlatform(currentPlatform);
+
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get("tab");
       if (
+        tabParam === "systems" ||
         tabParam === "operations" ||
         tabParam === "approvals" ||
         tabParam === "treasury" ||
@@ -148,16 +170,22 @@ export function DepartmentDashboardView({
       } else if (tabParam === "dispatch") {
         setActiveTab("communications");
       } else {
-        // Personalized default tab tailored per logged-in user department & host
-        const isOps =
-          window.location.hostname.startsWith("ops.") ||
-          (currentUser?.department || "").toUpperCase() === "OPERATIONS";
-        if (isOps) {
+        // Platform host strictly dictates default workspace view!
+        if (isAdminHost) {
+          setActiveTab("systems");
+        } else if (isOpsHost) {
           setActiveTab("operations");
-        } else if ((currentUser?.department || "").toUpperCase() === "HR") {
-          setActiveTab("approvals");
         } else {
-          setActiveTab("overview");
+          const userDept = (currentUser?.department || "").toUpperCase();
+          if (userDept === "OPERATIONS") {
+            setActiveTab("operations");
+          } else if (userDept === "IT") {
+            setActiveTab("systems");
+          } else if (userDept === "HR") {
+            setActiveTab("approvals");
+          } else {
+            setActiveTab("overview");
+          }
         }
       }
     };
@@ -167,6 +195,7 @@ export function DepartmentDashboardView({
     const handleSwitchTab = (e: any) => {
       const tab = e.detail;
       if (
+        tab === "systems" ||
         tab === "operations" ||
         tab === "approvals" ||
         tab === "treasury" ||
@@ -459,11 +488,15 @@ export function DepartmentDashboardView({
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
               <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
-                {currentUser.department || "Operations"} Directorate
+                {platform === "systems"
+                  ? "admin.dextafrica.org • Zero-Trust IT Command"
+                  : platform === "operations"
+                  ? "ops.dextaafrica.org • Operations Fleet Desk"
+                  : "dextaafrica.org • Executive Leadership Suite"}
               </span>
               <span className="text-slate-300 dark:text-white/20">&bull;</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                {currentUser.role || "Executive Staff"}
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                {currentUser.role || "Executive Staff"} &bull; {currentUser.department || "Operations"}
               </span>
             </div>
 
@@ -472,43 +505,75 @@ export function DepartmentDashboardView({
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-              {(currentUser.department || "").toUpperCase() === "OPERATIONS"
+              {platform === "systems"
+                ? "Your zero-trust IT command center governing user access tokens, identity verification, watchdog firewalls, active sessions, and cloud microservices."
+                : platform === "operations"
                 ? "Your personalized operational workspace for managing Landmark site developments, logistics procurement, and field contractor clearances."
-                : (currentUser.department || "").toUpperCase() === "IT"
-                ? "Your zero-trust IT console managing access tokens, identity verification, active sessions, and cloud microservices."
                 : "Personalized executive command center governing infrastructure site deliveries, capital treasury settlements, and official communications."}
             </p>
           </div>
 
-          {/* Quick Action Buttons for Non-Technical Users */}
+          {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => setNewApprovalModalOpen(true)}
-              leftIcon={<PlusCircle className="h-4 w-4" />}
-            >
-              Request Approval
-            </Button>
+            {platform === "systems" ? (
+              <>
+                <Link
+                  href="/it"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white px-3.5 py-2 text-xs font-bold transition-all shadow-sm"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Security Firewall</span>
+                </Link>
 
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => setNewEmailModalOpen(true)}
-              leftIcon={<Mail className="h-4 w-4" />}
-            >
-              Send Team Email
-            </Button>
+                <Link
+                  href="/users"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all"
+                >
+                  <Users className="h-4 w-4" />
+                  <span>User Governance</span>
+                </Link>
 
-            <a
-              href="/api/reports/executive?format=csv"
-              download
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all cursor-pointer"
-            >
-              <Download className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Export Report</span>
-              <span className="inline sm:hidden">CSV</span>
-            </a>
+                <a
+                  href="/api/reports/executive?format=csv"
+                  download
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Audit Logs (CSV)</span>
+                  <span className="inline sm:hidden">CSV</span>
+                </a>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="primary"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  leftIcon={<PlusCircle className="h-4 w-4" />}
+                >
+                  Request Approval
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNewEmailModalOpen(true)}
+                  leftIcon={<Mail className="h-4 w-4" />}
+                >
+                  Send Team Email
+                </Button>
+
+                <a
+                  href="/api/reports/executive?format=csv"
+                  download
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all cursor-pointer"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Export Report</span>
+                  <span className="inline sm:hidden">CSV</span>
+                </a>
+              </>
+            )}
           </div>
         </div>
 
@@ -525,6 +590,19 @@ export function DepartmentDashboardView({
           >
             <Crown className="h-3.5 w-3.5 text-[#ED2618]" />
             <span>Executive Overview</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("systems")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "systems"
+                ? "bg-[#ED2618] text-white shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+            }`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>Systems IT Command</span>
           </button>
 
           <button
@@ -869,6 +947,336 @@ export function DepartmentDashboardView({
                       </div>
                     );
                   })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* 2.5 TAB: SYSTEMS IT COMMAND (ADMIN.DEXTAFRICA.ORG) */}
+      {/* ===================================================================== */}
+      {activeTab === "systems" && (
+        <div className="space-y-6">
+          {/* Top 4 Systems Telemetry Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* 1. 2FA Zero-Trust Adoption */}
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Zero-Trust 2FA Adoption
+                </span>
+                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  {itMetrics.mfaPercent}%
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <Check className="h-3.5 w-3.5" />
+                  <span>{itMetrics.mfaUsers} of {itMetrics.totalUsers || 1} accounts enforced</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
+                Strict TOTP Authenticator &amp; Recovery Codes
+              </p>
+            </div>
+
+            {/* 2. Security Watchdog Defense */}
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Security Watchdog Defense
+                </span>
+                <div className="p-2 rounded-xl bg-red-500/10 text-[#ED2618]">
+                  <ShieldAlert className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                  {itMetrics.openAlerts === 0 ? "Threat Matrix Clear" : `${itMetrics.openAlerts} Incidents`}
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <Zap className="h-3.5 w-3.5 text-[#ED2618]" />
+                  <span>Automated Perimeter Watchdog Live</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
+                0 Critical Vulnerabilities Detected
+              </p>
+            </div>
+
+            {/* 3. AWS S3 Storage Vault */}
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  AWS S3 Storage Vault
+                </span>
+                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                  <HardDrive className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-mono">
+                  {formatBytes(itMetrics.totalStorageBytes)}
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-600 dark:text-slate-300 font-semibold">
+                  <span>Quota: {itMetrics.storagePercent}% of 50 GB allocated</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
+                Site Blue-Prints &bull; Legal Contracts &bull; Media Assets
+              </p>
+            </div>
+
+            {/* 4. Microservice API Health */}
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                  Microservice Gateway
+                </span>
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
+                  <Radio className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                  {itMetrics.healthyEndpoints} / {itMetrics.totalEndpoints || 1} Healthy
+                </div>
+                <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                  <Activity className="h-3.5 w-3.5" />
+                  <span>Core Backend Latency: {itMetrics.backendLatency || 12}ms</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
+                Subdomain Mesh: admin &bull; ops &bull; gateway
+              </p>
+            </div>
+          </div>
+
+          {/* Quick IT Systems Management Modules */}
+          <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Systems IT Core Governance Modules
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Direct administrative control planes for identity, cloud assets, firewall rules, and microservices.
+                </p>
+              </div>
+              <Badge variant="outline">Enterprise IT Mode</Badge>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Link
+                href="/users"
+                className="group p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-red-500/40 hover:bg-red-500/[0.03] transition-all space-y-2 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-red-100 dark:bg-red-500/10 text-[#ED2618]">
+                    <Users className="h-4 w-4" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  Identity &amp; User Governance
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Manage user accounts, assign department RBAC permissions, and revoke sessions across subdomains.
+                </p>
+              </Link>
+
+              <Link
+                href="/it"
+                className="group p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-red-500/40 hover:bg-red-500/[0.03] transition-all space-y-2 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-red-100 dark:bg-red-500/10 text-[#ED2618]">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  Security &amp; Inactivity Guard
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Configure perimeter firewall policies, 2FA enforcement, and backend inactivity logout threshold.
+                </p>
+              </Link>
+
+              <Link
+                href="/storage"
+                className="group p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-red-500/40 hover:bg-red-500/[0.03] transition-all space-y-2 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-500/10 text-blue-500">
+                    <HardDrive className="h-4 w-4" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  AWS S3 Storage Asset Vault
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Explore uploaded contractor site drawings, architectural BIM files, and multimedia assets.
+                </p>
+              </Link>
+
+              <Link
+                href="/endpoints"
+                className="group p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-red-500/40 hover:bg-red-500/[0.03] transition-all space-y-2 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-500/10 text-purple-500">
+                    <Radio className="h-4 w-4" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  Microservices &amp; API Health
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Monitor live latency pings, HTTP status returns, and endpoint heartbeat metrics.
+                </p>
+              </Link>
+
+              <Link
+                href="/audit-logs"
+                className="group p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-red-500/40 hover:bg-red-500/[0.03] transition-all space-y-2 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600">
+                    <FileText className="h-4 w-4" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  Immutable Audit Trails
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Cryptographically verified event logs for compliance, sign-ins, privilege elevations, and data mutations.
+                </p>
+              </Link>
+
+              <Link
+                href="/marketing/campaigns"
+                className="group p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-red-500/40 hover:bg-red-500/[0.03] transition-all space-y-2 cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                    <Mail className="h-4 w-4" />
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
+                </div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                  Email Dispatch &amp; Campaigns
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Scheduled broadcast queue, Mailpit delivery diagnostics, and corporate communication logs.
+                </p>
+              </Link>
+            </div>
+          </div>
+
+          {/* Connected Microservices & Recent Audit Stream */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Left 6 cols: Live Microservice Topology */}
+            <div className="lg:col-span-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Core Microservices Telemetry
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Continuous heartbeat ping status across internal Dexta services.
+                  </p>
+                </div>
+                <Badge variant="success">All Systems Nominal</Badge>
+              </div>
+
+              <div className="space-y-2.5">
+                {[
+                  { name: "Dexta Core Go API Gateway", route: "/api/v1/health", status: "HEALTHY", latency: "12ms" },
+                  { name: "Cloud AWS S3 Storage Ingestion", route: "s3.eu-west-1.amazonaws.com", status: "ONLINE", latency: "28ms" },
+                  { name: "Zero-Trust Session Inactivity Daemon", route: "internal://session-guard", status: "ACTIVE", latency: "4ms" },
+                  { name: "Enterprise SMTP Dispatcher", route: "smtp://mailpit:1025", status: "ONLINE", latency: "15ms" },
+                  { name: "Immutable SQLite WAL Database Engine", route: "file://admin_portal.db", status: "OPTIMAL", latency: "2ms" },
+                ].map((svc, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04]"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {svc.name}
+                        </p>
+                        <p className="text-[10px] font-mono text-slate-400 truncate">
+                          {svc.route}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {svc.latency}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                        {svc.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right 6 cols: Recent Security & Audit Logs */}
+            <div className="lg:col-span-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Live Security &amp; Audit Logs
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Real-time audit events verified by immutable audit trail.
+                  </p>
+                </div>
+                <Link
+                  href="/audit-logs"
+                  className="text-xs font-bold text-[#ED2618] hover:underline"
+                >
+                  View All &rarr;
+                </Link>
+              </div>
+
+              <div className="space-y-2.5">
+                {recentLogs && recentLogs.length > 0 ? (
+                  recentLogs.slice(0, 5).map((log: any, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04]"
+                    >
+                      <div className="min-w-0 pr-3">
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate font-mono">
+                          {log.action}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {log.actorEmail || "system"} &bull; {log.entity}
+                        </p>
+                      </div>
+                      <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap">
+                        {timeAgo(log.createdAt)}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    No security incidents or audit warnings detected.
+                  </div>
                 )}
               </div>
             </div>

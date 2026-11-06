@@ -99,7 +99,7 @@ const SYSTEMS_NAV: NavSection[] = [
   {
     label: "Systems Workspace",
     items: [
-      { title: "IT Command Overview", href: "/dashboard?tab=overview", tabId: "overview", icon: LayoutDashboard, badge: "Gov" },
+      { title: "IT Command Overview", href: "/dashboard?tab=systems", tabId: "systems", icon: LayoutDashboard, badge: "Gov" },
       { title: "Systems Landing", href: "/", icon: Home },
     ],
   },
@@ -324,11 +324,42 @@ export function Sidebar({
       localStorage.setItem("dexta_active_portal", portalId);
       window.dispatchEvent(new CustomEvent("dexta:portal-change", { detail: portalId }));
 
-      // If user switches to Operations while on dashboard, switch tab to operations
+      const currentHost = window.location.hostname.toLowerCase();
+      const port = window.location.port ? `:${window.location.port}` : "";
+      const protocol = window.location.protocol;
+
+      // Cross-subdomain navigation for seamless portal switching
+      if (currentHost.includes("localhost") || currentHost.includes("127.0.0.1")) {
+        if (portalId === "operations" && !currentHost.startsWith("ops.")) {
+          window.location.href = `${protocol}//ops.localhost${port}/dashboard?tab=operations`;
+          return;
+        } else if (portalId === "systems" && !currentHost.startsWith("admin.")) {
+          window.location.href = `${protocol}//admin.localhost${port}/dashboard?tab=systems`;
+          return;
+        } else if (portalId === "executive" && (currentHost.startsWith("ops.") || currentHost.startsWith("admin."))) {
+          window.location.href = `${protocol}//localhost${port}/dashboard?tab=overview`;
+          return;
+        }
+      } else if (currentHost.includes("dextaafrica.org") || currentHost.includes("dextafrica.org")) {
+        if (portalId === "operations" && !currentHost.startsWith("ops.")) {
+          window.location.href = `https://ops.dextaafrica.org/dashboard?tab=operations`;
+          return;
+        } else if (portalId === "systems" && !currentHost.startsWith("admin.")) {
+          window.location.href = `https://admin.dextafrica.org/dashboard?tab=systems`;
+          return;
+        } else if (portalId === "executive" && (currentHost.startsWith("ops.") || currentHost.startsWith("admin."))) {
+          window.location.href = `https://dextaafrica.org/dashboard?tab=overview`;
+          return;
+        }
+      }
+
+      // If already on the matching host or running locally without subdomains
       if (pathname === "/dashboard") {
         if (portalId === "operations") {
           window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "operations" }));
-        } else if (portalId === "executive" || portalId === "systems" || portalId === "hr") {
+        } else if (portalId === "systems") {
+          window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "systems" }));
+        } else if (portalId === "executive" || portalId === "hr") {
           window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "overview" }));
         }
       }

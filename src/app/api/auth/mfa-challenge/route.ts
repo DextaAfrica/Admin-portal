@@ -8,6 +8,7 @@ import {
   createSession,
   SESSION_COOKIE_NAME,
   SESSION_DURATION_DAYS,
+  getCookieDomain,
 } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 
@@ -117,12 +118,15 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const cookieDomain = getCookieDomain(req.headers.get("host"));
+
     res.cookies.set(SESSION_COOKIE_NAME, session.sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: SESSION_DURATION_DAYS * 24 * 60 * 60,
       path: "/",
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
     });
 
     res.cookies.delete("dexta_mfa_challenge");
