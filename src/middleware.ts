@@ -43,13 +43,15 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // Rewrite clean paths to internal Next.js folder routes
+    // Root serves the dedicated high-end Operations Welcome Landing page
     if (pathname === "/") {
       return NextResponse.rewrite(new URL("/ops", req.url));
     }
+
     if (pathname === "/login") {
       return NextResponse.rewrite(new URL("/ops/login", req.url));
     }
+
     if (pathname === "/register") {
       return NextResponse.rewrite(new URL("/ops/register", req.url));
     }
@@ -63,13 +65,15 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // Rewrite clean paths to internal Next.js folder routes
+    // Root serves the dedicated high-end Systems Command Welcome Landing page
     if (pathname === "/") {
       return NextResponse.rewrite(new URL("/admin-portal", req.url));
     }
+
     if (pathname === "/login") {
       return NextResponse.rewrite(new URL("/admin-portal/login", req.url));
     }
+
     if (pathname === "/register") {
       return NextResponse.rewrite(new URL("/admin-portal/register", req.url));
     }
@@ -94,11 +98,7 @@ export function middleware(req: NextRequest) {
 
   // 6. Redirect unauthenticated users trying to access protected workspace pages
   if (!token && !isPublicRoute && !isStaticOrApi) {
-    const loginTarget = isOpsHost
-      ? "/login"
-      : isAdminHost
-      ? "/login"
-      : "/login";
+    const loginTarget = "/login";
     const url = new URL(loginTarget, req.url);
     return NextResponse.redirect(url);
   }

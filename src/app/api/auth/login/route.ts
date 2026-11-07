@@ -5,6 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { sendEmail } from "@/lib/email/dispatcher";
 import { LoginSchema } from "@/lib/auth/validation";
+import {
+  createSession,
+  SESSION_COOKIE_NAME,
+  SESSION_DURATION_DAYS,
+  getCookieDomain,
+} from "@/lib/auth/session";
 
 export async function POST(req: NextRequest) {
   try {
@@ -134,13 +140,23 @@ export async function POST(req: NextRequest) {
     }
 
     // Zero-trust authentication flow:
-    // If user has 2FA enabled, they use their authenticator app (TOTP) or backup recovery codes.
-    // If user does not have 2FA enabled, an email OTP is dispatched securely to their inbox.
-    let emailOtpSent = false;
-    let sessionOtp = "";
+    // Generate an enterprise one-time verification token (valid for 5 minutes)
+    const sessionOtp = String(crypto.randomInt(100000, 999999));
 
-    if (!user.twoFactorEnabled) {
-      sessionOtp = String(crypto.randomInt(100000, 999999));
+    await prisma.systemSetting.upsert({
+      where: { key: `MFA_OTP_${user.id}` },
+      create: {
+        key: `MFA_OTP_${user.id}`,
+        value: `${sessionOtp}:${Date.now() + 5 * 60 * 1000}`,
+        description: "Active MFA challenge code",
+      },
+      update: {
+        value: `${sessionOtp}:${Date.now() + 5 * 60 * 1000}`,
+      },
+    }).catch(() => {});
+
+    let emailOtpSent = false;
+    try {
       const emailResult = await sendEmail({
         to: user.email,
         subject: `${sessionOtp} is your Dexta Africa verification code`,
@@ -168,7 +184,10 @@ export async function POST(req: NextRequest) {
           </div>
         `,
       });
-      emailOtpSent = emailResult.success;
+      emailOtpSent = Boolean(emailResult?.success);
+      console.log(`[Zero-Trust MFA] Verification code dispatched to corporate email (${user.email}): ${sessionOtp}`);
+    } catch {
+      emailOtpSent = false;
     }
 
     const res = NextResponse.json({
@@ -180,15 +199,13 @@ export async function POST(req: NextRequest) {
       emailOtpSent,
     });
 
-    if (sessionOtp) {
-      res.cookies.set("dexta_mfa_challenge", `${user.id}:${sessionOtp}`, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 300, // 5 minutes
-        path: "/",
-      });
-    }
+    res.cookies.set("dexta_mfa_challenge", `${user.id}:${sessionOtp}`, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 300, // 5 minutes
+      path: "/",
+    });
 
     return res;
   } catch (err: unknown) {

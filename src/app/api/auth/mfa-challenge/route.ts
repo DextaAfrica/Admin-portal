@@ -52,6 +52,24 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      // 1b. Server-backed OTP verification fallback (bypasses browser cookie-blocking)
+      if (!isValid) {
+        try {
+          const dbOtpRecord = await prisma.systemSetting.findUnique({
+            where: { key: `MFA_OTP_${user.id}` },
+          });
+          if (dbOtpRecord && dbOtpRecord.value) {
+            const [storedOtp, expStr] = dbOtpRecord.value.split(":");
+            if (storedOtp === cleanCode && Date.now() < Number(expStr)) {
+              isValid = true;
+              await prisma.systemSetting.delete({ where: { key: `MFA_OTP_${user.id}` } }).catch(() => {});
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       // 2. Also check Authenticator TOTP secret if configured on the account
       if (!isValid && user.twoFactorSecret) {
         isValid = verifyTotpToken({
