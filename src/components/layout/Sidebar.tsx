@@ -30,11 +30,12 @@ import {
   Check,
   Send,
   Layers,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 
-export type PortalType = "operations" | "systems" | "executive" | "hr";
+export type PortalType = "operations" | "systems" | "executive" | "hr" | "finance";
 
 interface NavItem {
   title: string;
@@ -197,6 +198,33 @@ const HR_NAV: NavSection[] = [
   },
 ];
 
+// 5. Finance & Accounts Treasury Navigation
+const FINANCE_NAV: NavSection[] = [
+  {
+    label: "Treasury & Capital",
+    items: [
+      { title: "Treasury Liquidity", href: "/dashboard?tab=treasury", tabId: "treasury", icon: Landmark, badge: "Ledger" },
+      { title: "Capital & Inflow Ledger", href: "/dashboard?tab=treasury", tabId: "treasury", icon: DollarSign, badge: "Inflow" },
+      { title: "Sovereign Deals Pipeline", href: "/crm", icon: Briefcase, badge: "Deals" },
+    ],
+  },
+  {
+    label: "Disbursements & Clearances",
+    items: [
+      { title: "Disbursement Approvals", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2, badge: "Payouts" },
+      { title: "Contractor Payout Ledger", href: "/dashboard?tab=treasury", tabId: "treasury", icon: FileText },
+      { title: "Financial Audit Trail", href: "/audit-logs", icon: ShieldCheck },
+    ],
+  },
+  {
+    label: "Corporate Finance Dispatch",
+    items: [
+      { title: "Inter-Office Dispatch", href: "/dashboard?tab=dispatch", tabId: "dispatch", icon: Mail },
+      { title: "Finance Team Directory", href: "/users", icon: Users },
+    ],
+  },
+];
+
 const PORTALS: Record<PortalType, PortalConfig> = {
   operations: {
     id: "operations",
@@ -238,75 +266,69 @@ const PORTALS: Record<PortalType, PortalConfig> = {
     icon: Users,
     sections: HR_NAV,
   },
+  finance: {
+    id: "finance",
+    title: "Finance & Accounts Desk",
+    shortTitle: "Finance & Accounts",
+    badge: "Treasury",
+    subdomain: "dextaafrica.org",
+    description: "Capital inflows, project disbursements, financial ledgers, and escrow",
+    icon: Landmark,
+    sections: FINANCE_NAV,
+  },
 };
 
 export function Sidebar({
   user,
 }: {
-  user?: { fullName: string; email: string; role: string; department?: string };
+  user?: {
+    fullName: string;
+    email: string;
+    role: string;
+    department?: string;
+    seniorityLevel?: string;
+    jobTitle?: string | null;
+  };
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [portalSwitcherOpen, setPortalSwitcherOpen] = React.useState(false);
-  const [activePortal, setActivePortal] = React.useState<PortalType>("operations");
   const [activeTabSearch, setActiveTabSearch] = React.useState<string>("");
 
-  // Determine initial portal based on host subdomain, user department, or stored selection
+  // Determine portal STRICTLY from authenticated account department & role
+  // Zero dropdown switcher; zero localStorage manipulation.
+  const dept = (user?.department || "").toUpperCase();
+  const role = (user?.role || "").toUpperCase();
+
+  const activePortal: PortalType = React.useMemo(() => {
+    if (role === "SUPER_ADMIN" || dept === "EXECUTIVE") {
+      return "executive";
+    }
+    if (dept === "FINANCE" || dept === "ACCOUNTING" || dept === "ACCOUNTS") {
+      return "finance";
+    }
+    if (dept === "IT") {
+      return "systems";
+    }
+    if (dept === "HR") {
+      return "hr";
+    }
+    // Operations Manager & Operations Fleet
+    return "operations";
+  }, [dept, role]);
+
+  // Sync activeTab from URL search parameters (?tab=...)
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Check URL search parameter for active tab
     const updateSearch = () => {
       const params = new URLSearchParams(window.location.search);
       setActiveTabSearch(params.get("tab") || "");
     };
     updateSearch();
     window.addEventListener("popstate", updateSearch);
-
-    const host = window.location.hostname;
-    const dept = (user?.department || "").toUpperCase();
-
-    // 1. Dedicated host subdomains take top priority
-    if (host.startsWith("ops.")) {
-      setActivePortal("operations");
-      return;
-    }
-    if (host.startsWith("admin.")) {
-      setActivePortal("systems");
-      return;
-    }
-
-    // 2. User's designated organizational department determines their tailored workspace
-    if (dept === "OPERATIONS") {
-      setActivePortal("operations");
-      return;
-    }
-    if (dept === "IT") {
-      setActivePortal("systems");
-      return;
-    }
-    if (dept === "HR") {
-      setActivePortal("hr");
-      return;
-    }
-    if (dept === "EXECUTIVE" || user?.role === "SUPER_ADMIN" || user?.role === "EXECUTIVE") {
-      setActivePortal("executive");
-      return;
-    }
-
-    // 3. Stored workspace selection fallback
-    const stored = localStorage.getItem("dexta_active_portal") as PortalType | null;
-    if (stored && PORTALS[stored]) {
-      setActivePortal(stored);
-      return;
-    }
-
-    setActivePortal("operations");
-
     return () => window.removeEventListener("popstate", updateSearch);
-  }, [user]);
+  }, []);
 
   // Listen for mobile menu toggle triggered from Header
   React.useEffect(() => {
@@ -318,57 +340,7 @@ export function Sidebar({
   // Automatically close mobile drawer on route change
   React.useEffect(() => {
     setMobileOpen(false);
-    setPortalSwitcherOpen(false);
   }, [pathname]);
-
-  const handleSelectPortal = (portalId: PortalType) => {
-    setActivePortal(portalId);
-    setPortalSwitcherOpen(false);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("dexta_active_portal", portalId);
-      window.dispatchEvent(new CustomEvent("dexta:portal-change", { detail: portalId }));
-
-      const currentHost = window.location.hostname.toLowerCase();
-      const port = window.location.port ? `:${window.location.port}` : "";
-      const protocol = window.location.protocol;
-
-      // Cross-subdomain navigation for seamless portal switching with SSO ticket transfer
-      if (currentHost.includes("localhost") || currentHost.includes("127.0.0.1")) {
-        if (portalId === "operations" && !currentHost.startsWith("ops.")) {
-          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//ops.localhost${port}/api/auth/sso`)}&next=/dashboard?tab=operations`;
-          return;
-        } else if (portalId === "systems" && !currentHost.startsWith("admin.")) {
-          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//admin.localhost${port}/api/auth/sso`)}&next=/dashboard?tab=systems`;
-          return;
-        } else if (portalId === "executive" && (currentHost.startsWith("ops.") || currentHost.startsWith("admin."))) {
-          window.location.href = `/api/auth/sso?target=${encodeURIComponent(`${protocol}//localhost${port}/api/auth/sso`)}&next=/dashboard?tab=overview`;
-          return;
-        }
-      } else if (currentHost.includes("dextaafrica.org") || currentHost.includes("dextafrica.org")) {
-        if (portalId === "operations" && !currentHost.startsWith("ops.")) {
-          window.location.href = `https://ops.dextaafrica.org/dashboard?tab=operations`;
-          return;
-        } else if (portalId === "systems" && !currentHost.startsWith("admin.")) {
-          window.location.href = `https://admin.dextafrica.org/dashboard?tab=systems`;
-          return;
-        } else if (portalId === "executive" && (currentHost.startsWith("ops.") || currentHost.startsWith("admin."))) {
-          window.location.href = `https://dextaafrica.org/dashboard?tab=overview`;
-          return;
-        }
-      }
-
-      // If already on the matching host or running locally without subdomains
-      if (pathname === "/dashboard") {
-        if (portalId === "operations") {
-          window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "operations" }));
-        } else if (portalId === "systems") {
-          window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "systems" }));
-        } else if (portalId === "executive" || portalId === "hr") {
-          window.dispatchEvent(new CustomEvent("dexta:switch-tab", { detail: "overview" }));
-        }
-      }
-    }
-  };
 
   const handleNavItemClick = (item: NavItem) => {
     if (item.tabId && pathname === "/dashboard") {
@@ -455,109 +427,32 @@ export function Sidebar({
           </div>
         )}
 
-        {/* Unique Workspace & Portal Selector Bar */}
-        <div className="relative border-b border-slate-200/80 dark:border-white/[0.08] p-2.5 bg-slate-50/50 dark:bg-white/[0.02]">
+        {/* Verified Directorate & Enterprise Role Badge (Locked to Authenticated Account) */}
+        <div className="border-b border-slate-200/80 dark:border-white/[0.08] p-3 bg-slate-50/60 dark:bg-white/[0.02]">
           {!isCollapsed ? (
-            <div>
-              <button
-                type="button"
-                onClick={() => setPortalSwitcherOpen(!portalSwitcherOpen)}
-                className="w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#12141c] hover:border-red-500/40 hover:bg-red-50/50 dark:hover:bg-red-500/5 transition-all text-left cursor-pointer group"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-100 dark:bg-red-500/15 text-[#ED2618] border border-red-200 dark:border-red-500/25">
-                    <CurrentIcon className="h-3.5 w-3.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
-                        {currentConfig.shortTitle}
-                      </span>
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-red-100 dark:bg-red-500/20 text-[#ED2618] dark:text-red-400">
-                        {currentConfig.badge}
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-slate-400 truncate font-mono">
-                      {currentConfig.subdomain}
-                    </p>
-                  </div>
+            <div className="flex items-center gap-2.5 px-1 py-0.5">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-100 dark:bg-red-500/15 text-[#ED2618] border border-red-200 dark:border-red-500/25">
+                <CurrentIcon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {currentConfig.shortTitle}
+                  </span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-500/20 text-[#ED2618] dark:text-red-400 uppercase tracking-wider">
+                    {currentConfig.badge}
+                  </span>
                 </div>
-                <ChevronDown
-                  className={cn(
-                    "h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-transform shrink-0",
-                    portalSwitcherOpen && "rotate-180 text-[#ED2618]"
-                  )}
-                />
-              </button>
-
-              {/* Portal Switcher Dropdown Menu */}
-              {portalSwitcherOpen && (
-                <div className="absolute left-2 right-2 top-full mt-1 z-50 rounded-2xl border border-slate-200 dark:border-white/15 bg-white dark:bg-[#141724] p-1.5 shadow-2xl dark:shadow-[0_10px_30px_rgba(0,0,0,0.8)] backdrop-blur-xl animate-fade-in space-y-1">
-                  <div className="px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                    Select Active Portal Workspace
-                  </div>
-                  {(Object.keys(PORTALS) as PortalType[]).map((pKey) => {
-                    const p = PORTALS[pKey];
-                    const PIcon = p.icon;
-                    const isSelected = activePortal === pKey;
-                    return (
-                      <button
-                        key={pKey}
-                        type="button"
-                        onClick={() => handleSelectPortal(pKey)}
-                        className={cn(
-                          "w-full flex items-center justify-between gap-2.5 p-2 rounded-xl text-left transition-colors cursor-pointer",
-                          isSelected
-                            ? "bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-500/30"
-                            : "hover:bg-slate-100 dark:hover:bg-white/[0.04]"
-                        )}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <div
-                            className={cn(
-                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold",
-                              isSelected
-                                ? "bg-[#ED2618] text-white"
-                                : "bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300"
-                            )}
-                          >
-                            <PIcon className="h-3.5 w-3.5" />
-                          </div>
-                          <div className="min-w-0">
-                            <p
-                              className={cn(
-                                "text-xs font-bold truncate",
-                                isSelected
-                                  ? "text-[#ED2618] dark:text-red-400"
-                                  : "text-slate-800 dark:text-slate-200"
-                              )}
-                            >
-                              {p.title}
-                            </p>
-                            <p className="text-[10px] text-slate-400 truncate">
-                              {p.subdomain}
-                            </p>
-                          </div>
-                        </div>
-                        {isSelected && (
-                          <Check className="h-3.5 w-3.5 text-[#ED2618] shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
+                <p className="text-[10px] text-slate-400 truncate font-mono mt-0.5">
+                  {currentConfig.subdomain}
+                </p>
+              </div>
             </div>
           ) : (
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => setIsCollapsed(false)}
-                title={`Active: ${currentConfig.title} (Click to expand)`}
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-100 dark:bg-red-500/15 text-[#ED2618] border border-red-200 dark:border-red-500/25 cursor-pointer"
-              >
+            <div className="flex justify-center" title={`${currentConfig.title} (${currentConfig.subdomain})`}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-red-100 dark:bg-red-500/15 text-[#ED2618] border border-red-200 dark:border-red-500/25">
                 <CurrentIcon className="h-4 w-4" />
-              </button>
+              </div>
             </div>
           )}
         </div>
@@ -645,10 +540,15 @@ export function Sidebar({
                 <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
                   {user?.fullName || "Team Member"}
                 </p>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="text-[10px] text-slate-400 truncate">
                     {user?.department || "Dexta"}
                   </span>
+                  {user?.seniorityLevel && (
+                    <span className="text-[8px] font-mono font-bold px-1 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 uppercase">
+                      {user.seniorityLevel}
+                    </span>
+                  )}
                   <span className="text-[9px] font-mono font-bold px-1 rounded bg-slate-200/60 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                     {user?.role || "STAFF"}
                   </span>

@@ -14,6 +14,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const dept = (user.department || "").toUpperCase();
+    const role = (user.role || "").toUpperCase();
+    if (role !== "SUPER_ADMIN" && dept !== "HR") {
+      return NextResponse.json(
+        { error: "Forbidden: Access restricted to People & HR Directorate" },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
 

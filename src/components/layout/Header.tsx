@@ -57,7 +57,14 @@ const PAGE_LABELS: Record<string, string> = {
 export function Header({
   user,
 }: {
-  user?: { fullName: string; email: string; role: string; department?: string };
+  user?: {
+    fullName: string;
+    email: string;
+    role: string;
+    department?: string;
+    seniorityLevel?: string;
+    jobTitle?: string | null;
+  };
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -78,7 +85,8 @@ export function Header({
     email: user?.email || "",
     role: user?.role || "ADMIN",
     department: user?.department || "OPERATIONS",
-    jobTitle: "",
+    seniorityLevel: user?.seniorityLevel || "SENIOR",
+    jobTitle: user?.jobTitle || "",
     phone: "",
     bio: "",
     avatarUrl: "",
@@ -98,6 +106,7 @@ export function Header({
               email: data.user.email || prev.email,
               role: data.user.role || prev.role,
               department: data.user.department || prev.department,
+              seniorityLevel: data.user.seniorityLevel || prev.seniorityLevel,
               jobTitle: data.user.jobTitle || "",
               phone: data.user.phone || "",
               bio: data.user.bio || "",
@@ -256,15 +265,17 @@ export function Header({
             <Search className="h-4 w-4" />
           </button>
 
-          {/* Workspace & Portal Switcher Modal Trigger */}
-          <button
-            type="button"
-            onClick={() => setWorkspaceSwitchModalOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-600 hover:text-[#ED2618] hover:border-[#ED2618]/30 dark:text-slate-300 dark:hover:text-white dark:hover:border-white/20 transition-all cursor-pointer"
-            title="Switch Workspace Portal"
-          >
-            <Globe className="h-4 w-4" />
-          </button>
+          {/* Workspace & Portal Switcher Modal Trigger (Super Admin & Executive Only) */}
+          {(user?.role === "SUPER_ADMIN" || user?.department?.toUpperCase() === "EXECUTIVE") && (
+            <button
+              type="button"
+              onClick={() => setWorkspaceSwitchModalOpen(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-white/10 text-slate-600 hover:text-[#ED2618] hover:border-[#ED2618]/30 dark:text-slate-300 dark:hover:text-white dark:hover:border-white/20 transition-all cursor-pointer"
+              title="Switch Workspace Portal"
+            >
+              <Globe className="h-4 w-4" />
+            </button>
+          )}
 
           {/* Automated Notification Hub */}
           <NotificationCenter />
@@ -314,7 +325,7 @@ export function Header({
                 <span className="truncate">{profileData.department}</span>
                 <span>&bull;</span>
                 <span className="font-semibold text-slate-500 dark:text-slate-300 uppercase">
-                  {profileData.role}
+                  {profileData.seniorityLevel ? `${profileData.seniorityLevel} ` : ""}{profileData.role}
                 </span>
               </div>
             </div>
@@ -592,27 +603,29 @@ export function Header({
               <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618]" />
             </Link>
 
-            <button
-              type="button"
-              onClick={() => {
-                setUserProfileModalOpen(false);
-                setWorkspaceSwitchModalOpen(true);
-              }}
-              className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200/80 dark:border-white/10 hover:border-[#ED2618]/50 hover:bg-red-50/20 transition-all text-left group cursor-pointer"
-            >
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-600">
-                  <Building2 className="h-4 w-4" />
+            {(user?.role === "SUPER_ADMIN" || user?.department?.toUpperCase() === "EXECUTIVE") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setUserProfileModalOpen(false);
+                  setWorkspaceSwitchModalOpen(true);
+                }}
+                className="w-full flex items-center justify-between p-3 rounded-xl border border-slate-200/80 dark:border-white/10 hover:border-[#ED2618]/50 hover:bg-red-50/20 transition-all text-left group cursor-pointer"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/15 text-blue-600">
+                    <Building2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                      Switch Workspace Portal
+                    </p>
+                    <p className="text-[11px] text-slate-400">Navigate to Operations, Systems IT, or Executive Suite.</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                    Switch Workspace Portal
-                  </p>
-                  <p className="text-[11px] text-slate-400">Navigate to Operations, Systems IT, or Executive Suite.</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618]" />
-            </button>
+                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618]" />
+              </button>
+            )}
           </div>
         </div>
       </Modal>

@@ -14,6 +14,7 @@ model User {
   fullName            String
   role                String                   @default("ADMIN") // SUPER_ADMIN, ADMIN, HR_MANAGER, IT_ADMIN, OPERATIONS, AUDITOR
   department          String                   @default("OPERATIONS") // HR, IT, OPERATIONS, EXECUTIVE, FINANCE, ARCHITECTURE
+  seniorityLevel      String                   @default("SENIOR") // EXECUTIVE, SENIOR, MID, JUNIOR
   jobTitle            String?
   phone               String?
   avatarUrl           String?

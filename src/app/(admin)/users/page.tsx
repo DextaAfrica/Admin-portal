@@ -14,6 +14,9 @@ interface UserItem {
   email: string;
   fullName: string;
   role: string;
+  department?: string;
+  seniorityLevel?: string;
+  jobTitle?: string | null;
   status: string;
   twoFactorEnabled: boolean;
   lastLoginAt?: string | null;
@@ -34,6 +37,9 @@ export default function UsersPage() {
   const [fullName, setFullName] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState("ADMIN");
+  const [department, setDepartment] = React.useState("OPERATIONS");
+  const [seniorityLevel, setSeniorityLevel] = React.useState("SENIOR");
+  const [jobTitle, setJobTitle] = React.useState("");
 
   const generateRandomPassword = React.useCallback(() => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
@@ -72,7 +78,7 @@ export default function UsersPage() {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, fullName, password, role }),
+        body: JSON.stringify({ email, fullName, password, role, department, seniorityLevel, jobTitle }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -80,6 +86,7 @@ export default function UsersPage() {
         setIsAddOpen(false);
         setEmail("");
         setFullName("");
+        setJobTitle("");
         fetchUsers();
       } else {
         toastError("Could Not Add Member", data.error || "Failed to add team member");
@@ -153,7 +160,9 @@ export default function UsersPage() {
           <thead className="border-b border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] text-slate-500 font-bold">
             <tr>
               <th className="px-5 py-3.5">Team Member</th>
-              <th className="px-5 py-3.5">Role & Responsibility</th>
+              <th className="px-5 py-3.5">Department</th>
+              <th className="px-5 py-3.5">Clearance Tier</th>
+              <th className="px-5 py-3.5">Role</th>
               <th className="px-5 py-3.5">Two-Step Protection</th>
               <th className="px-5 py-3.5">Access Status</th>
               <th className="px-5 py-3.5">Last Sign-In</th>
@@ -173,6 +182,24 @@ export default function UsersPage() {
                       <p className="text-[11px] text-slate-500">{u.email}</p>
                     </div>
                   </div>
+                </td>
+                <td className="px-5 py-4">
+                  <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 uppercase">
+                    {u.department || "OPERATIONS"}
+                  </span>
+                </td>
+                <td className="px-5 py-4">
+                  <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
+                    (u.seniorityLevel || "SENIOR") === "EXECUTIVE"
+                      ? "bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/25"
+                      : (u.seniorityLevel || "SENIOR") === "SENIOR"
+                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25"
+                      : (u.seniorityLevel || "SENIOR") === "MID"
+                      ? "bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/25"
+                      : "bg-slate-500/15 text-slate-700 dark:text-slate-300 border border-slate-500/25"
+                  }`}>
+                    {u.seniorityLevel || "SENIOR"}
+                  </span>
                 </td>
                 <td className="px-5 py-4">
                   <span className="rounded-lg bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
@@ -259,18 +286,67 @@ export default function UsersPage() {
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Assigned Department
+              </label>
+              <select
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 py-2 text-xs text-slate-900 dark:text-white"
+              >
+                <option value="OPERATIONS">Operations &amp; Logistics</option>
+                <option value="FINANCE">Finance &amp; Treasury</option>
+                <option value="HR">People &amp; Culture (HR)</option>
+                <option value="IT">Systems IT Directorate</option>
+                <option value="ENGINEERING">Civil &amp; Marine Engineering</option>
+                <option value="ARCHITECTURE">Architecture &amp; Design</option>
+                <option value="EXECUTIVE">Executive Directorate</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Seniority &amp; Clearance Tier
+              </label>
+              <select
+                value={seniorityLevel}
+                onChange={(e) => setSeniorityLevel(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 py-2 text-xs text-slate-900 dark:text-white"
+              >
+                <option value="SENIOR">Senior Lead (Full Approval Authority)</option>
+                <option value="EXECUTIVE">Executive Tier (Sovereign Authority)</option>
+                <option value="MID">Mid-Level Specialist (Execution &amp; Requisition)</option>
+                <option value="JUNIOR">Staff Associate (Task Execution)</option>
+              </select>
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Team Responsibility
+              Job Title (Optional)
+            </label>
+            <Input
+              type="text"
+              placeholder="e.g. Senior Logistics Lead / Treasury Officer"
+              value={jobTitle}
+              onChange={(e) => setJobTitle(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              System Access Level
             </label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3.5 py-2.5 text-xs text-slate-900 dark:text-white"
             >
-              <option value="ADMIN">Operations Manager (Full Workspace Access)</option>
-              <option value="MANAGER">Communications & Media Coordinator</option>
-              <option value="AUDITOR">Team Reviewer (View-Only Access)</option>
+              <option value="ADMIN">Administrator (Full Department Workspace Access)</option>
+              <option value="SUPER_ADMIN">Super Administrator (Cross-Directorate Executive Access)</option>
+              <option value="AUDITOR">Auditor (View-Only Compliance Access)</option>
             </select>
           </div>
 

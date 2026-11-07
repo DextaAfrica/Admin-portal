@@ -59,6 +59,80 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Strict Subdomain & Directorate Platform Gate Enforcement
+    const host = (req.headers.get("host") || "").toLowerCase();
+    const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.localhost");
+    const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
+
+    const dept = ((user as any).department || "").toUpperCase();
+    const isSuperAdmin = user.role === "SUPER_ADMIN";
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
+
+    // 1. Operations account trying to log into Systems IT portal
+    if (isAdminHost && !isSuperAdmin && dept !== "IT") {
+      await logAuditEvent({
+        actorEmail: email,
+        action: "AUTH_PLATFORM_GATE_REJECTED",
+        entity: "User",
+        entityId: user.id,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent"),
+        metadata: {
+          reason: "Operations account attempted login on Systems IT portal",
+          attemptedHost: host,
+          userDepartment: dept,
+        },
+      });
+
+      const targetUrl = isLocal
+        ? `http://ops.localhost${port}/login`
+        : `https://ops.dextaafrica.org/login`;
+
+      return NextResponse.json(
+        {
+          error: "This account belongs to the Operations workspace. Please sign in through the Operations Desk.",
+          code: "WRONG_WORKSPACE",
+          targetWorkspace: "Operations",
+          targetUrl,
+          buttonText: "Open Operations Desk",
+        },
+        { status: 403 }
+      );
+    }
+
+    // 2. Systems IT account trying to log into Operations portal
+    if (isOpsHost && !isSuperAdmin && dept === "IT") {
+      await logAuditEvent({
+        actorEmail: email,
+        action: "AUTH_PLATFORM_GATE_REJECTED",
+        entity: "User",
+        entityId: user.id,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent"),
+        metadata: {
+          reason: "Systems IT account attempted login on Operations portal",
+          attemptedHost: host,
+          userDepartment: dept,
+        },
+      });
+
+      const targetUrl = isLocal
+        ? `http://admin.localhost${port}/login`
+        : `https://admin.dextaafrica.org/login`;
+
+      return NextResponse.json(
+        {
+          error: "This account belongs to the Systems IT workspace. Please sign in through the Systems Portal.",
+          code: "WRONG_WORKSPACE",
+          targetWorkspace: "Systems IT",
+          targetUrl,
+          buttonText: "Open Systems Portal",
+        },
+        { status: 403 }
+      );
+    }
+
     // Zero-trust authentication flow:
     // If user has 2FA enabled, they use their authenticator app (TOTP) or backup recovery codes.
     // If user does not have 2FA enabled, an email OTP is dispatched securely to their inbox.

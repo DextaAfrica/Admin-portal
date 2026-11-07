@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Building2,
   Briefcase,
@@ -24,6 +25,10 @@ export const revalidate = 0;
 export default async function DashboardPage() {
   const { user } = await getCurrentSession();
 
+  if (!user) {
+    redirect("/login");
+  }
+
   // Detect Host / Portal Subdomain from Incoming Request
   const headersList = await headers();
   const host = (headersList.get("host") || "").toLowerCase();
@@ -31,27 +36,50 @@ export default async function DashboardPage() {
   const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextafrica") || host.includes("admin.localhost");
   const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
 
-  let initialPlatform: "systems" | "operations" | "executive" = "executive";
-  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" = "overview";
+  const userDept = (user?.department || "").toUpperCase();
+  const userRole = (user?.role || "").toUpperCase();
+  const isSuperAdmin = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
 
-  if (isAdminHost) {
+  // STRICT DOMAIN ISOLATION ARCHITECTURE:
+  // Non-IT, non-executive users (Operations, Finance, HR) accessing admin.* must be routed to ops.*
+  if (isAdminHost && !isSuperAdmin && userDept !== "IT") {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
+    const targetUrl = isLocal ? `http://ops.localhost${port}/dashboard` : `https://ops.dextaafrica.org/dashboard`;
+    redirect(targetUrl);
+  }
+
+  // IT personnel accessing ops.* must be routed to admin.*
+  if (isOpsHost && !isSuperAdmin && userDept === "IT") {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
+    const targetUrl = isLocal ? `http://admin.localhost${port}/dashboard` : `https://admin.dextaafrica.org/dashboard`;
+    redirect(targetUrl);
+  }
+
+  let initialPlatform: "systems" | "operations" | "executive" | "finance" | "hr" = "operations";
+  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" | "personal" = "operations";
+
+  if (isSuperAdmin) {
+    // Super Admins & Executive Leadership have cross-directorate oversight
+    initialPlatform = isAdminHost ? "systems" : isOpsHost ? "operations" : "executive";
+    initialTab = isAdminHost ? "systems" : isOpsHost ? "operations" : "overview";
+  } else if (userDept === "FINANCE" || userDept === "ACCOUNTING" || userDept === "ACCOUNTS") {
+    // Finance & Accounts personnel strictly default to Treasury & Ledger
+    initialPlatform = "finance";
+    initialTab = "treasury";
+  } else if (userDept === "IT") {
+    // IT Officers are locked to Systems IT Command
     initialPlatform = "systems";
     initialTab = "systems";
-  } else if (isOpsHost) {
+  } else if (userDept === "HR") {
+    // People & Culture personnel strictly default to HR & Workforce Clearances
+    initialPlatform = "hr";
+    initialTab = "approvals";
+  } else {
+    // Operations personnel are strictly locked to Operations Fleet
     initialPlatform = "operations";
     initialTab = "operations";
-  } else {
-    const userDept = (user?.department || "").toUpperCase();
-    if (userDept === "IT") {
-      initialPlatform = "systems";
-      initialTab = "systems";
-    } else if (userDept === "OPERATIONS") {
-      initialPlatform = "operations";
-      initialTab = "operations";
-    } else {
-      initialPlatform = "executive";
-      initialTab = "overview";
-    }
   }
 
   // 1. Calculate Real 7-Day Activity Aggregation from AuditLog
@@ -264,7 +292,61 @@ export default async function DashboardPage() {
     email: "executive@dextaafrica.com",
     role: "SUPER_ADMIN",
     department: "EXECUTIVE",
+    seniorityLevel: "EXECUTIVE",
   };
+
+  // 4. Personalized User Context (Requisitions submitted by user, actions pending for their department, personal audit trail)
+  let userSubmittedApprovals: any[] = [];
+  let userPendingActionApprovals: any[] = [];
+  let userAuditLogs: any[] = [];
+  let userLeaveRequests: any[] = [];
+
+  if (user?.id) {
+    try {
+      const [usa, upa, ual, ulr] = await Promise.all([
+        db.interDeptApproval.findMany({
+          where: {
+            OR: [
+              { requesterId: user.id },
+              { requesterEmail: user.email },
+            ],
+          },
+          take: 8,
+          orderBy: { createdAt: "desc" },
+        }),
+        db.interDeptApproval.findMany({
+          where: {
+            toDepartment: userDept,
+            status: "PENDING",
+          },
+          take: 8,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.auditLog.findMany({
+          where: {
+            OR: [
+              { actorId: user.id },
+              { actorEmail: user.email },
+            ],
+          },
+          take: 8,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.leaveRequest.findMany({
+          where: { userId: user.id },
+          take: 5,
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
+
+      userSubmittedApprovals = usa || [];
+      userPendingActionApprovals = upa || [];
+      userAuditLogs = ual || [];
+      userLeaveRequests = ulr || [];
+    } catch {
+      // Deferred
+    }
+  }
 
   return (
     <div className="pb-12 animate-fade-in w-full min-w-0">
@@ -274,6 +356,10 @@ export default async function DashboardPage() {
         initialPlatform={initialPlatform}
         initialTab={initialTab}
         portfolioItems={portfolioItems}
+        userSubmittedApprovals={userSubmittedApprovals}
+        userPendingActionApprovals={userPendingActionApprovals}
+        userAuditLogs={userAuditLogs}
+        userLeaveRequests={userLeaveRequests}
         executiveMetrics={{
           grossPipelineValue,
           totalDeals,

@@ -157,6 +157,8 @@ export interface SessionUser {
   fullName: string;
   role: string;
   department?: string;
+  seniorityLevel?: string;
+  jobTitle?: string | null;
   status: string;
   twoFactorEnabled: boolean;
 }
@@ -209,6 +211,8 @@ export async function getCurrentSession(): Promise<{
             fullName: true,
             role: true,
             department: true,
+            seniorityLevel: true,
+            jobTitle: true,
             status: true,
             twoFactorEnabled: true,
           },

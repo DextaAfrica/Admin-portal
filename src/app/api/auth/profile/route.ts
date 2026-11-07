@@ -19,6 +19,7 @@ export async function GET() {
         fullName: true,
         role: true,
         department: true,
+        seniorityLevel: true,
         jobTitle: true,
         phone: true,
         avatarUrl: true,
@@ -46,7 +47,7 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { fullName, jobTitle, phone, avatarUrl, bio, department } = body;
+    const { fullName, jobTitle, phone, avatarUrl, bio, department, seniorityLevel } = body;
 
     const dataToUpdate: any = {};
     if (fullName && typeof fullName === "string") dataToUpdate.fullName = fullName.trim();
@@ -54,7 +55,13 @@ export async function PATCH(req: NextRequest) {
     if (phone !== undefined) dataToUpdate.phone = typeof phone === "string" ? phone.trim() : null;
     if (avatarUrl !== undefined) dataToUpdate.avatarUrl = typeof avatarUrl === "string" ? avatarUrl : null;
     if (bio !== undefined) dataToUpdate.bio = typeof bio === "string" ? bio.trim() : null;
-    if (department && typeof department === "string") dataToUpdate.department = department.toUpperCase();
+    // Department and Seniority reassignment are reserved for SUPER_ADMIN or ADMIN
+    if (department && typeof department === "string" && (user.role === "SUPER_ADMIN" || user.role === "ADMIN")) {
+      dataToUpdate.department = department.toUpperCase();
+    }
+    if (seniorityLevel && typeof seniorityLevel === "string" && (user.role === "SUPER_ADMIN" || user.role === "ADMIN")) {
+      dataToUpdate.seniorityLevel = seniorityLevel.toUpperCase();
+    }
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
@@ -65,6 +72,7 @@ export async function PATCH(req: NextRequest) {
         fullName: true,
         role: true,
         department: true,
+        seniorityLevel: true,
         jobTitle: true,
         phone: true,
         avatarUrl: true,
