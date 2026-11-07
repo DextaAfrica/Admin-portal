@@ -262,7 +262,10 @@ export default function OperationsLoginPage() {
               </div>
 
               <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl">
-                Executing Landmark Infrastructure, Capital Allocation &amp; Field Deliveries.
+                Executing{" "}
+                <span className="italic text-flow-red">
+                  Landmark Infrastructure, Capital Allocation &amp; Field Deliveries.
+                </span>
               </h2>
 
               <p className="text-xs xl:text-sm text-slate-200/90 leading-relaxed max-w-lg">

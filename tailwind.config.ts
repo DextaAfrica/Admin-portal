@@ -47,8 +47,37 @@ const config: Config = {
         "ken-burns": "kenBurns 10s ease-in-out forwards",
         "float-slow": "floatSlow 7s ease-in-out infinite",
         "slide-progress": "slideProgress 10s linear forwards",
+        "text-shimmer": "textShimmer 6s ease-in-out infinite",
+        "text-glow": "textGlow 4s ease-in-out infinite",
+        "text-flow": "textFlow 4s linear infinite",
       },
       keyframes: {
+        textFlow: {
+          "0%": {
+            "background-position": "0% center",
+          },
+          "100%": {
+            "background-position": "200% center",
+          },
+        },
+        textShimmer: {
+          "0%, 100%": {
+            "background-size": "200% auto",
+            "background-position": "0% center",
+          },
+          "50%": {
+            "background-size": "200% auto",
+            "background-position": "100% center",
+          },
+        },
+        textGlow: {
+          "0%, 100%": {
+            filter: "drop-shadow(0 0 8px rgba(237, 38, 24, 0.2))",
+          },
+          "50%": {
+            filter: "drop-shadow(0 0 18px rgba(237, 38, 24, 0.5))",
+          },
+        },
         bottomSheetUp: {
           from: { transform: "translateY(100%)", opacity: "0.8" },
           to: { transform: "translateY(0%)", opacity: "1" },

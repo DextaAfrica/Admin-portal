@@ -121,6 +121,49 @@
   animation: dextaScaleIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Executive White & Dexta-Red Text Flow Effect */
+@keyframes textFlow {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.text-flow-red {
+  background: linear-gradient(
+    90deg,
+    #0f172a 0%,
+    #0f172a 25%,
+    #ed2618 50%,
+    #0f172a 75%,
+    #0f172a 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: textFlow 4.5s linear infinite;
+}
+
+.dark .text-flow-red {
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #ffffff 25%,
+    #ed2618 50%,
+    #ffffff 75%,
+    #ffffff 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
 .hover-lift {
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1),

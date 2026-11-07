@@ -257,7 +257,10 @@ export default function AdminPortalLoginPage() {
               </div>
 
               <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl">
-                Centralized Governance, Identity Protection &amp; Infrastructure Watchdog.
+                Centralized{" "}
+                <span className="italic text-flow-red">
+                  Governance, Identity Protection &amp; Infrastructure Watchdog.
+                </span>
               </h2>
 
               <p className="text-xs xl:text-sm text-slate-200/90 leading-relaxed max-w-lg">

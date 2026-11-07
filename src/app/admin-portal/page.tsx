@@ -144,23 +144,26 @@ export default function AdminPortalLandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Content */}
             <div className="lg:col-span-6 space-y-4 sm:space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1">
+              <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1 animate-fade-in">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
                 <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#ED2618] dark:text-red-400">
                   Dexta Africa Systems Command
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-[46px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.15]">
-                Centralized Governance, Identity &amp; System Infrastructure.
+              <h1 className="text-2xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.15] animate-reveal-up">
+                Centralized{" "}
+                <span className="italic text-flow-red">
+                  Governance, Identity &amp; System Infrastructure.
+                </span>
               </h1>
 
-              <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+              <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl animate-fade-in delay-100">
                 The administrative and IT nerve center of Dexta Africa. Engineered to support thousands of concurrent staff sessions, cryptographic audit trails, zero-trust RBAC permissions, and real-time monitoring.
               </p>
 
               {/* Action Buttons - Side by Side on Mobile & Desktop to Save Space */}
-              <div className="pt-1 grid grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:items-center sm:gap-4">
+              <div className="pt-1 grid grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:items-center sm:gap-4 animate-fade-in delay-200">
                 <Link
                   href="/login"
                   className="btn-crimson-exec h-11 sm:h-12 rounded-xl px-4 sm:px-7 text-xs sm:text-sm font-bold shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer text-center"
@@ -180,7 +183,7 @@ export default function AdminPortalLandingPage() {
               </div>
 
               {/* Trust & Scale Highlights - Ultra-Crisp Mobile Grid */}
-              <div className="pt-4 sm:pt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 border-t border-slate-200/80 dark:border-white/10">
+              <div className="pt-4 sm:pt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 border-t border-slate-200/80 dark:border-white/10 animate-fade-in delay-300">
                 <div className="space-y-0.5 sm:space-y-1">
                   <div className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     24/7
