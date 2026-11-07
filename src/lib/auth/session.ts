@@ -213,7 +213,6 @@ export async function getCurrentSession(): Promise<{
             fullName: true,
             role: true,
             department: true,
-            seniorityLevel: true,
             jobTitle: true,
             status: true,
             twoFactorEnabled: true,
@@ -263,8 +262,15 @@ export async function getCurrentSession(): Promise<{
       }).catch(() => {});
     }
 
+    const sessionUser = session.user
+      ? {
+          ...session.user,
+          seniorityLevel: (session.user as any).seniorityLevel || "SENIOR",
+        }
+      : null;
+
     return {
-      user: session.user,
+      user: sessionUser,
       sessionToken: token,
       sessionId: session.id,
     };

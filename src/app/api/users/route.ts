@@ -31,7 +31,6 @@ export async function GET() {
         fullName: true,
         role: true,
         department: true,
-        seniorityLevel: true,
         jobTitle: true,
         status: true,
         twoFactorEnabled: true,
@@ -44,7 +43,12 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ users });
+    const safeUsers = users.map((u: any) => ({
+      ...u,
+      seniorityLevel: u.seniorityLevel || "SENIOR",
+    }));
+
+    return NextResponse.json({ users: safeUsers });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to load users" },

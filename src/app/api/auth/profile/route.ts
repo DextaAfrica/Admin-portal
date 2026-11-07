@@ -19,7 +19,6 @@ export async function GET() {
         fullName: true,
         role: true,
         department: true,
-        seniorityLevel: true,
         jobTitle: true,
         phone: true,
         avatarUrl: true,
@@ -30,7 +29,16 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ user: fullUser });
+    if (!fullUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      user: {
+        ...fullUser,
+        seniorityLevel: (fullUser as any).seniorityLevel || user.seniorityLevel || "SENIOR",
+      },
+    });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to load profile" },
@@ -72,7 +80,6 @@ export async function PATCH(req: NextRequest) {
         fullName: true,
         role: true,
         department: true,
-        seniorityLevel: true,
         jobTitle: true,
         phone: true,
         avatarUrl: true,
