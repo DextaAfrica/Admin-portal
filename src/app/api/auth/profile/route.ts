@@ -11,14 +11,13 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const fullUser = await prisma.user.findUnique({
+    const baseUser = await prisma.user.findUnique({
       where: { id: user.id },
       select: {
         id: true,
         email: true,
         fullName: true,
         role: true,
-        department: true,
         jobTitle: true,
         phone: true,
         avatarUrl: true,
@@ -29,14 +28,31 @@ export async function GET() {
       },
     });
 
-    if (!fullUser) {
+    if (!baseUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    let department = user.department || "OPERATIONS";
+    let seniorityLevel = user.seniorityLevel || "SENIOR";
+
+    try {
+      const rawRows: any[] = await prisma.$queryRawUnsafe(
+        "SELECT department, seniorityLevel FROM User WHERE id = ? LIMIT 1",
+        user.id
+      );
+      if (rawRows?.[0]) {
+        if (rawRows[0].department) department = rawRows[0].department;
+        if (rawRows[0].seniorityLevel) seniorityLevel = rawRows[0].seniorityLevel;
+      }
+    } catch {
+      // Fallback to session values
     }
 
     return NextResponse.json({
       user: {
-        ...fullUser,
-        seniorityLevel: (fullUser as any).seniorityLevel || user.seniorityLevel || "SENIOR",
+        ...baseUser,
+        department,
+        seniorityLevel,
       },
     });
   } catch (err: unknown) {
@@ -63,13 +79,6 @@ export async function PATCH(req: NextRequest) {
     if (phone !== undefined) dataToUpdate.phone = typeof phone === "string" ? phone.trim() : null;
     if (avatarUrl !== undefined) dataToUpdate.avatarUrl = typeof avatarUrl === "string" ? avatarUrl : null;
     if (bio !== undefined) dataToUpdate.bio = typeof bio === "string" ? bio.trim() : null;
-    // Department and Seniority reassignment are reserved for SUPER_ADMIN or ADMIN
-    if (department && typeof department === "string" && (user.role === "SUPER_ADMIN" || user.role === "ADMIN")) {
-      dataToUpdate.department = department.toUpperCase();
-    }
-    if (seniorityLevel && typeof seniorityLevel === "string" && (user.role === "SUPER_ADMIN" || user.role === "ADMIN")) {
-      dataToUpdate.seniorityLevel = seniorityLevel.toUpperCase();
-    }
 
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
@@ -79,7 +88,6 @@ export async function PATCH(req: NextRequest) {
         email: true,
         fullName: true,
         role: true,
-        department: true,
         jobTitle: true,
         phone: true,
         avatarUrl: true,
@@ -89,6 +97,28 @@ export async function PATCH(req: NextRequest) {
       },
     });
 
+    let finalDept = user.department || "OPERATIONS";
+    let finalSeniority = user.seniorityLevel || "SENIOR";
+
+    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") {
+      if (department && typeof department === "string") {
+        finalDept = department.toUpperCase();
+        await prisma.$executeRawUnsafe(
+          "UPDATE User SET department = ? WHERE id = ?",
+          finalDept,
+          user.id
+        ).catch(() => {});
+      }
+      if (seniorityLevel && typeof seniorityLevel === "string") {
+        finalSeniority = seniorityLevel.toUpperCase();
+        await prisma.$executeRawUnsafe(
+          "UPDATE User SET seniorityLevel = ? WHERE id = ?",
+          finalSeniority,
+          user.id
+        ).catch(() => {});
+      }
+    }
+
     // Sync with EmployeeProfile if exists
     try {
       await prisma.employeeProfile.updateMany({
@@ -97,7 +127,7 @@ export async function PATCH(req: NextRequest) {
           fullName: updatedUser.fullName,
           jobTitle: updatedUser.jobTitle || "Team Member",
           phone: updatedUser.phone || "+234 800 000 0000",
-          department: updatedUser.department || "Operations",
+          department: finalDept,
         },
       });
     } catch {
@@ -116,7 +146,14 @@ export async function PATCH(req: NextRequest) {
       },
     }).catch(() => {});
 
-    return NextResponse.json({ success: true, user: updatedUser });
+    return NextResponse.json({
+      success: true,
+      user: {
+        ...updatedUser,
+        department: finalDept,
+        seniorityLevel: finalSeniority,
+      },
+    });
   } catch (err: unknown) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to update profile" },
@@ -124,4 +161,3 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
-

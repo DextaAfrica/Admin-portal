@@ -212,7 +212,6 @@ export async function getCurrentSession(): Promise<{
             email: true,
             fullName: true,
             role: true,
-            department: true,
             jobTitle: true,
             status: true,
             twoFactorEnabled: true,
@@ -262,12 +261,30 @@ export async function getCurrentSession(): Promise<{
       }).catch(() => {});
     }
 
-    const sessionUser = session.user
-      ? {
-          ...session.user,
-          seniorityLevel: (session.user as any).seniorityLevel || "SENIOR",
+    let sessionUser: SessionUser | null = null;
+    if (session.user) {
+      let dept = (session.user as any).department || "OPERATIONS";
+      let seniority = (session.user as any).seniorityLevel || "SENIOR";
+
+      try {
+        const rawUser: any = await prisma.$queryRawUnsafe(
+          "SELECT department, seniorityLevel FROM User WHERE id = ? LIMIT 1",
+          session.user.id
+        );
+        if (rawUser?.[0]) {
+          if (rawUser[0].department) dept = rawUser[0].department;
+          if (rawUser[0].seniorityLevel) seniority = rawUser[0].seniorityLevel;
         }
-      : null;
+      } catch {
+        // Fallback to defaults
+      }
+
+      sessionUser = {
+        ...session.user,
+        department: dept,
+        seniorityLevel: seniority,
+      };
+    }
 
     return {
       user: sessionUser,
