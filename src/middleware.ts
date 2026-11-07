@@ -35,7 +35,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // 3. Subdomain Root & Auth Rewrites on OPS Subdomain (Single Unified Login Experience)
+  // 3. Subdomain Root & Auth Rewrites on OPS Subdomain
   if (isOpsHost) {
     // Strip redundant /ops prefix on ops subdomain
     if (pathname === "/ops" || pathname.startsWith("/ops/")) {
@@ -43,9 +43,9 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // Unify entry: root redirects directly to the single official login page
+    // Root serves the dedicated high-end Operations Welcome Landing page
     if (pathname === "/") {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.rewrite(new URL("/ops", req.url));
     }
 
     if (pathname === "/login") {
@@ -57,7 +57,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // 4. Subdomain Root & Auth Rewrites on ADMIN Subdomain (Single Unified Login Experience)
+  // 4. Subdomain Root & Auth Rewrites on ADMIN Subdomain
   if (isAdminHost) {
     // Strip redundant /admin-portal prefix on admin subdomain
     if (pathname === "/admin-portal" || pathname.startsWith("/admin-portal/")) {
@@ -65,9 +65,9 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // Unify entry: root redirects directly to the single official login page
+    // Root serves the dedicated high-end Systems Command Welcome Landing page
     if (pathname === "/") {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.rewrite(new URL("/admin-portal", req.url));
     }
 
     if (pathname === "/login") {
