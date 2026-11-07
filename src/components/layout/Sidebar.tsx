@@ -30,6 +30,7 @@ import {
   Check,
   Send,
   Layers,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";

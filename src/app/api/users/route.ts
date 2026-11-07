@@ -95,26 +95,28 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const createdUser = newUser as any;
+
     await logAuditEvent({
       actorId: user.id,
       actorEmail: user.email,
       action: "USER_CREATED",
       entity: "User",
-      entityId: newUser.id,
+      entityId: createdUser.id,
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent"),
-      metadata: { targetEmail: newUser.email, assignedRole: newUser.role, department: newUser.department, seniorityLevel: newUser.seniorityLevel },
+      metadata: { targetEmail: createdUser.email, assignedRole: createdUser.role, department: createdUser.department, seniorityLevel: createdUser.seniorityLevel },
     });
 
     return NextResponse.json({
       success: true,
       user: {
-        id: newUser.id,
-        email: newUser.email,
-        fullName: newUser.fullName,
-        role: newUser.role,
-        department: newUser.department,
-        seniorityLevel: newUser.seniorityLevel,
+        id: createdUser.id,
+        email: createdUser.email,
+        fullName: createdUser.fullName,
+        role: createdUser.role,
+        department: createdUser.department,
+        seniorityLevel: createdUser.seniorityLevel,
       },
     });
   } catch (err: unknown) {

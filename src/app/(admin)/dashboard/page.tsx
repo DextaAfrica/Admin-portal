@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Building2,
   Briefcase,
@@ -24,6 +25,10 @@ export const revalidate = 0;
 export default async function DashboardPage() {
   const { user } = await getCurrentSession();
 
+  if (!user) {
+    redirect("/login");
+  }
+
   // Detect Host / Portal Subdomain from Incoming Request
   const headersList = await headers();
   const host = (headersList.get("host") || "").toLowerCase();
@@ -33,11 +38,29 @@ export default async function DashboardPage() {
 
   const userDept = (user?.department || "").toUpperCase();
   const userRole = (user?.role || "").toUpperCase();
+  const isSuperAdmin = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
+
+  // STRICT DOMAIN ISOLATION ARCHITECTURE:
+  // Non-IT, non-executive users (Operations, Finance, HR) accessing admin.* must be routed to ops.*
+  if (isAdminHost && !isSuperAdmin && userDept !== "IT") {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
+    const targetUrl = isLocal ? `http://ops.localhost${port}/dashboard` : `https://ops.dextaafrica.org/dashboard`;
+    redirect(targetUrl);
+  }
+
+  // IT personnel accessing ops.* must be routed to admin.*
+  if (isOpsHost && !isSuperAdmin && userDept === "IT") {
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
+    const targetUrl = isLocal ? `http://admin.localhost${port}/dashboard` : `https://admin.dextaafrica.org/dashboard`;
+    redirect(targetUrl);
+  }
 
   let initialPlatform: "systems" | "operations" | "executive" | "finance" | "hr" = "operations";
-  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" | "hr" = "operations";
+  let initialTab: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" | "personal" = "operations";
 
-  if (userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE") {
+  if (isSuperAdmin) {
     // Super Admins & Executive Leadership have cross-directorate oversight
     initialPlatform = isAdminHost ? "systems" : isOpsHost ? "operations" : "executive";
     initialTab = isAdminHost ? "systems" : isOpsHost ? "operations" : "overview";
@@ -50,14 +73,11 @@ export default async function DashboardPage() {
     initialPlatform = "systems";
     initialTab = "systems";
   } else if (userDept === "HR") {
-    // People & Culture personnel strictly default to HR & Workforce
+    // People & Culture personnel strictly default to HR & Workforce Clearances
     initialPlatform = "hr";
-    initialTab = "hr";
-  } else if (userDept === "OPERATIONS" || userDept === "ENGINEERING" || userDept === "ARCHITECTURE") {
-    // Operations personnel are strictly locked to Operations Fleet
-    initialPlatform = "operations";
-    initialTab = "operations";
+    initialTab = "approvals";
   } else {
+    // Operations personnel are strictly locked to Operations Fleet
     initialPlatform = "operations";
     initialTab = "operations";
   }
