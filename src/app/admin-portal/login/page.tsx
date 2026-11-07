@@ -175,35 +175,48 @@ export default function AdminPortalLoginPage() {
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#070A0F] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-[#ED2618] selection:text-white font-sans relative overflow-x-hidden">
-      {/* Background Ambient Glow */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-red-500/[0.04] blur-[140px] rounded-full" />
-        <div className="absolute inset-0 bg-[radial-gradient(#ffffff08_1px,transparent_1px)] [background-size:24px_24px] opacity-30" />
+      {/* Background Ambient Systems Banner Layer */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <Image
+          src="/images/olufemi-dexta.png"
+          alt="Dexta Systems Command Banner"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover opacity-20 dark:opacity-15 blur-[4px] scale-105"
+          style={{ objectPosition: "50% 15%" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/90 via-white/95 to-white dark:from-[#070A0F]/85 dark:via-[#070A0F]/95 dark:to-[#070A0F]" />
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-red-600/[0.08] blur-[160px] rounded-full" />
       </div>
 
-      {/* Top Bar */}
+      {/* Top Bar - Clean & Responsive on all screens */}
       <header className="relative z-20 border-b border-slate-200/80 dark:border-white/[0.08] bg-white/90 dark:bg-[#070A0F]/90 backdrop-blur-xl">
         <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
-          <Link
-            href={landingPath}
-            className="flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-[#ED2618] dark:hover:text-white transition-colors"
-          >
-            <Home className="h-4 w-4" />
-            <span>Home</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href={landingPath}
+              className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-[#ED2618] dark:hover:text-white transition-colors"
+            >
+              <Home className="h-4 w-4 text-[#ED2618]" />
+              <span className="hidden sm:inline">Home</span>
+            </Link>
 
-          <div className="flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">
-            <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
-            <span className="text-xs font-mono font-bold tracking-wider text-slate-600 dark:text-slate-300 uppercase">
-              admin.dextafrica.org
-            </span>
+            <div className="flex items-center gap-1.5 border-l border-slate-200 dark:border-white/10 pl-2.5 sm:pl-3">
+              <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse shrink-0" />
+              <span className="text-[11px] sm:text-xs font-mono font-bold tracking-wider text-slate-600 dark:text-slate-300 uppercase truncate">
+                admin.dextafrica.org
+              </span>
+            </div>
           </div>
 
           <Link
             href={registerPath}
-            className="text-xs font-bold text-[#ED2618] hover:underline"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#ED2618] hover:underline shrink-0"
           >
-            Create Account &rarr;
+            <span className="hidden sm:inline">Create IT Account</span>
+            <span className="sm:hidden">Create Account</span>
+            <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </header>
@@ -218,6 +231,7 @@ export default function AdminPortalLoginPage() {
               alt="Dexta Africa Systems Command"
               fill
               priority
+              sizes="(max-width: 1024px) 100vw, 58vw"
               className="object-cover"
               style={{ objectPosition: "50% 15%" }}
             />
@@ -270,7 +284,28 @@ export default function AdminPortalLoginPage() {
 
           {/* Right Column: Systems Auth Card */}
           <div className="lg:col-span-5 w-full max-w-md mx-auto">
-            <div className="rounded-3xl border border-slate-200/90 dark:border-white/[0.14] bg-white dark:bg-[#141722] dark:bg-gradient-to-b dark:from-[#171A26] dark:to-[#11141E] p-6 sm:p-9 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08] backdrop-blur-2xl relative overflow-hidden space-y-6">
+            {/* Mobile Branded Mini-Banner (Visible on Mobile & Tablets) */}
+            <div className="lg:hidden relative w-full aspect-[21/8] sm:aspect-[24/8] rounded-2xl overflow-hidden mb-4 border border-slate-200/80 dark:border-white/15 shadow-lg">
+              <Image
+                src="/images/olufemi-dexta.png"
+                alt="Dexta Systems Command"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 420px"
+                className="object-cover"
+                style={{ objectPosition: "50% 15%" }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+              <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-[11px]">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
+                  <span>Systems IT Command Gateway</span>
+                </div>
+                <span className="text-[10px] text-white/80 font-mono">24/7 Monitored</span>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-200/90 dark:border-white/[0.14] bg-white/95 dark:bg-[#121522]/95 backdrop-blur-2xl p-6 sm:p-9 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08] relative overflow-hidden space-y-6">
               <div className="flex flex-col items-center text-center space-y-3">
                 <Link href={landingPath}>
                   <DextaLogo className="h-9 w-auto" />
