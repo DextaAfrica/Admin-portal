@@ -258,12 +258,8 @@ export default function AdminPortalLoginPage() {
 
               <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl">
                 Centralized{" "}
-                <span className="italic font-serif bg-gradient-to-r from-red-400 via-rose-300 to-amber-300 bg-clip-text text-transparent bg-[length:200%_auto] animate-text-shimmer inline-block">
-                  Governance &amp; Identity
-                </span>
-                ,{" "}
-                <span className="italic font-semibold text-white/95">
-                  Infrastructure Watchdog.
+                <span className="italic bg-gradient-to-r from-red-400 via-rose-300 to-amber-300 bg-clip-text text-transparent bg-[length:200%_auto] animate-text-shimmer">
+                  Governance, Identity Protection &amp; Infrastructure Watchdog.
                 </span>
               </h2>
 

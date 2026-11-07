@@ -151,14 +151,10 @@ export default function AdminPortalLandingPage() {
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-[46px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.18] animate-reveal-up">
+              <h1 className="text-2xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.15] animate-reveal-up">
                 Centralized{" "}
-                <span className="italic font-serif font-black tracking-tight bg-gradient-to-r from-[#ED2618] via-rose-500 to-amber-500 bg-clip-text text-transparent bg-[length:200%_auto] animate-text-shimmer drop-shadow-sm inline-block">
-                  Governance &amp; Identity
-                </span>
-                ,{" "}
-                <span className="italic font-bold bg-gradient-to-r from-slate-900 via-red-600 to-slate-900 dark:from-white dark:via-rose-400 dark:to-white bg-clip-text text-transparent bg-[length:200%_auto] animate-text-shimmer inline-block">
-                  System Infrastructure.
+                <span className="italic bg-gradient-to-r from-[#ED2618] via-rose-500 to-amber-500 bg-clip-text text-transparent bg-[length:200%_auto] animate-text-shimmer">
+                  Governance, Identity &amp; System Infrastructure.
                 </span>
               </h1>
 

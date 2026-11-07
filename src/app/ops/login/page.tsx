@@ -263,12 +263,8 @@ export default function OperationsLoginPage() {
 
               <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl">
                 Executing{" "}
-                <span className="italic font-serif bg-gradient-to-r from-red-400 via-rose-300 to-amber-300 bg-clip-text text-transparent bg-[length:200%_auto] animate-text-shimmer inline-block">
-                  Landmark Infrastructure
-                </span>
-                ,{" "}
-                <span className="italic font-semibold text-white/95">
-                  Capital Allocation &amp; Field Deliveries.
+                <span className="italic bg-gradient-to-r from-red-400 via-rose-300 to-amber-300 bg-clip-text text-transparent bg-[length:200%_auto] animate-text-shimmer">
+                  Landmark Infrastructure, Capital Allocation &amp; Field Deliveries.
                 </span>
               </h2>
 
