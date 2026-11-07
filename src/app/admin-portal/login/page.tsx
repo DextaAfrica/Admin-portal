@@ -98,7 +98,7 @@ export default function AdminPortalLoginPage() {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
         setIsEmailOtp(Boolean(data.emailOtpSent));
-        setOtpCode("");
+        setOtpCode(data.devOtp || "");
         setRecoveryCode("");
         setOtpError("");
         setUseRecoveryCode(false);
@@ -106,7 +106,9 @@ export default function AdminPortalLoginPage() {
         setIsLoading(false);
         toastSuccess(
           "Verification Required",
-          data.emailOtpSent
+          data.devOtp
+            ? `Development Mode: Verification code is ${data.devOtp}`
+            : data.emailOtpSent
             ? "A 6-digit verification code has been dispatched to your email."
             : "Please enter your 6-digit code from your authenticator app."
         );
@@ -268,25 +270,28 @@ export default function AdminPortalLoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <label htmlFor="admin-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 Administrator Email *
               </label>
               <div className="relative">
                 <Input
+                  id="admin-email"
+                  name="email"
                   type="email"
                   required
+                  autoComplete="username"
                   placeholder="admin@dextaafrica.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white pl-10 h-11 text-xs sm:text-sm focus:border-[#ED2618]"
                 />
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                <label htmlFor="admin-password" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Password *
                 </label>
                 <Link
@@ -298,13 +303,16 @@ export default function AdminPortalLoginPage() {
               </div>
               <div className="relative">
                 <PasswordInput
+                  id="admin-password"
+                  name="password"
                   required
+                  autoComplete="current-password"
                   placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="bg-slate-50 dark:bg-black/50 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white pl-10 h-11 text-xs sm:text-sm focus:border-[#ED2618]"
                 />
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
               </div>
             </div>
 

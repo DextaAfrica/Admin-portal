@@ -153,7 +153,7 @@ export default function OperationsLandingPage() {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
         setIsEmailOtp(Boolean(data.emailOtpSent));
-        setOtpCode("");
+        setOtpCode(data.devOtp || "");
         setRecoveryCode("");
         setOtpError("");
         setUseRecoveryCode(false);
@@ -161,7 +161,9 @@ export default function OperationsLandingPage() {
         setIsLoading(false);
         toastSuccess(
           "Verification Required",
-          data.emailOtpSent
+          data.devOtp
+            ? `Development Mode: Verification code is ${data.devOtp}`
+            : data.emailOtpSent
             ? "A 6-digit verification code has been dispatched to your email."
             : "Please enter your 6-digit code from your authenticator app."
         );
@@ -169,8 +171,7 @@ export default function OperationsLandingPage() {
       }
 
       toastSuccess("Operations Authorized", "Signed in to Dexta Africa Operations Desk.");
-      router.push("/dashboard");
-      router.refresh();
+      window.location.replace("/dashboard");
     } catch {
       setErrorMessage("Connection error while accessing authorization service.");
       setIsLoading(false);
@@ -204,8 +205,7 @@ export default function OperationsLandingPage() {
 
       setOtpModalOpen(false);
       toastSuccess("Operations Authenticated", "Welcome to Dexta Africa Operations Desk.");
-      router.push("/dashboard");
-      router.refresh();
+      window.location.replace(data.mustChangePassword ? "/setup/password" : "/dashboard");
     } catch {
       setOtpError("Network error during verification.");
       setIsVerifyingOtp(false);

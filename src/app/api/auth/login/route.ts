@@ -178,9 +178,22 @@ export async function POST(req: NextRequest) {
       fullName: user.fullName,
       twoFactorEnabled: user.twoFactorEnabled,
       emailOtpSent,
+      ...(process.env.NODE_ENV !== "production" && sessionOtp ? { devOtp: sessionOtp } : {}),
     });
 
     if (sessionOtp) {
+      await prisma.systemSetting.upsert({
+        where: { key: `MFA_OTP_${user.id}` },
+        create: {
+          key: `MFA_OTP_${user.id}`,
+          value: `${sessionOtp}:${Date.now() + 5 * 60 * 1000}`,
+          description: "Active MFA challenge code",
+        },
+        update: {
+          value: `${sessionOtp}:${Date.now() + 5 * 60 * 1000}`,
+        },
+      }).catch(() => {});
+
       res.cookies.set("dexta_mfa_challenge", `${user.id}:${sessionOtp}`, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",

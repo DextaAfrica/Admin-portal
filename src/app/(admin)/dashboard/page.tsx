@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { getCurrentSession } from "@/lib/auth/session";
+import { getCurrentSession, createSsoTicket } from "@/lib/auth/session";
 import { backendApi } from "@/lib/backend-api";
 import { DepartmentDashboardView } from "@/components/dashboard/DepartmentDashboardView";
 import { ensureDefaultAutomationRules, ensureInitialEnterpriseData } from "@/lib/automation/engine";
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function DashboardPage() {
-  const { user } = await getCurrentSession();
+  const { user, sessionToken } = await getCurrentSession();
 
   if (!user) {
     redirect("/login");
@@ -41,20 +41,30 @@ export default async function DashboardPage() {
   const isSuperAdmin = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
 
   // STRICT DOMAIN ISOLATION ARCHITECTURE:
-  // Non-IT, non-executive users (Operations, Finance, HR) accessing admin.* must be routed to ops.*
+  // Non-IT, non-executive users (Operations, Finance, HR) accessing admin.* must be routed to ops.* via SSO ticket
   if (isAdminHost && !isSuperAdmin && userDept !== "IT") {
     const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
     const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
-    const targetUrl = isLocal ? `http://ops.localhost${port}/dashboard` : `https://ops.dextaafrica.org/dashboard`;
-    redirect(targetUrl);
+    const opsBase = isLocal ? `http://ops.localhost${port}` : `https://ops.dextaafrica.org`;
+    if (sessionToken) {
+      const ticket = await createSsoTicket(sessionToken);
+      redirect(`${opsBase}/api/auth/sso?ticket=${ticket}&next=/dashboard`);
+    } else {
+      redirect(`${opsBase}/login`);
+    }
   }
 
-  // IT personnel accessing ops.* must be routed to admin.*
+  // IT personnel accessing ops.* must be routed to admin.* via SSO ticket
   if (isOpsHost && !isSuperAdmin && userDept === "IT") {
     const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
     const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
-    const targetUrl = isLocal ? `http://admin.localhost${port}/dashboard` : `https://admin.dextaafrica.org/dashboard`;
-    redirect(targetUrl);
+    const adminBase = isLocal ? `http://admin.localhost${port}` : `https://admin.dextaafrica.org`;
+    if (sessionToken) {
+      const ticket = await createSsoTicket(sessionToken);
+      redirect(`${adminBase}/api/auth/sso?ticket=${ticket}&next=/dashboard`);
+    } else {
+      redirect(`${adminBase}/login`);
+    }
   }
 
   let initialPlatform: "systems" | "operations" | "executive" | "finance" | "hr" = "operations";
