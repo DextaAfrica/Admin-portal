@@ -136,10 +136,10 @@ export default function AdminPortalLandingPage() {
         </div>
       </header>
 
-      {/* Hero Welcome Showcase */}
-      <main className="relative z-10 flex-1">
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-12 sm:py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-14 items-center">
+      {/* Hero Welcome Showcase - Minimal, Focused, Single Viewport */}
+      <main className="relative z-10 flex-1 flex items-center">
+        <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-8 sm:py-14">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-4 py-1.5">
@@ -149,7 +149,7 @@ export default function AdminPortalLandingPage() {
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-[50px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
+              <h1 className="text-3xl sm:text-4xl lg:text-[48px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
                 Centralized Governance, Identity &amp; System Infrastructure.
               </h1>
 
@@ -178,30 +178,46 @@ export default function AdminPortalLandingPage() {
                 </Link>
               </div>
 
-              {/* High-Concurrency Trust Badges */}
-              <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-slate-200/80 dark:border-white/10">
-                <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">FIPS 140-3</div>
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Crypto Standard</div>
+              {/* Trust & Scale Highlights - Clear, Executive & Human-Comprehensible */}
+              <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 border-t border-slate-200/80 dark:border-white/10">
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    24/7
+                  </div>
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Continuous Availability
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">100%</div>
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Audit Coverage</div>
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-extrabold text-[#ED2618] tracking-tight">
+                    Audited
+                  </div>
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Complete Activity Logs
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">RBAC + MFA</div>
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Zero-Trust Gate</div>
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    Secured
+                  </div>
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Two-Step Authentication
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">Sub-ms</div>
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Session Check</div>
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    Tailored
+                  </div>
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Role-Based Permissions
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Interactive Visual Carousel */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative aspect-[4/5] sm:aspect-[4/3] lg:aspect-[4/5] w-full rounded-3xl overflow-hidden border border-slate-200/90 dark:border-white/[0.14] bg-slate-900 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08]">
+            {/* Right Interactive Visual Carousel - Fully Responsive Across Mobile, Tablet & Desktop */}
+            <div className="lg:col-span-5 relative w-full">
+              <div className="relative aspect-[16/11] sm:aspect-[4/3] lg:aspect-[4/5] w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 dark:border-white/[0.14] bg-slate-900 shadow-xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08]">
                 <Image
                   src={currentSlide.image}
                   alt={currentSlide.name}
@@ -242,8 +258,8 @@ export default function AdminPortalLandingPage() {
                             setZoomToggle((prev) => !prev);
                           }}
                           className={cn(
-                            "h-2 rounded-full transition-all duration-300",
-                            activeSlide === i ? "w-8 bg-[#ED2618]" : "w-2 bg-white/40 hover:bg-white/70"
+                            "h-1.5 rounded-full transition-all cursor-pointer",
+                            activeSlide === i ? "w-6 bg-[#ED2618]" : "w-1.5 bg-white/40 hover:bg-white/70"
                           )}
                           aria-label={`Go to slide ${i + 1}`}
                         />
@@ -256,60 +272,6 @@ export default function AdminPortalLandingPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Systems Pillars Grid */}
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 pb-20">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-950 dark:text-white">
-              Enterprise Governance &amp; Scale Architecture
-            </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
-              Designed from first principles to enforce strict institutional compliance across thousands of operators.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#11141E] shadow-sm hover:border-[#ED2618]/50 transition-all space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center justify-center text-[#ED2618]">
-                <Lock className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">Zero-Trust Directory</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Hardware-backed TOTP and cryptographic verification gates ensure authenticated identity at every boundary.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#11141E] shadow-sm hover:border-[#ED2618]/50 transition-all space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center justify-center text-[#ED2618]">
-                <Terminal className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">Immutable Audit Trails</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Every permission escalation, session creation, and record modification is permanently logged with actor metadata.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#11141E] shadow-sm hover:border-[#ED2618]/50 transition-all space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center justify-center text-[#ED2618]">
-                <Activity className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">Inactivity Sentinel</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Adaptive idle timers instantly invalidate inactive tokens to safeguard unattended workstations in the field.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#11141E] shadow-sm hover:border-[#ED2618]/50 transition-all space-y-3">
-              <div className="h-10 w-10 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 flex items-center justify-center text-[#ED2618]">
-                <Users className="h-5 w-5" />
-              </div>
-              <h3 className="font-bold text-base text-slate-900 dark:text-white">Hierarchical RBAC</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Fine-grained division of power between Admin, Manager, and Field Officer roles across departmental domains.
-              </p>
             </div>
           </div>
         </section>

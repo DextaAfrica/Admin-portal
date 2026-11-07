@@ -140,11 +140,10 @@ export default function OperationsLandingPage() {
         </div>
       </header>
 
-      {/* Hero Welcome Showcase */}
-      <main className="relative z-10 flex-1">
-        {/* Main Hero Container */}
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-12 sm:py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-14 items-center">
+      {/* Hero Welcome Showcase - Minimal, Focused, Single Viewport */}
+      <main className="relative z-10 flex-1 flex items-center">
+        <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-8 sm:py-14">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
             {/* Left Content */}
             <div className="lg:col-span-7 space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-4 py-1.5">
@@ -154,7 +153,7 @@ export default function OperationsLandingPage() {
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-[50px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
+              <h1 className="text-3xl sm:text-4xl lg:text-[48px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
                 Executing Landmark Infrastructure, Capital &amp; Field Deliveries.
               </h1>
 
@@ -184,30 +183,46 @@ export default function OperationsLandingPage() {
                 </Link>
               </div>
 
-              {/* High-Concurrency Trust Badges */}
-              <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-slate-200/80 dark:border-white/10">
-                <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">99.99%</div>
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Uptime SLA</div>
+              {/* Trust & Scale Highlights - Clear, Executive & Human-Comprehensible */}
+              <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 border-t border-slate-200/80 dark:border-white/10">
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    24/7
+                  </div>
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Always Online &amp; Accessible
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">&lt;50ms</div>
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Audit Latency</div>
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-extrabold text-[#ED2618] tracking-tight">
+                    Live
+                  </div>
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Real-Time Milestone Tracking
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">Zero-Trust</div>
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">MFA Protected</div>
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    Secured
+                  </div>
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Two-Step Verification
+                  </div>
                 </div>
-                <div>
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">Multi-Tier</div>
-                  <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">Role Seniority</div>
+                <div className="space-y-1">
+                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                    Tailored
+                  </div>
+                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Role-Based Workspaces
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Interactive Visual Carousel */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative aspect-[4/5] sm:aspect-[4/3] lg:aspect-[4/5] w-full rounded-3xl overflow-hidden border border-slate-200/90 dark:border-white/[0.14] bg-slate-900 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08]">
+            {/* Right Interactive Visual Carousel - Fully Responsive Across Mobile, Tablet & Desktop */}
+            <div className="lg:col-span-5 relative w-full">
+              <div className="relative aspect-[16/11] sm:aspect-[4/3] lg:aspect-[4/5] w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 dark:border-white/[0.14] bg-slate-900 shadow-xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08]">
                 <Image
                   src={currentFleet.image}
                   alt={currentFleet.name}
@@ -286,91 +301,6 @@ export default function OperationsLandingPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Core Operational Capabilities Grid */}
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-12 border-t border-slate-200/80 dark:border-white/[0.08]">
-          <div className="text-center max-w-3xl mx-auto space-y-3 mb-12">
-            <span className="text-xs font-mono font-extrabold text-[#ED2618] uppercase tracking-wider">
-              Architecture &amp; Scale
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
-              Engineered for Enterprise Multi-Directorate Operations
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
-              Each team member operates within a tailored, role-personalized environment with strict seniority access controls.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {/* Card 1 */}
-            <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121622] shadow-sm hover:border-red-500/40 transition-all space-y-3">
-              <div className="h-10 w-10 rounded-2xl bg-red-500/10 text-[#ED2618] flex items-center justify-center">
-                <HardHat className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Field Engineering &amp; Delivery</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Live construction milestone tracking, contractor task assignments, and site telemetry with proof of delivery.
-              </p>
-            </div>
-
-            {/* Card 2 */}
-            <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121622] shadow-sm hover:border-red-500/40 transition-all space-y-3">
-              <div className="h-10 w-10 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                <DollarSign className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Capital Treasury &amp; Clearances</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Inflow ledger reconciliation, multi-signoff project disbursements, and automated contractor payout tracking.
-              </p>
-            </div>
-
-            {/* Card 3 */}
-            <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121622] shadow-sm hover:border-red-500/40 transition-all space-y-3">
-              <div className="h-10 w-10 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Inter-Directorate Approvals</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Structured clearance requests across Operations, Finance, IT, and HR with real-time audit event logging.
-              </p>
-            </div>
-
-            {/* Card 4 */}
-            <div className="p-6 rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121622] shadow-sm hover:border-red-500/40 transition-all space-y-3">
-              <div className="h-10 w-10 rounded-2xl bg-purple-500/10 text-purple-500 flex items-center justify-center">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">Zero-Trust Security Gate</h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                Mandatory two-factor authentication, domain isolation architecture, and encrypted session inactivity monitoring.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Pre-Footer Action Banner */}
-        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 pb-16">
-          <div className="rounded-3xl border border-red-500/25 dark:border-red-500/30 bg-gradient-to-r from-red-500/[0.08] via-red-500/[0.04] to-transparent p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="space-y-2 max-w-xl text-center md:text-left">
-              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-                Ready to coordinate operations across the continent?
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
-                Sign in with your verified operations credentials or establish a new authorized team profile.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-3 shrink-0">
-              <Link
-                href="/login"
-                className="btn-crimson-exec h-11 rounded-xl px-6 text-xs sm:text-sm font-bold shadow-md shadow-red-500/25 hover:shadow-red-500/40 flex items-center gap-2"
-              >
-                <span>Enter Operations Desk</span>
-                <ArrowRight className="h-4 w-4" />
-              </Link>
             </div>
           </div>
         </section>
