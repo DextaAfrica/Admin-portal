@@ -103,7 +103,7 @@ export default function OperationsLoginPage() {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
         setIsEmailOtp(Boolean(data.emailOtpSent));
-        setOtpCode(data.devOtp || "");
+        setOtpCode("");
         setRecoveryCode("");
         setOtpError("");
         setUseRecoveryCode(false);
@@ -111,11 +111,9 @@ export default function OperationsLoginPage() {
         setIsLoading(false);
         toastSuccess(
           "Verification Required",
-          data.devOtp
-            ? `Development Mode: Verification code is ${data.devOtp}`
-            : data.emailOtpSent
-            ? "A 6-digit verification code has been dispatched to your email."
-            : "Please enter your 6-digit code from your authenticator app."
+          data.emailOtpSent
+            ? "A 6-digit verification code has been dispatched to your corporate email."
+            : "Please enter the 6-digit code from your authenticator app."
         );
         return;
       }

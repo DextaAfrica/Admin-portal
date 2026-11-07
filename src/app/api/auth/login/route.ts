@@ -169,6 +169,9 @@ export async function POST(req: NextRequest) {
         `,
       });
       emailOtpSent = emailResult.success;
+      if (process.env.NODE_ENV !== "production") {
+        console.info(`[Zero-Trust IT Console] Verification OTP issued for ${user.email}: [${sessionOtp}]`);
+      }
     }
 
     const res = NextResponse.json({
@@ -178,7 +181,6 @@ export async function POST(req: NextRequest) {
       fullName: user.fullName,
       twoFactorEnabled: user.twoFactorEnabled,
       emailOtpSent,
-      ...(process.env.NODE_ENV !== "production" && sessionOtp ? { devOtp: sessionOtp } : {}),
     });
 
     if (sessionOtp) {
