@@ -95,14 +95,14 @@ export default function OperationsLandingPage() {
         <div className="absolute top-1/2 -right-32 w-[550px] h-[350px] bg-slate-700/[0.06] blur-[150px] rounded-full dark:opacity-100 opacity-20" />
       </div>
 
-      {/* Top Navigation Bar */}
+      {/* Top Navigation Bar - Ultra-Clean, Responsive & Spacious */}
       <header className="sticky top-0 z-40 w-full border-b border-slate-200/80 dark:border-white/[0.12] bg-white/95 dark:bg-[#0C0F17]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
+        <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
             <Link href="/" className="flex items-center shrink-0">
-              <DextaLogo className="h-8 sm:h-10 w-auto" />
+              <DextaLogo className="h-7 sm:h-9 w-auto" />
             </Link>
-            <div className="flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">
+            <div className="hidden sm:flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">
               <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
               <span className="text-[11px] font-mono font-bold tracking-wider text-slate-600 dark:text-slate-300 uppercase">
                 ops.dextaafrica.org
@@ -110,7 +110,7 @@ export default function OperationsLandingPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3.5">
             {mounted && (
               <button
                 type="button"
@@ -124,105 +124,104 @@ export default function OperationsLandingPage() {
 
             <Link
               href="/register"
-              className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-[#ED2618] dark:hover:text-white transition-colors"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-[#ED2618] dark:hover:text-white transition-colors"
             >
-              <span>Create Ops Profile</span>
+              <span>Create Profile</span>
             </Link>
 
             <Link
               href="/login"
-              className="btn-crimson-exec h-9 sm:h-10 rounded-xl px-4 sm:px-6 text-xs sm:text-sm font-bold shadow-md shadow-red-500/20 hover:shadow-red-500/35 transition-all flex items-center gap-2 cursor-pointer"
+              className="btn-crimson-exec h-9 sm:h-10 rounded-xl px-3.5 sm:px-5 text-xs sm:text-sm font-bold shadow-md shadow-red-500/20 hover:shadow-red-500/35 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             >
-              <span>Sign In to Desk</span>
+              <span>Sign In</span>
+              <span className="hidden sm:inline">to Desk</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Welcome Showcase - Minimal, Focused, Single Viewport */}
+      {/* Hero Welcome Showcase - Perfectly Engineered for Mobile & Desktop */}
       <main className="relative z-10 flex-1 flex items-center">
-        <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-8 sm:py-14">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+        <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-6 sm:py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
             {/* Left Content */}
-            <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-4 py-1.5">
-                <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
-                <span className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#ED2618] dark:text-red-400">
+            <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
+                <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#ED2618] dark:text-red-400">
                   Dexta Africa Enterprise Operations
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-[48px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.12]">
+              <h1 className="text-2xl sm:text-4xl lg:text-[46px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.15]">
                 Executing Landmark Infrastructure, Capital &amp; Field Deliveries.
               </h1>
 
-              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-                Welcome to the unified operations command desk for Dexta Africa. Engineered for thousands of
-                infrastructure directors, contractor engineers, procurement officers, and institutional partners coordinating
-                ground milestones with zero latency.
+              <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+                The unified operations desk for Dexta Africa. Engineered for infrastructure directors, contractor engineers, procurement officers, and institutional partners coordinating ground milestones with zero latency.
               </p>
 
-              {/* Action Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+              {/* Action Buttons - Side by Side on Mobile & Desktop to Save Space */}
+              <div className="pt-1 grid grid-cols-2 gap-2.5 sm:flex sm:flex-row sm:items-center sm:gap-4">
                 <Link
                   href="/login"
-                  className="btn-crimson-exec h-12 rounded-xl px-7 text-sm font-bold shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all flex items-center justify-center gap-2.5 cursor-pointer"
+                  className="btn-crimson-exec h-11 sm:h-12 rounded-xl px-4 sm:px-7 text-xs sm:text-sm font-bold shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer text-center"
                 >
-                  <HardHat className="h-4 w-4" />
-                  <span>Access Operations Desk</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <HardHat className="h-3.5 w-3.5 shrink-0" />
+                  <span>Access Desk</span>
+                  <ArrowRight className="h-3.5 w-3.5 hidden sm:inline" />
                 </Link>
 
                 <Link
                   href="/register"
-                  className="h-12 rounded-xl px-7 text-sm font-bold border border-slate-200 dark:border-white/15 bg-white dark:bg-[#141722] hover:border-[#ED2618] text-slate-800 dark:text-white transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm hover:shadow-md"
+                  className="h-11 sm:h-12 rounded-xl px-4 sm:px-7 text-xs sm:text-sm font-bold border border-slate-200 dark:border-white/15 bg-white dark:bg-[#141722] hover:border-[#ED2618] text-slate-800 dark:text-white transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer shadow-sm hover:shadow-md text-center"
                 >
-                  <Users className="h-4 w-4 text-[#ED2618]" />
-                  <span>Establish Team Profile</span>
+                  <Users className="h-3.5 w-3.5 text-[#ED2618] shrink-0" />
+                  <span>Create Profile</span>
                 </Link>
               </div>
 
-              {/* Trust & Scale Highlights - Clear, Executive & Human-Comprehensible */}
-              <div className="pt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 border-t border-slate-200/80 dark:border-white/10">
-                <div className="space-y-1">
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+              {/* Trust & Scale Highlights - Ultra-Crisp Mobile Grid */}
+              <div className="pt-4 sm:pt-6 grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 border-t border-slate-200/80 dark:border-white/10">
+                <div className="space-y-0.5 sm:space-y-1">
+                  <div className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     24/7
                   </div>
-                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
-                    Always Online &amp; Accessible
+                  <div className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Always Online
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-xl sm:text-2xl font-extrabold text-[#ED2618] tracking-tight">
+                <div className="space-y-0.5 sm:space-y-1">
+                  <div className="text-lg sm:text-2xl font-extrabold text-[#ED2618] tracking-tight">
                     Live
                   </div>
-                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
-                    Real-Time Milestone Tracking
+                  <div className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Milestone Tracking
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <div className="space-y-0.5 sm:space-y-1">
+                  <div className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     Secured
                   </div>
-                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                  <div className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
                     Two-Step Verification
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <div className="space-y-0.5 sm:space-y-1">
+                  <div className="text-lg sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight">
                     Tailored
                   </div>
-                  <div className="text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
-                    Role-Based Workspaces
+                  <div className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-400 leading-snug">
+                    Role-Based Access
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Interactive Visual Carousel - Fully Responsive Across Mobile, Tablet & Desktop */}
-            <div className="lg:col-span-5 relative w-full">
-              <div className="relative aspect-[16/11] sm:aspect-[4/3] lg:aspect-[4/5] w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 dark:border-white/[0.14] bg-slate-900 shadow-xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08]">
+            {/* Right Interactive Visual Carousel */}
+            <div className="lg:col-span-5 relative w-full pt-2 lg:pt-0">
+              <div className="relative aspect-[16/10] sm:aspect-[4/3] lg:aspect-[4/5] w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 dark:border-white/[0.14] bg-slate-900 shadow-xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08]">
                 <Image
                   src={currentFleet.image}
                   alt={currentFleet.name}
