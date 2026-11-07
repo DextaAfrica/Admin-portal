@@ -43,11 +43,16 @@ const config: Config = {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
         "fade-in": "fadeIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "reveal-up": "revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "slide-up": "bottomSheetUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "ken-burns": "kenBurns 10s ease-in-out forwards",
         "float-slow": "floatSlow 7s ease-in-out infinite",
         "slide-progress": "slideProgress 10s linear forwards",
       },
       keyframes: {
+        bottomSheetUp: {
+          from: { transform: "translateY(100%)", opacity: "0.8" },
+          to: { transform: "translateY(0%)", opacity: "1" },
+        },
         fadeIn: {
           from: { opacity: "0", transform: "translateY(8px)" },
           to: { opacity: "1", transform: "translateY(0)" },
