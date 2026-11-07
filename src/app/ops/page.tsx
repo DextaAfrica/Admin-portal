@@ -156,7 +156,7 @@ export default function OperationsLandingPage() {
 
               <h1 className="text-2xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.15] animate-reveal-up">
                 Executing{" "}
-                <span className="italic bg-gradient-to-r from-[#ED2618] via-rose-500 to-amber-500 bg-clip-text text-transparent bg-[length:200%_auto] animate-text-shimmer">
+                <span className="italic text-flow-red">
                   Landmark Infrastructure, Capital &amp; Field Deliveries.
                 </span>
               </h1>

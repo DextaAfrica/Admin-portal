@@ -49,8 +49,17 @@ const config: Config = {
         "slide-progress": "slideProgress 10s linear forwards",
         "text-shimmer": "textShimmer 6s ease-in-out infinite",
         "text-glow": "textGlow 4s ease-in-out infinite",
+        "text-flow": "textFlow 4s linear infinite",
       },
       keyframes: {
+        textFlow: {
+          "0%": {
+            "background-position": "0% center",
+          },
+          "100%": {
+            "background-position": "200% center",
+          },
+        },
         textShimmer: {
           "0%, 100%": {
             "background-size": "200% auto",
