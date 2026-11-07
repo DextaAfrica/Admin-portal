@@ -35,7 +35,7 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // 3. Subdomain Root & Auth Rewrites on OPS Subdomain
+  // 3. Subdomain Root & Auth Rewrites on OPS Subdomain (Single Unified Login Experience)
   if (isOpsHost) {
     // Strip redundant /ops prefix on ops subdomain
     if (pathname === "/ops" || pathname.startsWith("/ops/")) {
@@ -43,19 +43,21 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // Rewrite clean paths to internal Next.js folder routes
+    // Unify entry: root redirects directly to the single official login page
     if (pathname === "/") {
-      return NextResponse.rewrite(new URL("/ops", req.url));
+      return NextResponse.redirect(new URL("/login", req.url));
     }
+
     if (pathname === "/login") {
       return NextResponse.rewrite(new URL("/ops/login", req.url));
     }
+
     if (pathname === "/register") {
       return NextResponse.rewrite(new URL("/ops/register", req.url));
     }
   }
 
-  // 4. Subdomain Root & Auth Rewrites on ADMIN Subdomain
+  // 4. Subdomain Root & Auth Rewrites on ADMIN Subdomain (Single Unified Login Experience)
   if (isAdminHost) {
     // Strip redundant /admin-portal prefix on admin subdomain
     if (pathname === "/admin-portal" || pathname.startsWith("/admin-portal/")) {
@@ -63,13 +65,15 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // Rewrite clean paths to internal Next.js folder routes
+    // Unify entry: root redirects directly to the single official login page
     if (pathname === "/") {
-      return NextResponse.rewrite(new URL("/admin-portal", req.url));
+      return NextResponse.redirect(new URL("/login", req.url));
     }
+
     if (pathname === "/login") {
       return NextResponse.rewrite(new URL("/admin-portal/login", req.url));
     }
+
     if (pathname === "/register") {
       return NextResponse.rewrite(new URL("/admin-portal/register", req.url));
     }
@@ -94,11 +98,7 @@ export function middleware(req: NextRequest) {
 
   // 6. Redirect unauthenticated users trying to access protected workspace pages
   if (!token && !isPublicRoute && !isStaticOrApi) {
-    const loginTarget = isOpsHost
-      ? "/login"
-      : isAdminHost
-      ? "/login"
-      : "/login";
+    const loginTarget = "/login";
     const url = new URL(loginTarget, req.url);
     return NextResponse.redirect(url);
   }

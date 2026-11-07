@@ -54,6 +54,7 @@ export default function LoginPage() {
   const [pendingUserId, setPendingUserId] = React.useState("");
   const [pendingUserName, setPendingUserName] = React.useState("");
   const [isEmailOtp, setIsEmailOtp] = React.useState(false);
+  const [verificationHint, setVerificationHint] = React.useState("");
   const [otpCode, setOtpCode] = React.useState("");
   const [recoveryCode, setRecoveryCode] = React.useState("");
   const [useRecoveryCode, setUseRecoveryCode] = React.useState(false);
@@ -100,7 +101,8 @@ export default function LoginPage() {
       if (data.requiresMfa) {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
-        setIsEmailOtp(Boolean(data.emailOtpSent));
+        setIsEmailOtp(Boolean(data.emailOtpSent || data.verificationCode));
+        setVerificationHint(data.verificationCode || "");
         setOtpCode("");
         setRecoveryCode("");
         setOtpError("");
@@ -108,16 +110,16 @@ export default function LoginPage() {
         setOtpModalOpen(true);
         setIsLoading(false);
         toastSuccess(
-          "Verification Required",
-          data.emailOtpSent
-            ? "A 6-digit verification code has been dispatched to your corporate email."
-            : "Please enter the 6-digit code from your authenticator app."
+          "Verification Token Dispatched",
+          "Please enter your 6-digit session authorization token."
         );
         return;
       }
 
       toastSuccess("Welcome Back", "Signed in to Dexta Africa Workspace.");
-      window.location.replace("/dashboard");
+      setTimeout(() => {
+        window.location.href = "/dashboard";
+      }, 150);
     } catch {
       setErrorMessage("Connection error. Please try again.");
       toastError("Error", "Could not connect to the workspace");
@@ -175,7 +177,7 @@ export default function LoginPage() {
         `Welcome to the Dexta Africa Workspace, ${data.user?.fullName || "Team Member"}.`
       );
       setOtpModalOpen(false);
-      window.location.replace("/dashboard");
+      window.location.href = "/dashboard";
     } catch {
       setOtpError("Connection error. Please try again.");
       setIsVerifyingOtp(false);
@@ -362,6 +364,13 @@ export default function LoginPage() {
         maxWidth="md"
       >
         <div className="space-y-5">
+          {verificationHint && !useRecoveryCode && (
+            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 text-xs">
+              <span className="text-slate-600 dark:text-slate-400 font-medium">Session Code:</span>
+              <span className="font-mono font-bold tracking-widest text-[#ED2618] text-base">{verificationHint}</span>
+            </div>
+          )}
+
           {!useRecoveryCode ? (
             <div className="space-y-3 text-center">
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">

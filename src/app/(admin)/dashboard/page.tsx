@@ -33,8 +33,8 @@ export default async function DashboardPage() {
   const headersList = await headers();
   const host = (headersList.get("host") || "").toLowerCase();
 
-  const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextafrica") || host.includes("admin.localhost");
-  const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
+  const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.dextafrica") || host.includes("admin.localhost");
+  const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.dextafrica") || host.includes("ops.localhost");
 
   const userDept = (user?.department || "").toUpperCase();
   const userRole = (user?.role || "").toUpperCase();

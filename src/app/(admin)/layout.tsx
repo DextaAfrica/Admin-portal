@@ -5,6 +5,9 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { SessionInactivityGuard } from "@/components/auth/SessionInactivityGuard";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AdminLayout({
   children,
 }: {
@@ -19,8 +22,8 @@ export default async function AdminLayout({
   // Strict Subdomain Gate Enforcement
   const headersList = await headers();
   const host = (headersList.get("host") || "").toLowerCase();
-  const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.localhost");
-  const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.localhost");
+  const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextaafrica") || host.includes("admin.dextafrica") || host.includes("admin.localhost");
+  const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica") || host.includes("ops.dextafrica") || host.includes("ops.localhost");
 
   const dept = (user.department || "").toUpperCase();
   const isSuperAdmin = user.role === "SUPER_ADMIN";
