@@ -114,8 +114,7 @@ export default function AdminPortalLoginPage() {
       }
 
       toastSuccess("Command Authenticated", "Signed in to Dexta Africa Systems Command.");
-      router.push("/dashboard");
-      router.refresh();
+      window.location.replace("/dashboard");
     } catch {
       setErrorMessage("Secure gateway connection timeout.");
       setIsLoading(false);
@@ -158,8 +157,7 @@ export default function AdminPortalLoginPage() {
 
       setOtpModalOpen(false);
       toastSuccess("Access Granted", "Welcome to Dexta Africa Systems Command.");
-      router.push("/dashboard");
-      router.refresh();
+      window.location.replace(data.mustChangePassword ? "/setup/password" : "/dashboard");
     } catch {
       setOtpError("Network error during verification.");
       setIsVerifyingOtp(false);

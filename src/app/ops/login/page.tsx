@@ -116,8 +116,7 @@ export default function OperationsLoginPage() {
       }
 
       toastSuccess("Operations Authorized", "Signed in to Dexta Africa Operations Desk.");
-      router.push("/dashboard");
-      router.refresh();
+      window.location.replace("/dashboard");
     } catch {
       setErrorMessage("Connection error while accessing authorization service.");
       setIsLoading(false);
@@ -160,8 +159,7 @@ export default function OperationsLoginPage() {
 
       setOtpModalOpen(false);
       toastSuccess("Operations Authenticated", "Welcome to Dexta Africa Operations Desk.");
-      router.push("/dashboard");
-      router.refresh();
+      window.location.replace(data.mustChangePassword ? "/setup/password" : "/dashboard");
     } catch {
       setOtpError("Network error during verification.");
       setIsVerifyingOtp(false);

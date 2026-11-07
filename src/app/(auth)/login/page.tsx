@@ -117,8 +117,7 @@ export default function LoginPage() {
       }
 
       toastSuccess("Welcome Back", "Signed in to Dexta Africa Workspace.");
-      router.push("/dashboard");
-      router.refresh();
+      window.location.replace("/dashboard");
     } catch {
       setErrorMessage("Connection error. Please try again.");
       toastError("Error", "Could not connect to the workspace");
@@ -167,8 +166,7 @@ export default function LoginPage() {
       if (data.mustChangePassword) {
         toastSuccess("First-Time Sign In", "Please configure your preferred account password.");
         setOtpModalOpen(false);
-        router.push("/setup/password");
-        router.refresh();
+        window.location.replace("/setup/password");
         return;
       }
 
@@ -177,8 +175,7 @@ export default function LoginPage() {
         `Welcome to the Dexta Africa Workspace, ${data.user?.fullName || "Team Member"}.`
       );
       setOtpModalOpen(false);
-      router.push("/dashboard");
-      router.refresh();
+      window.location.replace("/dashboard");
     } catch {
       setOtpError("Connection error. Please try again.");
       setIsVerifyingOtp(false);

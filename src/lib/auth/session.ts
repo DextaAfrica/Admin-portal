@@ -174,6 +174,7 @@ export async function createSession({
 }) {
   const sessionToken = crypto.randomBytes(32).toString("hex");
   const expiresAt = new Date(Date.now() + SESSION_DURATION_DAYS * 24 * 60 * 60 * 1000);
+  const now = new Date();
 
   const session = await prisma.session.create({
     data: {
@@ -181,6 +182,7 @@ export async function createSession({
       userId,
       ipAddress: ipAddress || "unknown",
       userAgent: userAgent || "unknown",
+      lastActiveAt: now,
       expiresAt,
     },
   });
@@ -226,14 +228,15 @@ export async function getCurrentSession(): Promise<{
 
     // Enforce Backend Inactivity Timeout
     const timeoutMinutes = await getInactivityTimeoutMinutes();
+    const effectiveTimeout = timeoutMinutes > 0 ? timeoutMinutes : DEFAULT_INACTIVITY_TIMEOUT_MINUTES;
     const now = Date.now();
     const lastActiveTime = session.lastActiveAt
       ? new Date(session.lastActiveAt).getTime()
       : new Date(session.createdAt || now).getTime();
     const inactiveMs = now - lastActiveTime;
-    const timeoutMs = timeoutMinutes * 60 * 1000;
+    const timeoutMs = effectiveTimeout * 60 * 1000;
 
-    if (inactiveMs > timeoutMs) {
+    if (inactiveMs > 0 && inactiveMs > timeoutMs) {
       // Session expired due to inactivity -> automatically delete session from database
       await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
       await prisma.auditLog.create({
@@ -244,7 +247,7 @@ export async function getCurrentSession(): Promise<{
           metadata: JSON.stringify({
             sessionId: session.id,
             inactiveDurationMinutes: Math.round(inactiveMs / 60000),
-            thresholdMinutes: timeoutMinutes,
+            thresholdMinutes: effectiveTimeout,
           }),
         },
       }).catch(() => {});
@@ -265,7 +268,8 @@ export async function getCurrentSession(): Promise<{
       sessionToken: token,
       sessionId: session.id,
     };
-  } catch {
+  } catch (error) {
+    console.error("[Auth] Error in getCurrentSession:", error);
     return { user: null, sessionToken: null, sessionId: null };
   }
 }
