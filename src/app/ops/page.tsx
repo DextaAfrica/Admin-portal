@@ -144,9 +144,9 @@ export default function OperationsLandingPage() {
       {/* Hero Welcome Showcase - Perfectly Engineered for Mobile & Desktop */}
       <main className="relative z-10 flex-1 flex items-center">
         <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-6 sm:py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Content */}
-            <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+            <div className="lg:col-span-6 space-y-4 sm:space-y-6">
               <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
                 <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#ED2618] dark:text-red-400">
@@ -219,27 +219,45 @@ export default function OperationsLandingPage() {
               </div>
             </div>
 
-            {/* Right Interactive Visual Carousel - Clean, Modest & Unobstructed */}
-            <div className="lg:col-span-5 relative w-full pt-2 lg:pt-0">
-              <div className="relative aspect-[16/10] sm:aspect-[4/3] lg:aspect-[4/5] w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 dark:border-white/[0.14] bg-slate-900 shadow-xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08]">
-                <Image
-                  src={currentFleet.image}
-                  alt={currentFleet.name}
-                  fill
-                  sizes="(max-width: 1024px) 100vw, 42vw"
-                  priority
-                  className={cn(
-                    "object-cover transition-transform duration-[6000ms] ease-out",
-                    zoomToggle ? "scale-105" : "scale-100"
-                  )}
-                  style={{ objectPosition: currentFleet.objectPosition }}
-                />
+            {/* Right Interactive Visual Carousel - Wider & Diagonal Curvy Showcase */}
+            <div className="lg:col-span-6 relative w-full pt-2 lg:pt-0">
+              <div className="relative aspect-[16/10] sm:aspect-[4/3] lg:aspect-[5/4] w-full overflow-hidden rounded-[2rem] sm:rounded-[2.5rem] rounded-tr-[4rem] sm:rounded-tr-[5.5rem] rounded-bl-[3rem] sm:rounded-bl-[4.5rem] border border-slate-200/90 dark:border-white/[0.16] bg-slate-950 shadow-2xl dark:shadow-[0_24px_60px_rgba(0,0,0,0.85)] dark:ring-1 dark:ring-white/[0.1]">
+                {/* Slant-Curvy Architectural Accent Waves */}
+                <div className="absolute top-0 right-0 w-44 h-44 bg-gradient-to-bl from-red-500/20 via-transparent to-transparent rounded-bl-[100px] pointer-events-none z-20" />
+                <div className="absolute bottom-0 left-0 w-36 h-36 bg-gradient-to-tr from-red-500/10 via-transparent to-transparent rounded-tr-[80px] pointer-events-none z-20" />
+
+                {/* Smooth Cross-Fade Image Slides */}
+                {FLEET_PORTRAITS.map((slide, index) => {
+                  const isActive = index === activeSlide;
+                  return (
+                    <div
+                      key={slide.image}
+                      className={cn(
+                        "absolute inset-0 transition-opacity duration-1000 ease-in-out",
+                        isActive ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+                      )}
+                    >
+                      <Image
+                        src={slide.image}
+                        alt={slide.name}
+                        fill
+                        priority={index === 0}
+                        sizes="(max-width: 1024px) 100vw, 50vw"
+                        className={cn(
+                          "object-cover transition-transform duration-[7000ms] ease-out will-change-transform",
+                          isActive && zoomToggle ? "scale-105" : "scale-100"
+                        )}
+                        style={{ objectPosition: slide.objectPosition }}
+                      />
+                    </div>
+                  );
+                })}
 
                 {/* Soft Bottom-Only Gradient for Controls Legibility */}
-                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none z-20" />
 
                 {/* Modest Bottom Controls & Subtle Identity */}
-                <div className="absolute bottom-0 inset-x-0 p-3.5 sm:p-5 z-20 flex items-center justify-between text-white">
+                <div className="absolute bottom-0 inset-x-0 p-4 sm:p-5 z-30 flex items-center justify-between text-white">
                   <div className="flex items-center gap-2">
                     <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
                     <span className="text-xs sm:text-sm font-semibold tracking-wide text-white/95">
