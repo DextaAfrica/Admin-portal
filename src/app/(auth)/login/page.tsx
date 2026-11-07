@@ -54,7 +54,6 @@ export default function LoginPage() {
   const [pendingUserId, setPendingUserId] = React.useState("");
   const [pendingUserName, setPendingUserName] = React.useState("");
   const [isEmailOtp, setIsEmailOtp] = React.useState(false);
-  const [verificationHint, setVerificationHint] = React.useState("");
   const [otpCode, setOtpCode] = React.useState("");
   const [recoveryCode, setRecoveryCode] = React.useState("");
   const [useRecoveryCode, setUseRecoveryCode] = React.useState(false);
@@ -101,8 +100,7 @@ export default function LoginPage() {
       if (data.requiresMfa) {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
-        setIsEmailOtp(Boolean(data.emailOtpSent || data.verificationCode));
-        setVerificationHint(data.verificationCode || "");
+        setIsEmailOtp(Boolean(data.emailOtpSent));
         setOtpCode("");
         setRecoveryCode("");
         setOtpError("");
@@ -110,8 +108,10 @@ export default function LoginPage() {
         setOtpModalOpen(true);
         setIsLoading(false);
         toastSuccess(
-          "Verification Token Dispatched",
-          "Please enter your 6-digit session authorization token."
+          "Verification Required",
+          data.emailOtpSent
+            ? "A 6-digit verification code has been dispatched to your corporate email."
+            : "Please enter the 6-digit code from your authenticator app."
         );
         return;
       }
@@ -364,13 +364,6 @@ export default function LoginPage() {
         maxWidth="md"
       >
         <div className="space-y-5">
-          {verificationHint && !useRecoveryCode && (
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 text-xs">
-              <span className="text-slate-600 dark:text-slate-400 font-medium">Session Code:</span>
-              <span className="font-mono font-bold tracking-widest text-[#ED2618] text-base">{verificationHint}</span>
-            </div>
-          )}
-
           {!useRecoveryCode ? (
             <div className="space-y-3 text-center">
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">

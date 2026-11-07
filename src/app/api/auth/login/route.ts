@@ -185,6 +185,7 @@ export async function POST(req: NextRequest) {
         `,
       });
       emailOtpSent = Boolean(emailResult?.success);
+      console.log(`[Zero-Trust MFA] Verification code dispatched to corporate email (${user.email}): ${sessionOtp}`);
     } catch {
       emailOtpSent = false;
     }
@@ -196,7 +197,6 @@ export async function POST(req: NextRequest) {
       fullName: user.fullName,
       twoFactorEnabled: user.twoFactorEnabled,
       emailOtpSent,
-      verificationCode: sessionOtp,
     });
 
     res.cookies.set("dexta_mfa_challenge", `${user.id}:${sessionOtp}`, {
