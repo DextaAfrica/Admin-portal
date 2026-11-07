@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import {
   ArrowRight,
+  ArrowLeft,
   Sun,
   Moon,
   ShieldCheck,
@@ -215,7 +216,7 @@ export default function AdminPortalLandingPage() {
               </div>
             </div>
 
-            {/* Right Interactive Visual Carousel */}
+            {/* Right Interactive Visual Carousel - Clean, Modest & Unobstructed */}
             <div className="lg:col-span-5 relative w-full pt-2 lg:pt-0">
               <div className="relative aspect-[16/10] sm:aspect-[4/3] lg:aspect-[4/5] w-full rounded-2xl sm:rounded-3xl overflow-hidden border border-slate-200/90 dark:border-white/[0.14] bg-slate-900 shadow-xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08]">
                 <Image
@@ -231,23 +232,20 @@ export default function AdminPortalLandingPage() {
                   style={{ objectPosition: currentSlide.objectPosition }}
                 />
 
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
+                {/* Soft Bottom-Only Gradient for Controls Legibility */}
+                <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/80 via-black/30 to-transparent pointer-events-none" />
 
-                <div className="absolute top-4 left-4 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 text-[11px] font-mono text-white">
-                  <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
-                  <span>{currentSlide.department}</span>
-                </div>
-
-                <div className="absolute bottom-0 inset-x-0 p-6 z-20 text-white space-y-2">
-                  <div className="inline-block px-2.5 py-0.5 rounded-md bg-[#ED2618] text-[10px] font-extrabold uppercase tracking-wider">
-                    {currentSlide.role}
+                {/* Modest Bottom Controls & Subtle Identity */}
+                <div className="absolute bottom-0 inset-x-0 p-3.5 sm:p-5 z-20 flex items-center justify-between text-white">
+                  <div className="flex items-center gap-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
+                    <span className="text-xs sm:text-sm font-semibold tracking-wide text-white/95">
+                      {currentSlide.name}
+                    </span>
                   </div>
-                  <h3 className="text-xl font-bold">{currentSlide.name}</h3>
-                  <p className="text-xs text-slate-200/90 leading-relaxed max-w-sm line-clamp-3">
-                    {currentSlide.summary}
-                  </p>
 
-                  <div className="pt-3 flex items-center justify-between border-t border-white/15">
+                  {/* Clean Indicators & Subtle Arrows */}
+                  <div className="flex items-center gap-2.5">
                     <div className="flex items-center gap-1.5">
                       {COMMAND_PORTRAITS.map((_, i) => (
                         <button
@@ -259,16 +257,37 @@ export default function AdminPortalLandingPage() {
                           }}
                           className={cn(
                             "h-1.5 rounded-full transition-all cursor-pointer",
-                            activeSlide === i ? "w-6 bg-[#ED2618]" : "w-1.5 bg-white/40 hover:bg-white/70"
+                            activeSlide === i ? "w-5 bg-[#ED2618]" : "w-1.5 bg-white/40 hover:bg-white/70"
                           )}
                           aria-label={`Go to slide ${i + 1}`}
                         />
                       ))}
                     </div>
 
-                    <span className="text-[11px] font-mono text-slate-300">
-                      0{activeSlide + 1} / 0{COMMAND_PORTRAITS.length}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveSlide((prev) => (prev - 1 + COMMAND_PORTRAITS.length) % COMMAND_PORTRAITS.length);
+                          setZoomToggle((prev) => !prev);
+                        }}
+                        className="h-7 w-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all cursor-pointer"
+                        title="Previous"
+                      >
+                        <ArrowLeft className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveSlide((prev) => (prev + 1) % COMMAND_PORTRAITS.length);
+                          setZoomToggle((prev) => !prev);
+                        }}
+                        className="h-7 w-7 rounded-full bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all cursor-pointer"
+                        title="Next"
+                      >
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
