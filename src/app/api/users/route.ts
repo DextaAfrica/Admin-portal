@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { ensureInitialEnterpriseData } from "@/lib/automation/engine";
+import { validateCorporateEmail, validatePhoneNumber } from "@/lib/validation/contact";
 
 const MOCK_EMAILS = [
   "amina.arch@dextaafrica.com",
@@ -64,13 +65,33 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { email, fullName, password, role, department, seniorityLevel, jobTitle } = await req.json();
+    const { email, fullName, password, role, department, seniorityLevel, jobTitle, phone } = await req.json();
 
     if (!email || !fullName || !password) {
       return NextResponse.json(
         { error: "Email, Full Name, and Password are required" },
         { status: 400 }
       );
+    }
+
+    const emailCheck = validateCorporateEmail(email);
+    if (!emailCheck.isValid) {
+      return NextResponse.json(
+        { error: emailCheck.error },
+        { status: 400 }
+      );
+    }
+
+    let sanitizedPhone: string | null = null;
+    if (phone && phone.trim()) {
+      const phoneCheck = validatePhoneNumber(phone);
+      if (!phoneCheck.isValid) {
+        return NextResponse.json(
+          { error: phoneCheck.error },
+          { status: 400 }
+        );
+      }
+      sanitizedPhone = phoneCheck.formatted;
     }
 
     const existing = await prisma.user.findUnique({
@@ -90,6 +111,7 @@ export async function POST(req: NextRequest) {
         email: email.toLowerCase().trim(),
         fullName,
         passwordHash,
+        phone: sanitizedPhone,
         role: role || "ADMIN",
         department: (department || "OPERATIONS").toUpperCase(),
         seniorityLevel: (seniorityLevel || "SENIOR").toUpperCase(),

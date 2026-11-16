@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
       bio,
       mfaSecret,
       mfaCode,
+      verificationToken,
     } = validationResult.data;
 
     // 2. Email Uniqueness Check
@@ -52,6 +53,31 @@ export async function POST(req: NextRequest) {
         { error: "A team member account with this corporate email already exists. Please sign in instead." },
         { status: 409 }
       );
+    }
+
+    // 2b. Zero-Trust Contact Verification Check
+    if (verificationToken) {
+      const tokenRecord = await prisma.systemSetting.findUnique({
+        where: { key: `EMAIL_VERIFIED_TOKEN_${verificationToken}` },
+      });
+
+      if (!tokenRecord || !tokenRecord.value) {
+        return NextResponse.json(
+          { error: "Contact verification token is invalid or expired. Please verify your email with the 6-digit code." },
+          { status: 400 }
+        );
+      }
+
+      const [tokenEmail, , expStr] = tokenRecord.value.split(":");
+      if (tokenEmail !== normalizedEmail || Date.now() > Number(expStr)) {
+        return NextResponse.json(
+          { error: "Contact verification token does not match this corporate email. Please re-verify." },
+          { status: 400 }
+        );
+      }
+
+      // Burn used token
+      await prisma.systemSetting.delete({ where: { key: `EMAIL_VERIFIED_TOKEN_${verificationToken}` } }).catch(() => {});
     }
 
     let twoFactorEnabled = false;
