@@ -135,9 +135,11 @@
   background: linear-gradient(
     90deg,
     #0f172a 0%,
-    #0f172a 25%,
+    #0f172a 22%,
+    #ff4a3d 36%,
     #ed2618 50%,
-    #0f172a 75%,
+    #ff4a3d 64%,
+    #0f172a 78%,
     #0f172a 100%
   );
   background-size: 200% auto;
@@ -152,9 +154,11 @@
   background: linear-gradient(
     90deg,
     #ffffff 0%,
-    #ffffff 25%,
+    #ffffff 22%,
+    #ff4a3d 36%,
     #ed2618 50%,
-    #ffffff 75%,
+    #ff4a3d 64%,
+    #ffffff 78%,
     #ffffff 100%
   );
   background-size: 200% auto;
@@ -162,6 +166,29 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
+}
+
+/* For elements always on dark backgrounds/banners, regardless of theme */
+.text-flow-white-red,
+.dark-context .text-flow-red {
+  background: linear-gradient(
+    90deg,
+    #ffffff 0%,
+    #ffffff 22%,
+    #ff4a3d 36%,
+    #ed2618 50%,
+    #ff4a3d 64%,
+    #ffffff 78%,
+    #ffffff 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: textFlow 4.5s linear infinite;
+  display: inline;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.75));
 }
 
 .hover-lift {

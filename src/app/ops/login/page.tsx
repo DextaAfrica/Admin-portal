@@ -261,9 +261,9 @@ export default function OperationsLoginPage() {
                 Operations Fleet Portal
               </div>
 
-              <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl">
+              <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl drop-shadow-md">
                 Executing{" "}
-                <span className="italic text-flow-red">
+                <span className="italic text-flow-white-red">
                   Landmark Infrastructure, Capital Allocation &amp; Field Deliveries.
                 </span>
               </h2>

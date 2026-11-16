@@ -256,9 +256,9 @@ export default function AdminPortalLoginPage() {
                 IT &amp; Systems Architecture
               </div>
 
-              <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl">
+              <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl drop-shadow-md">
                 Centralized{" "}
-                <span className="italic text-flow-red">
+                <span className="italic text-flow-white-red">
                   Governance, Identity Protection &amp; Infrastructure Watchdog.
                 </span>
               </h2>
