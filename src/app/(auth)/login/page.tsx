@@ -100,7 +100,8 @@ export default function LoginPage() {
       if (data.requiresMfa) {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
-        setIsEmailOtp(Boolean(data.emailOtpSent));
+        const hasTotp = Boolean(data.twoFactorEnabled);
+        setIsEmailOtp(!hasTotp);
         setOtpCode("");
         setRecoveryCode("");
         setOtpError("");
@@ -109,9 +110,9 @@ export default function LoginPage() {
         setIsLoading(false);
         toastSuccess(
           "Verification Required",
-          data.emailOtpSent
-            ? "A 6-digit verification code has been dispatched to your corporate email."
-            : "Please enter the 6-digit code from your authenticator app."
+          hasTotp
+            ? "Please enter the 6-digit code from your authenticator app."
+            : "A 6-digit verification code has been dispatched to your corporate inbox (Mailpit)."
         );
         return;
       }
@@ -368,7 +369,7 @@ export default function LoginPage() {
             <div className="space-y-3 text-center">
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                 {isEmailOtp
-                  ? "Enter the 6-digit verification code sent to your email:"
+                  ? "Enter the 6-digit verification code sent to your email (or local Mailpit: http://localhost:8025):"
                   : "Enter the 6-digit verification code from your authenticator app:"}
               </p>
               <OTPInput

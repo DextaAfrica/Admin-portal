@@ -65,6 +65,34 @@ export default function OperationsLoginPage() {
   const [recoveryCode, setRecoveryCode] = React.useState("");
   const [useRecoveryCode, setUseRecoveryCode] = React.useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = React.useState(false);
+  const [resendCooldown, setResendCooldown] = React.useState(0);
+
+  React.useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
+
+  const handleResendEmailOtp = async () => {
+    if (resendCooldown > 0) return;
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (res.ok) {
+        setResendCooldown(30);
+        setOtpError("");
+        setOtpCode("");
+        toastSuccess("Code Dispatched", "A fresh verification code was sent to your inbox (Mailpit).");
+      }
+    } catch {
+      // ignore
+    }
+  };
   const [otpError, setOtpError] = React.useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,7 +134,8 @@ export default function OperationsLoginPage() {
       if (data.requiresMfa) {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
-        setIsEmailOtp(Boolean(data.emailOtpSent));
+        const hasTotp = Boolean(data.twoFactorEnabled);
+        setIsEmailOtp(!hasTotp);
         setOtpCode("");
         setRecoveryCode("");
         setOtpError("");
@@ -115,9 +144,9 @@ export default function OperationsLoginPage() {
         setIsLoading(false);
         toastSuccess(
           "Verification Required",
-          data.emailOtpSent
-            ? "A 6-digit verification code has been dispatched to your corporate email."
-            : "Please enter the 6-digit code from your authenticator app."
+          hasTotp
+            ? "Please enter the 6-digit code from your authenticator app."
+            : "A 6-digit verification code has been dispatched to your corporate inbox (Mailpit)."
         );
         return;
       }
@@ -495,7 +524,7 @@ export default function OperationsLoginPage() {
               </div>
               <p className="text-center text-xs text-slate-500 dark:text-slate-400">
                 {isEmailOtp
-                  ? "Check your corporate inbox for the one-time authentication code."
+                  ? "Check your corporate inbox or development Mailpit (http://localhost:8025) for the one-time authentication code."
                   : "Open your authenticator app (Google Authenticator, 1Password, etc.)"}
               </p>
             </div>
@@ -515,16 +544,29 @@ export default function OperationsLoginPage() {
           )}
 
           <div className="flex items-center justify-between pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                setUseRecoveryCode(!useRecoveryCode);
-                setOtpError("");
-              }}
-              className="text-xs text-[#ED2618] hover:underline"
-            >
-              {useRecoveryCode ? "Use 6-digit authenticator code" : "Use a backup recovery code"}
-            </button>
+            {isEmailOtp ? (
+              <button
+                type="button"
+                onClick={handleResendEmailOtp}
+                disabled={resendCooldown > 0}
+                className="text-xs text-[#ED2618] hover:underline cursor-pointer disabled:opacity-50"
+              >
+                {resendCooldown > 0
+                  ? `Resend code in ${resendCooldown}s`
+                  : "Resend verification code"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setUseRecoveryCode(!useRecoveryCode);
+                  setOtpError("");
+                }}
+                className="text-xs text-[#ED2618] hover:underline"
+              >
+                {useRecoveryCode ? "Use 6-digit authenticator code" : "Use a backup recovery code"}
+              </button>
+            )}
 
             <button
               type="button"
