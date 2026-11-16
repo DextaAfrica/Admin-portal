@@ -146,7 +146,7 @@ export default function OperationsLandingPage() {
         <section className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10 py-6 sm:py-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
             {/* Left Content */}
-            <div className="lg:col-span-6 space-y-4 sm:space-y-6">
+            <div className="lg:col-span-6 space-y-5 sm:space-y-7">
               <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1 animate-fade-in">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
                 <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#ED2618] dark:text-red-400">
@@ -154,14 +154,14 @@ export default function OperationsLandingPage() {
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.15] animate-reveal-up">
+              <h1 className="text-2xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-normal text-slate-950 dark:text-white leading-[1.3] sm:leading-[1.32] lg:leading-[1.28] animate-reveal-up">
                 Executing{" "}
-                <span className="italic text-flow-red">
+                <span className="italic text-flow-red pr-1">
                   Landmark Infrastructure, Capital &amp; Field Deliveries.
                 </span>
               </h1>
 
-              <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl animate-fade-in delay-100">
+              <p className="text-xs sm:text-sm lg:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl animate-fade-in delay-100 pt-1">
                 The unified operations desk for Dexta Africa. Engineered for infrastructure directors, contractor engineers, procurement officers, and institutional partners coordinating ground milestones with zero latency.
               </p>
 

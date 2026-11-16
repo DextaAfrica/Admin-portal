@@ -251,19 +251,21 @@ export default function AdminPortalLoginPage() {
             </div>
 
             {/* Bottom Content Overlay */}
-            <div className="relative z-10 space-y-4">
-              <div className="inline-block px-3 py-1 rounded-lg bg-[#ED2618] text-[10px] font-extrabold uppercase tracking-widest">
-                IT &amp; Systems Architecture
+            <div className="relative z-10 space-y-5 xl:space-y-6">
+              <div>
+                <span className="inline-block px-3.5 py-1 rounded-lg bg-[#ED2618] text-[10px] xl:text-[11px] font-extrabold uppercase tracking-[0.14em] shadow-sm shadow-red-500/30">
+                  IT &amp; Systems Architecture
+                </span>
               </div>
 
-              <h2 className="text-2xl xl:text-3xl font-extrabold leading-tight text-white max-w-xl drop-shadow-md">
+              <h2 className="text-2xl xl:text-[32px] 2xl:text-[34px] font-extrabold tracking-normal leading-[1.38] sm:leading-[1.42] text-white max-w-xl xl:max-w-2xl drop-shadow-md">
                 Centralized{" "}
-                <span className="italic text-flow-white-red">
+                <span className="italic text-flow-white-red pr-1">
                   Governance, Identity Protection &amp; Infrastructure Watchdog.
                 </span>
               </h2>
 
-              <p className="text-xs xl:text-sm text-slate-200/90 leading-relaxed max-w-lg">
+              <p className="text-xs sm:text-sm xl:text-[15px] text-slate-200/95 leading-relaxed xl:leading-loose max-w-xl pt-1">
                 Administrative access point for Dexta Africa systems architects, security directors, and technical operations controllers.
               </p>
 
