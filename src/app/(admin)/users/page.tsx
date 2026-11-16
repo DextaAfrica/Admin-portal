@@ -8,6 +8,7 @@ import { Input, PasswordInput } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate, formatRoleLabel, getInitials } from "@/lib/utils";
+import { validateCorporateEmail, validatePhoneNumber } from "@/lib/validation/contact";
 
 interface UserItem {
   id: string;
@@ -35,6 +36,7 @@ export default function UsersPage() {
 
   const [email, setEmail] = React.useState("");
   const [fullName, setFullName] = React.useState("");
+  const [phone, setPhone] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [role, setRole] = React.useState("ADMIN");
   const [department, setDepartment] = React.useState("OPERATIONS");
@@ -74,11 +76,35 @@ export default function UsersPage() {
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const emailCheck = validateCorporateEmail(email);
+    if (!emailCheck.isValid) {
+      toastError("Invalid Corporate Email", emailCheck.error || "Please enter a valid company email.");
+      return;
+    }
+
+    if (phone.trim()) {
+      const phoneCheck = validatePhoneNumber(phone);
+      if (!phoneCheck.isValid) {
+        toastError("Invalid Phone Format", phoneCheck.error || "Please enter a valid phone number.");
+        return;
+      }
+    }
+
     try {
       const res = await fetch("/api/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, fullName, password, role, department, seniorityLevel, jobTitle }),
+        body: JSON.stringify({
+          email,
+          fullName,
+          phone: phone.trim() ? phone : undefined,
+          password,
+          role,
+          department,
+          seniorityLevel,
+          jobTitle,
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -86,6 +112,7 @@ export default function UsersPage() {
         setIsAddOpen(false);
         setEmail("");
         setFullName("");
+        setPhone("");
         setJobTitle("");
         fetchUsers();
       } else {
@@ -263,6 +290,14 @@ export default function UsersPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="chinedu@dextaafrica.com"
             required
+          />
+
+          <Input
+            label="Direct Mobile Phone (Optional)"
+            type="tel"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+234 800 000 0000"
           />
 
           <div className="space-y-1.5">

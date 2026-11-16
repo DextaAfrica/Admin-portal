@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateCorporateEmail, validatePhoneNumber } from "@/lib/validation/contact";
 
 // =============================================================================
 // ENTERPRISE PASSWORD SECURITY & ENTROPY ENGINE
@@ -108,7 +109,10 @@ export const RegisterSchema = z
       .string()
       .trim()
       .toLowerCase()
-      .email("Please provide a valid corporate email address"),
+      .refine(
+        (val) => validateCorporateEmail(val).isValid,
+        (val) => ({ message: validateCorporateEmail(val).error || "Invalid corporate email address" })
+      ),
     password: z
       .string()
       .min(8, "Password must be at least 8 characters long"),
@@ -131,9 +135,10 @@ export const RegisterSchema = z
       .trim()
       .optional()
       .refine(
-        (val) => !val || /^(\+?[0-9\s\-()]{7,20})$/.test(val),
-        "Invalid phone number format"
+        (val) => !val || validatePhoneNumber(val).isValid,
+        (val) => ({ message: val ? validatePhoneNumber(val).error || "Invalid phone number format" : "" })
       ),
+    verificationToken: z.string().optional(),
     accessPasscode: z.string().trim().optional(),
     mfaSecret: z.string().optional(),
     mfaCode: z.string().optional(),

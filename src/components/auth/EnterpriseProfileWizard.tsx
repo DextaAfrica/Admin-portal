@@ -35,6 +35,14 @@ import { useToast } from "@/components/ui/Toast";
 import { navigateToSubdomainWithSso } from "@/lib/routing";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 import { evaluatePasswordStrength } from "@/lib/auth/validation";
+import {
+  SUPPORTED_COUNTRIES,
+  CountryDialCode,
+  validateCorporateEmail,
+  validatePhoneNumber,
+} from "@/lib/validation/contact";
+import { Modal } from "@/components/ui/Modal";
+import { OTPInput } from "@/components/ui/OTPInput";
 
 interface EnterpriseProfileWizardProps {
   initialDepartment?: "OPERATIONS" | "IT" | "EXECUTIVE" | "HR";
@@ -64,6 +72,7 @@ export function EnterpriseProfileWizard({
   const [lastName, setLastName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
+  const [selectedCountry, setSelectedCountry] = React.useState<CountryDialCode>(SUPPORTED_COUNTRIES[0]);
   const [department, setDepartment] = React.useState<string>(initialDepartment);
   const [jobTitle, setJobTitle] = React.useState(
     initialDepartment === "OPERATIONS"
@@ -75,6 +84,16 @@ export function EnterpriseProfileWizard({
   const [bio, setBio] = React.useState("");
   const [avatarUrl, setAvatarUrl] = React.useState<string>("");
   const [selectedAvatarPreset, setSelectedAvatarPreset] = React.useState<string>("crimson");
+
+  // Contact Verification State (Zero-Trust OTP Gate)
+  const [isEmailVerified, setIsEmailVerified] = React.useState(false);
+  const [verificationToken, setVerificationToken] = React.useState<string | null>(null);
+  const [isContactOtpModalOpen, setIsContactOtpModalOpen] = React.useState(false);
+  const [contactOtpCode, setContactOtpCode] = React.useState("");
+  const [isSendingOtp, setIsSendingOtp] = React.useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = React.useState(false);
+  const [otpCooldown, setOtpCooldown] = React.useState(0);
+  const [otpModalError, setOtpModalError] = React.useState("");
 
   // Credentials State
   const [password, setPassword] = React.useState("");
@@ -101,6 +120,146 @@ export function EnterpriseProfileWizard({
     ? firstName.charAt(0).toUpperCase()
     : "D";
 
+  // Real-time Email & Phone Validation
+  const emailValidation = React.useMemo(() => {
+    return validateCorporateEmail(email);
+  }, [email]);
+
+  const phoneValidation = React.useMemo(() => {
+    if (!phone.trim()) {
+      return { isValid: false, formatted: "", cleanDigits: "", error: "Direct mobile phone number is required." };
+    }
+    return validatePhoneNumber(phone, selectedCountry.dialCode);
+  }, [phone, selectedCountry.dialCode]);
+
+  // Handle email changes (resets verification status if edited)
+  const handleEmailChange = (val: string) => {
+    setEmail(val);
+    if (isEmailVerified) {
+      setIsEmailVerified(false);
+      setVerificationToken(null);
+    }
+  };
+
+  // OTP Resend Cooldown Timer
+  React.useEffect(() => {
+    if (otpCooldown <= 0) return;
+    const interval = setInterval(() => {
+      setOtpCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [otpCooldown]);
+
+  // Dispatch 6-digit OTP via API / Mailpit
+  const handleSendOtp = async (overrideEmail?: string, overridePhone?: string) => {
+    const targetEmail = (overrideEmail || email).toLowerCase().trim();
+    const targetPhone = overridePhone || phoneValidation.formatted;
+
+    setOtpModalError("");
+    setIsSendingOtp(true);
+    try {
+      const res = await fetch("/api/auth/verify-contact/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: targetEmail,
+          phone: targetPhone,
+          countryDialCode: selectedCountry.dialCode,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to dispatch verification code.");
+      }
+
+      setOtpCooldown(60);
+      toastSuccess(
+        "Verification Code Sent",
+        `We dispatched a 6-digit corporate verification code to ${targetEmail}. (View in Mailpit if developing locally).`
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to dispatch verification code.";
+      setOtpModalError(msg);
+      toastError("Verification Dispatch Error", msg);
+    } finally {
+      setIsSendingOtp(false);
+    }
+  };
+
+  // Verify OTP code & obtain verificationToken
+  const handleVerifyOtp = async (codeToVerify?: string) => {
+    const code = (codeToVerify || contactOtpCode).trim();
+    if (code.length !== 6) {
+      setOtpModalError("Please enter all 6 digits of your verification code.");
+      return;
+    }
+
+    setOtpModalError("");
+    setIsVerifyingOtp(true);
+    try {
+      const res = await fetch("/api/auth/verify-contact/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          code,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Invalid or expired verification code.");
+      }
+
+      setVerificationToken(data.verificationToken);
+      setIsEmailVerified(true);
+      setIsContactOtpModalOpen(false);
+      setContactOtpCode("");
+      toastSuccess(
+        "Contact Verified",
+        "Your corporate email & phone have been cryptographically verified under Zero-Trust protocols."
+      );
+      // Advance to Step 2
+      setCurrentStep(2);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to verify code.";
+      setOtpModalError(msg);
+      toastError("Verification Failed", msg);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  // Proceed from Step 1 handler
+  const handleStep1Proceed = async () => {
+    setErrorMessage("");
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setErrorMessage("Please enter both First Name and Last Name.");
+      return;
+    }
+
+    if (!emailValidation.isValid) {
+      setErrorMessage(emailValidation.error || "Please enter a valid corporate email.");
+      return;
+    }
+
+    if (!phoneValidation.isValid) {
+      setErrorMessage(phoneValidation.error || "Please provide a valid corporate mobile phone.");
+      return;
+    }
+
+    // Zero-Trust: Require OTP verification before proceeding to Step 2
+    if (!isEmailVerified || !verificationToken) {
+      setIsContactOtpModalOpen(true);
+      await handleSendOtp();
+      return;
+    }
+
+    setCurrentStep(2);
+  };
+
   // Real-time Password Evaluation
   const passwordAnalysis = React.useMemo(() => {
     return evaluatePasswordStrength(password);
@@ -126,7 +285,11 @@ export function EnterpriseProfileWizard({
   };
 
   // Step 1 Validation
-  const canProceedStep1 = firstName.trim().length > 0 && lastName.trim().length > 0 && email.includes("@") && email.includes(".");
+  const canProceedStep1 =
+    firstName.trim().length >= 2 &&
+    lastName.trim().length >= 2 &&
+    emailValidation.isValid &&
+    phoneValidation.isValid;
 
   // Step 2 Validation
   const canProceedStep2 =
@@ -173,9 +336,10 @@ export function EnterpriseProfileWizard({
         confirmPassword,
         department,
         jobTitle,
-        phone,
+        phone: phoneValidation.formatted || phone,
         avatarUrl: avatarUrl || undefined,
         bio: bio || undefined,
+        verificationToken: verificationToken || undefined,
         ...(enable2FA && mfaSecret ? { mfaSecret, mfaCode } : {}),
       };
 
@@ -409,37 +573,100 @@ export function EnterpriseProfileWizard({
 
           {/* Corporate Email & Mobile Phone */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Corporate Email */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Corporate Email Address <span className="text-[#ED2618]">*</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Corporate Email Address <span className="text-[#ED2618]">*</span>
+                </label>
+                {isEmailVerified ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <Check className="h-3 w-3" /> Verified via OTP
+                  </span>
+                ) : email.trim() && emailValidation.isValid ? (
+                  <span className="text-[10px] font-medium text-slate-400">
+                    Domain Format OK
+                  </span>
+                ) : null}
+              </div>
               <div className="relative">
                 <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="peter.ogba@dextaafrica.com"
-                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.03] pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618] transition-all"
+                  onChange={(e) => handleEmailChange(e.target.value)}
+                  placeholder="e.g. peter.ogba@dextaafrica.com"
+                  className={`w-full rounded-xl border bg-slate-50/50 dark:bg-white/[0.03] pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all ${
+                    isEmailVerified
+                      ? "border-emerald-500/50 focus:ring-emerald-500/30 focus:border-emerald-500"
+                      : email.trim() && !emailValidation.isValid
+                      ? "border-rose-400 focus:ring-rose-500/30 focus:border-rose-500"
+                      : "border-slate-200 dark:border-white/10 focus:ring-[#ED2618]/30 focus:border-[#ED2618]"
+                  }`}
                   required
                 />
               </div>
+              {email.trim() && !emailValidation.isValid && (
+                <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{emailValidation.error}</span>
+                </p>
+              )}
             </div>
 
+            {/* Direct Mobile Phone */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Direct Mobile Phone
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+234 800 000 0000"
-                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.03] pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618] transition-all"
-                />
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Direct Mobile Phone <span className="text-[#ED2618]">*</span>
+                </label>
+                {phone.trim() && phoneValidation.isValid ? (
+                  <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    E.164: {phoneValidation.formatted}
+                  </span>
+                ) : null}
               </div>
+              <div className="flex gap-2">
+                <select
+                  value={selectedCountry.code}
+                  onChange={(e) => {
+                    const found = SUPPORTED_COUNTRIES.find((c) => c.code === e.target.value);
+                    if (found) setSelectedCountry(found);
+                  }}
+                  className="w-28 sm:w-32 shrink-0 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.03] px-2 py-2.5 text-xs text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618] transition-all cursor-pointer"
+                  title="Select Country Dial Code"
+                >
+                  {SUPPORTED_COUNTRIES.map((c) => (
+                    <option key={c.code} value={c.code} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                      {c.flag} {c.dialCode}
+                    </option>
+                  ))}
+                </select>
+
+                <div className="relative flex-1">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder={selectedCountry.placeholder}
+                    className={`w-full rounded-xl border bg-slate-50/50 dark:bg-white/[0.03] pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 transition-all ${
+                      phone.trim() && !phoneValidation.isValid
+                        ? "border-rose-400 focus:ring-rose-500/30 focus:border-rose-500"
+                        : phone.trim() && phoneValidation.isValid
+                        ? "border-emerald-500/50 focus:ring-emerald-500/30 focus:border-emerald-500"
+                        : "border-slate-200 dark:border-white/10 focus:ring-[#ED2618]/30 focus:border-[#ED2618]"
+                    }`}
+                    required
+                  />
+                </div>
+              </div>
+              {phone.trim() && !phoneValidation.isValid && (
+                <p className="text-[11px] font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1 mt-1">
+                  <AlertCircle className="h-3 w-3 shrink-0" />
+                  <span>{phoneValidation.error}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -558,11 +785,12 @@ export function EnterpriseProfileWizard({
             <Button
               type="button"
               variant="primary"
-              disabled={!canProceedStep1}
-              onClick={() => setCurrentStep(2)}
+              disabled={!canProceedStep1 || isSendingOtp}
+              isLoading={isSendingOtp}
+              onClick={handleStep1Proceed}
               rightIcon={<ArrowRight className="h-4 w-4" />}
             >
-              Continue to Security
+              {isEmailVerified ? "Continue to Security" : "Verify Email & Continue"}
             </Button>
           </div>
         </div>
@@ -975,6 +1203,88 @@ export function EnterpriseProfileWizard({
           </div>
         </div>
       )}
+
+      {/* Zero-Trust Contact Verification OTP Modal */}
+      <Modal
+        isOpen={isContactOtpModalOpen}
+        onClose={() => setIsContactOtpModalOpen(false)}
+        title="Zero-Trust Contact Verification"
+        description="Verify corporate email identity before workspace provisioning"
+        maxWidth="md"
+      >
+        <div className="space-y-5 pt-1">
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.08] space-y-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
+              <Mail className="h-4 w-4 text-[#ED2618]" />
+              <span>Target Corporate Email:</span>
+            </div>
+            <p className="font-mono text-xs font-semibold text-[#ED2618] break-all">
+              {email.toLowerCase().trim()}
+            </p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              We dispatched an authorized 6-digit one-time passcode to confirm this address belongs to you. In development mode, check your local <strong className="text-slate-800 dark:text-slate-200">Mailpit inbox at http://localhost:8025</strong>.
+            </p>
+          </div>
+
+          {/* OTP Code Input */}
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block text-center">
+              Enter 6-Digit Authorization Code
+            </label>
+            <div className="flex justify-center py-2">
+              <OTPInput
+                length={6}
+                value={contactOtpCode}
+                onChange={setContactOtpCode}
+                onComplete={(code) => handleVerifyOtp(code)}
+                error={!!otpModalError}
+                autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Error Message */}
+          {otpModalError && (
+            <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-xs text-rose-600 dark:text-rose-400 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <span>{otpModalError}</span>
+            </div>
+          )}
+
+          {/* Resend & Action Buttons */}
+          <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-white/[0.06]">
+            <button
+              type="button"
+              disabled={otpCooldown > 0 || isSendingOtp}
+              onClick={() => handleSendOtp()}
+              className="text-xs font-bold text-slate-500 hover:text-[#ED2618] disabled:opacity-40 disabled:hover:text-slate-500 transition-colors cursor-pointer"
+            >
+              {otpCooldown > 0 ? `Resend code in ${otpCooldown}s` : "Resend 6-digit code"}
+            </button>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsContactOtpModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={contactOtpCode.trim().length !== 6 || isVerifyingOtp}
+                isLoading={isVerifyingOtp}
+                onClick={() => handleVerifyOtp()}
+              >
+                Verify &amp; Continue
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
