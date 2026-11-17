@@ -845,9 +845,9 @@ export default function OperationsProjectsPage() {
         onClose={() => setIsModalOpen(false)}
         title={modalMode === "create" ? "Enter New Infrastructure Project" : `Edit Project: ${name}`}
         description="Record site specifications, ground mobilization schedule, supervising teams, and key milestones."
-        maxWidth="4xl"
+        maxWidth="5xl"
       >
-        <form onSubmit={handleSubmitProject} className="space-y-5 text-slate-900 dark:text-white max-h-[80vh] overflow-y-auto px-1 sm:px-2">
+        <form onSubmit={handleSubmitProject} className="space-y-5 text-slate-900 dark:text-white pb-2">
           {/* Card 1: Project Identity & Sector */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/[0.05]">
