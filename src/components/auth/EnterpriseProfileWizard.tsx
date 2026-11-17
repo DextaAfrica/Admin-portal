@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   User,
+  UserPlus,
   Mail,
   Lock,
   Phone,
@@ -226,6 +227,15 @@ export function EnterpriseProfileWizard({
   const [otpCooldown, setOtpCooldown] = React.useState(0);
   const [otpModalError, setOtpModalError] = React.useState("");
 
+  // IT Governance & Operations Activation State
+  const [onboardingMode, setOnboardingMode] = React.useState<"ACTIVATION" | "DIRECT_PROVISION">(
+    portalType === "operations" ? "ACTIVATION" : "DIRECT_PROVISION"
+  );
+  const [activationKey, setActivationKey] = React.useState("");
+  const [isVerifyingKey, setIsVerifyingKey] = React.useState(false);
+  const [isKeyVerified, setIsKeyVerified] = React.useState(false);
+  const [verifiedProfile, setVerifiedProfile] = React.useState<any | null>(null);
+
   // Credentials State
   const [password, setPassword] = React.useState("");
   const [confirmPassword, setConfirmPassword] = React.useState("");
@@ -269,6 +279,83 @@ export function EnterpriseProfileWizard({
     if (isEmailVerified) {
       setIsEmailVerified(false);
       setVerificationToken(null);
+    }
+  };
+
+  // Auto-parse URL Search Params for IT Activation Key on Mount
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const emailParam = params.get("email");
+    const keyParam = params.get("key");
+    const actionParam = params.get("action");
+
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+    if (keyParam) {
+      setActivationKey(keyParam);
+    }
+    if (actionParam === "activate" || portalType === "operations") {
+      setOnboardingMode("ACTIVATION");
+    }
+    if (emailParam && keyParam) {
+      handleVerifyActivationKey(emailParam, keyParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [portalType]);
+
+  // Real-time IT Activation Key Verification
+  const handleVerifyActivationKey = async (targetEmail = email, targetKey = activationKey) => {
+    const cleanEmail = targetEmail.toLowerCase().trim();
+    const cleanKey = targetKey.trim();
+
+    if (!cleanEmail || !cleanKey) {
+      toastError("Verification Error", "Please provide both Corporate Email and IT Activation Key");
+      return;
+    }
+
+    setIsVerifyingKey(true);
+    try {
+      const res = await fetch("/api/it/verify-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: cleanEmail,
+          activationKey: cleanKey,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "IT activation key verification failed");
+      }
+
+      setIsKeyVerified(true);
+      setVerifiedProfile(data.user);
+
+      if (data.user.fullName) {
+        const parts = data.user.fullName.trim().split(" ");
+        setFirstName(parts[0] || "");
+        setLastName(parts.slice(1).join(" ") || "");
+      }
+      if (data.user.phone) setPhone(data.user.phone);
+      if (data.user.department) setDepartment(data.user.department);
+      if (data.user.jobTitle) {
+        setJobTitle(data.user.jobTitle);
+        setSelectedRole(data.user.jobTitle);
+      }
+
+      toastSuccess(
+        "IT Clearance Verified",
+        `Welcome ${data.user.fullName}! Profile pre-provisioned as ${data.user.jobTitle || "Operations Manager"}.`
+      );
+
+      setCurrentStep(2);
+    } catch (err: unknown) {
+      toastError("Verification Failed", err instanceof Error ? err.message : "Invalid activation key");
+    } finally {
+      setIsVerifyingKey(false);
     }
   };
 
@@ -455,12 +542,48 @@ export function EnterpriseProfileWizard({
     }
   };
 
-  // Submit Profile Creation
+  // Submit Profile Creation or Activation
   const handleCreateProfile = async () => {
     setErrorMessage("");
     setIsSubmitting(true);
 
     try {
+      if (isKeyVerified) {
+        // High-End IT-Provisioned Account Activation
+        const res = await fetch("/api/auth/activate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.toLowerCase().trim(),
+            activationKey: activationKey.trim(),
+            preferredPassword: password,
+            phone: phoneValidation.formatted || phone,
+            avatarUrl: avatarUrl || undefined,
+            bio: bio || undefined,
+            ...(enable2FA && mfaSecret ? { mfaSecret, mfaCode } : {}),
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Profile activation failed");
+        }
+
+        setCreatedUser(data.user);
+        if (data.recoveryCodes && data.recoveryCodes.length > 0) {
+          setRecoveryCodes(data.recoveryCodes);
+        }
+
+        toastSuccess(
+          "Profile Activated Successfully",
+          `Welcome to Dexta Africa, ${data.user.fullName}! Your Operations profile is active.`
+        );
+
+        setCurrentStep(4);
+        return;
+      }
+
+      // Direct Identity Registration
       const payload = {
         fullName,
         email: email.toLowerCase().trim(),
@@ -625,84 +748,199 @@ export function EnterpriseProfileWizard({
       {/* ===================================================================== */}
       {currentStep === 1 && (
         <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
-          {/* Avatar Setup Studio */}
-          <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
-            <div className="relative group shrink-0">
-              <div
-                className={`flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-black text-white shadow-md overflow-hidden bg-gradient-to-br ${
-                  avatarUrl
-                    ? ""
-                    : AVATAR_PRESETS.find((p) => p.id === selectedAvatarPreset)?.bg || "from-[#ED2618] to-[#991207]"
-                }`}
-              >
-                {avatarUrl ? (
-                  <Image
-                    src={avatarUrl}
-                    alt="Avatar Preview"
-                    width={80}
-                    height={80}
-                    className="h-full w-full object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <span>{initials}</span>
-                )}
+          {/* Operations IT Governance Mode Switcher */}
+          {portalType === "operations" && (
+            <div className="space-y-4">
+              <div className="flex p-1 rounded-2xl bg-slate-100 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.08]">
+                <button
+                  type="button"
+                  onClick={() => setOnboardingMode("ACTIVATION")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    onboardingMode === "ACTIVATION"
+                      ? "bg-white dark:bg-[#12141c] text-[#ED2618] shadow-sm"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  <span>Activate IT-Provisioned Account</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOnboardingMode("DIRECT_PROVISION")}
+                  className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    onboardingMode === "DIRECT_PROVISION"
+                      ? "bg-white dark:bg-[#12141c] text-[#ED2618] shadow-sm"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                  }`}
+                >
+                  <UserPlus className="h-3.5 w-3.5" />
+                  <span>Direct IT Profile Setup</span>
+                </button>
               </div>
 
-              <label
-                htmlFor="avatar-upload"
-                className="absolute -bottom-1.5 -right-1.5 p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-sm text-slate-700 dark:text-slate-200 hover:text-[#ED2618] cursor-pointer transition-colors"
-                title="Upload custom photo"
-              >
-                <Camera className="h-3.5 w-3.5" />
-                <input
-                  id="avatar-upload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
+              {onboardingMode === "ACTIVATION" && (
+                <div className="p-5 rounded-2xl bg-red-50/40 dark:bg-red-500/10 border-2 border-[#ED2618]/30 space-y-4 animate-fade-in">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2.5 rounded-xl bg-[#ED2618] text-white shadow-sm shrink-0">
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Operations Workspace Identity Activation</span>
+                        <span className="px-2 py-0.5 rounded-md bg-white dark:bg-white/10 text-[10px] font-mono font-bold text-[#ED2618]">
+                          ops.dextaafrica.org
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                        Accounts for Operations are created and provisioned by Dexta Systems IT Command. Enter your corporate email and the one-time activation key issued to you to initialize your workspace credentials.
+                      </p>
+                    </div>
+                  </div>
 
-            <div className="space-y-2 text-center sm:text-left flex-1 min-w-0">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Personal Avatar &amp; Photo
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Upload your company headshot or choose an executive palette preset.
-              </p>
-              <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start flex-wrap">
-                {AVATAR_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => {
-                      setAvatarUrl("");
-                      setSelectedAvatarPreset(preset.id);
-                    }}
-                    className={`h-6 w-6 rounded-lg bg-gradient-to-br ${preset.bg} transition-transform cursor-pointer ${
-                      selectedAvatarPreset === preset.id && !avatarUrl
-                        ? "scale-110 ring-2 ring-[#ED2618] ring-offset-2 dark:ring-offset-slate-950"
-                        : "hover:scale-105 opacity-80"
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                        Corporate Work Email <span className="text-[#ED2618]">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="e.g. peter.ogba@dextaafrica.com"
+                          className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#12141c] pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618]"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          IT Activation Key <span className="text-[#ED2618]">*</span>
+                        </label>
+                        <span className="text-[10px] text-slate-400 font-mono">Issued by IT Command</span>
+                      </div>
+                      <div className="relative">
+                        <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <input
+                          type="text"
+                          value={activationKey}
+                          onChange={(e) => setActivationKey(e.target.value.toUpperCase())}
+                          placeholder="e.g. DXT-ACT-9821"
+                          className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#12141c] pl-10 pr-3.5 py-2.5 text-xs font-mono font-bold text-[#ED2618] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618]"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-red-200/50 dark:border-red-500/20">
+                    <Link
+                      href="/login"
+                      className="text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                    >
+                      Already activated? Sign In &rarr;
+                    </Link>
+
+                    <Button
+                      type="button"
+                      variant="primary"
+                      isLoading={isVerifyingKey}
+                      disabled={!email.trim() || !activationKey.trim() || isVerifyingKey}
+                      onClick={() => handleVerifyActivationKey(email, activationKey)}
+                      rightIcon={<ArrowRight className="h-4 w-4" />}
+                    >
+                      Verify IT Clearance &amp; Continue
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Direct Profile Input Fields (Shown when Direct Provisioning or Non-Operations) */}
+          {(portalType !== "operations" || onboardingMode === "DIRECT_PROVISION") && (
+            <>
+              {/* Avatar Setup Studio */}
+              <div className="flex flex-col sm:flex-row items-center gap-6 p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
+                <div className="relative group shrink-0">
+                  <div
+                    className={`flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-black text-white shadow-md overflow-hidden bg-gradient-to-br ${
+                      avatarUrl
+                        ? ""
+                        : AVATAR_PRESETS.find((p) => p.id === selectedAvatarPreset)?.bg || "from-[#ED2618] to-[#991207]"
                     }`}
-                    title={preset.label}
-                  />
-                ))}
-                {avatarUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setAvatarUrl("")}
-                    className="text-[10px] text-slate-400 hover:text-rose-500 font-semibold underline ml-1 cursor-pointer"
                   >
-                    Reset Photo
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+                    {avatarUrl ? (
+                      <Image
+                        src={avatarUrl}
+                        alt="Avatar Preview"
+                        width={80}
+                        height={80}
+                        className="h-full w-full object-cover"
+                        unoptimized
+                      />
+                    ) : (
+                      <span>{initials}</span>
+                    )}
+                  </div>
 
-          {/* Names Input (Facebook Style side-by-side) */}
+                  <label
+                    htmlFor="avatar-upload"
+                    className="absolute -bottom-1.5 -right-1.5 p-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-sm text-slate-700 dark:text-slate-200 hover:text-[#ED2618] cursor-pointer transition-colors"
+                    title="Upload custom photo"
+                  >
+                    <Camera className="h-3.5 w-3.5" />
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="space-y-2 text-center sm:text-left flex-1 min-w-0">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    Personal Avatar &amp; Photo
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Upload your company headshot or choose an executive palette preset.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1 justify-center sm:justify-start flex-wrap">
+                    {AVATAR_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          setAvatarUrl("");
+                          setSelectedAvatarPreset(preset.id);
+                        }}
+                        className={`h-6 w-6 rounded-lg bg-gradient-to-br ${preset.bg} transition-transform cursor-pointer ${
+                          selectedAvatarPreset === preset.id && !avatarUrl
+                            ? "scale-110 ring-2 ring-[#ED2618] ring-offset-2 dark:ring-offset-slate-950"
+                            : "hover:scale-105 opacity-80"
+                        }`}
+                        title={preset.label}
+                      />
+                    ))}
+                    {avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setAvatarUrl("")}
+                        className="text-[10px] text-slate-400 hover:text-rose-500 font-semibold underline ml-1 cursor-pointer"
+                      >
+                        Reset Photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Names Input (Facebook Style side-by-side) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -1084,6 +1322,8 @@ export function EnterpriseProfileWizard({
               {isEmailVerified ? "Continue to Security" : "Verify Email & Continue"}
             </Button>
           </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1092,12 +1332,36 @@ export function EnterpriseProfileWizard({
       {/* ===================================================================== */}
       {currentStep === 2 && (
         <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 sm:p-8 shadow-sm space-y-6 animate-fade-in">
+          {/* IT Clearance Verification Seal (Shown if activated via IT Key) */}
+          {isKeyVerified && (
+            <div className="p-4 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs animate-fade-in">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1 rounded-lg bg-emerald-500 text-white shrink-0">
+                  <Check className="h-4 w-4" />
+                </div>
+                <div>
+                  <span className="font-extrabold text-slate-900 dark:text-white block">
+                    IT Provisioning Clearance Confirmed: {firstName} {lastName}
+                  </span>
+                  <span className="text-slate-500 dark:text-slate-400 text-[11px]">
+                    Role: <strong className="text-[#ED2618]">{jobTitle || "Operations Manager"}</strong> &bull; Workspace: <strong className="text-slate-900 dark:text-white">ops.dextaafrica.org</strong>
+                  </span>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-mono text-[10px] font-bold">
+                Clearance: Level 2 &bull; Active
+              </span>
+            </div>
+          )}
+
           <div className="space-y-1">
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              Choose an Executive Secure Password
+              {isKeyVerified ? "Establish Your Confidential Password" : "Choose an Executive Secure Password"}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Zero-trust defense standard requiring military-grade entropy for administrative clearance.
+              {isKeyVerified
+                ? "Your Operations identity has been pre-verified by Systems IT Command. Establish your private permanent passphrase."
+                : "Zero-trust defense standard requiring military-grade entropy for administrative clearance."}
             </p>
           </div>
 

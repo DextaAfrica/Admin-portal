@@ -5,12 +5,23 @@ import { createSession, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS, getCookieDom
 import { logAuditEvent } from "@/lib/auth/audit";
 import { logPolicyAlert } from "@/lib/auth/policy-alerts";
 import { evaluatePasswordStrength } from "@/lib/auth/validation";
+import { verifyTotpToken, generateAndStoreRecoveryCodes } from "@/lib/auth/mfa";
+import { backendApi } from "@/lib/backend-api";
 
 const db = prisma as any;
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, activationKey, preferredPassword } = await req.json();
+    const {
+      email,
+      activationKey,
+      preferredPassword,
+      phone,
+      bio,
+      avatarUrl,
+      mfaSecret,
+      mfaCode,
+    } = await req.json();
 
     if (!email || !activationKey || !preferredPassword) {
       return NextResponse.json(
@@ -36,7 +47,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user) {
-      // Possible policy violation: someone attempting activation on a non-existent account
       await logPolicyAlert({
         severity: "WARNING",
         eventType: "UNAUTHORIZED_DASHBOARD_ACCESS",
@@ -55,17 +65,15 @@ export async function POST(req: NextRequest) {
 
     const staffUser = user as any;
 
-    // Verify activation key: either matches stored activationKey, or matches temporary credential ticket
+    // Verify activation key
     let isKeyValid = false;
     if (staffUser.activationKey && staffUser.activationKey === cleanKey) {
       isKeyValid = true;
     } else {
-      // Check if matches bcrypt of temporary password
       const matchTemp = await bcrypt.compare(cleanKey, staffUser.passwordHash).catch(() => false);
       if (matchTemp) {
         isKeyValid = true;
       } else {
-        // Also check if there is an approved CredentialRequest ticket with this temporaryCode
         const ticket = await db.credentialRequest.findFirst({
           where: {
             requesterEmail: normalizedEmail,
@@ -92,9 +100,30 @@ export async function POST(req: NextRequest) {
       });
 
       return NextResponse.json(
-        { error: "Invalid or expired IT activation key. Please request a new key from IT." },
+        { error: "Invalid or expired IT activation key. Please request a new key from Systems IT Command." },
         { status: 403 }
       );
+    }
+
+    let twoFactorEnabled = staffUser.twoFactorEnabled || false;
+    let twoFactorSecret = staffUser.twoFactorSecret || null;
+    let recoveryCodes: string[] = [];
+
+    // Optional 2FA TOTP verification
+    if (mfaSecret && mfaCode) {
+      const isTotpValid = verifyTotpToken({
+        token: mfaCode,
+        secret: mfaSecret,
+      });
+
+      if (!isTotpValid) {
+        return NextResponse.json(
+          { error: "Invalid 6-digit authenticator code. Please check your app and try again." },
+          { status: 400 }
+        );
+      }
+      twoFactorEnabled = true;
+      twoFactorSecret = mfaSecret;
     }
 
     // Hash preferred password
@@ -108,9 +137,18 @@ export async function POST(req: NextRequest) {
         mustChangePassword: false,
         activationKey: null,
         status: "ACTIVE",
+        phone: phone ? phone.trim() : staffUser.phone,
+        avatarUrl: avatarUrl || staffUser.avatarUrl,
+        bio: bio ? bio.trim() : staffUser.bio,
+        twoFactorEnabled,
+        twoFactorSecret,
         lastLoginAt: new Date(),
       },
     });
+
+    if (twoFactorEnabled) {
+      recoveryCodes = await generateAndStoreRecoveryCodes(updatedUser.id);
+    }
 
     // Mark any corresponding credential tickets as FULFILLED
     await db.credentialRequest.updateMany({
@@ -123,6 +161,23 @@ export async function POST(req: NextRequest) {
         resolvedAt: new Date(),
       },
     });
+
+    // Synchronize with Go core backend
+    try {
+      await backendApi.users.syncUser({
+        id: updatedUser.id,
+        email: updatedUser.email,
+        fullName: updatedUser.fullName,
+        role: updatedUser.role,
+        department: updatedUser.department,
+        jobTitle: updatedUser.jobTitle || undefined,
+        phone: updatedUser.phone || undefined,
+        status: updatedUser.status,
+        createdAt: updatedUser.createdAt,
+      });
+    } catch (syncErr) {
+      console.warn("Go core backend user sync deferred:", syncErr);
+    }
 
     // Create session
     const session = await createSession({
@@ -151,7 +206,12 @@ export async function POST(req: NextRequest) {
         fullName: updatedUser.fullName,
         role: updatedUser.role,
         department: updatedUser.department || "OPERATIONS",
+        jobTitle: updatedUser.jobTitle || "Operations Manager",
+        seniorityLevel: updatedUser.seniorityLevel,
+        twoFactorEnabled: updatedUser.twoFactorEnabled,
+        avatarUrl: updatedUser.avatarUrl,
       },
+      recoveryCodes,
     });
 
     const cookieDomain = getCookieDomain(req.headers.get("host"));
@@ -173,4 +233,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

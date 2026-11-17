@@ -398,3 +398,28 @@ export const CreateMarketingTemplateSchema = z.object({
     .min(10, "Template HTML must be at least 10 characters"),
   variables: z.array(z.string()).default([]),
 });
+
+// =============================================================================
+// IT GOVERNANCE & OPERATIONS USER PROVISIONING SCHEMA
+// =============================================================================
+
+export const ItProvisionUserSchema = z.object({
+  fullName: safeTrimString(2, 80, "Full Legal Name"),
+  email: corporateEmailValidator,
+  targetDomain: z
+    .enum(["ops.dextaafrica.org", "admin.dextafrica.org", "dextafrica.org"])
+    .default("ops.dextaafrica.org"),
+  department: z.string().default("OPERATIONS"),
+  role: z
+    .enum(["STAFF", "ADMIN", "SUPER_ADMIN", "OPERATIONS", "HR_MANAGER", "IT_ADMIN"])
+    .default("ADMIN"),
+  seniorityLevel: z
+    .enum(["JUNIOR", "MID", "SENIOR", "EXECUTIVE"])
+    .default("SENIOR"),
+  jobTitle: safeTrimString(2, 80, "Official Job Title"),
+  phone: phoneValidator,
+  temporaryPassword: z.string().min(6, "Temporary Key must be at least 6 characters").optional(),
+  sendWelcomeEmail: z.boolean().default(true),
+});
+
+export type ItProvisionUserInput = z.infer<typeof ItProvisionUserSchema>;

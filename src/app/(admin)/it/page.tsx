@@ -26,6 +26,12 @@ import {
   AlertOctagon,
   EyeOff,
   Flame,
+  HardHat,
+  Cpu,
+  Landmark,
+  ExternalLink,
+  Mail,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -128,17 +134,29 @@ export default function ItGovernancePage() {
   });
   const [isSubmittingTicket, setIsSubmittingTicket] = React.useState(false);
 
-  // Provision Account Form
+  // Provision Account Form (Executive IT Onboarding Engine)
   const [provisionForm, setProvisionForm] = React.useState({
     fullName: "",
     email: "",
-    department: "Engineering",
+    targetDomain: "ops.dextaafrica.org",
+    department: "OPERATIONS",
     role: "ADMIN",
-    jobTitle: "",
+    seniorityLevel: "SENIOR",
+    jobTitle: "Operations Manager",
+    phone: "+234 800 000 0000",
     temporaryPassword: "",
+    sendWelcomeEmail: true,
   });
   const [isProvisioning, setIsProvisioning] = React.useState(false);
   const [provisionSuccessCode, setProvisionSuccessCode] = React.useState<string | null>(null);
+  const [provisionSuccessData, setProvisionSuccessData] = React.useState<{
+    activationKey: string;
+    activationUrl?: string;
+    targetDomain: string;
+    fullName: string;
+    email: string;
+    jobTitle: string;
+  } | null>(null);
 
   // Inactivity Policy & Active Sessions State
   const [inactivityTimeout, setInactivityTimeout] = React.useState<number>(15);
@@ -293,8 +311,8 @@ export default function ItGovernancePage() {
   // Handle Provisioning New Account
   const handleProvisionAccount = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!provisionForm.fullName || !provisionForm.email || !provisionForm.temporaryPassword) {
-      toastError("Please complete all required fields");
+    if (!provisionForm.fullName.trim() || !provisionForm.email.trim()) {
+      toastError("Full Name and Corporate Email are mandatory");
       return;
     }
 
@@ -306,22 +324,34 @@ export default function ItGovernancePage() {
         body: JSON.stringify(provisionForm),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
         throw new Error(data.error || "Account provisioning failed");
       }
 
-      const data = await res.json();
-      const code = data.user?.activationKey || provisionForm.temporaryPassword;
-      toastSuccess(`Account successfully created for ${provisionForm.fullName}`);
+      const code = data.activationKey || data.user?.activationKey || provisionForm.temporaryPassword;
+      toastSuccess(`Account successfully provisioned for ${provisionForm.fullName}! Activation key issued.`);
       setProvisionSuccessCode(code);
+      setProvisionSuccessData({
+        activationKey: code,
+        activationUrl: data.activationUrl,
+        targetDomain: provisionForm.targetDomain,
+        fullName: provisionForm.fullName,
+        email: provisionForm.email,
+        jobTitle: provisionForm.jobTitle,
+      });
+
       setProvisionForm({
         fullName: "",
         email: "",
-        department: "Engineering",
+        targetDomain: "ops.dextaafrica.org",
+        department: "OPERATIONS",
         role: "ADMIN",
-        jobTitle: "",
+        seniorityLevel: "SENIOR",
+        jobTitle: "Operations Manager",
+        phone: "+234 800 000 0000",
         temporaryPassword: "",
+        sendWelcomeEmail: true,
       });
       fetchRequests();
     } catch (err: unknown) {
@@ -815,129 +845,341 @@ export default function ItGovernancePage() {
         </div>
       )}
 
-      {/* TAB 2: Provision Staff Account Form */}
+      {/* TAB 2: Provision Staff Account Form (Executive IT Onboarding Engine) */}
       {activeTab === "provision" && (
-        <div className="max-w-3xl rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 sm:p-8 shadow-sm">
-          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-white/[0.08] pb-4 mb-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">
-              <UserPlus className="h-5 w-5" />
+        <div className="max-w-4xl rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-white/[0.08] pb-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#ED2618]/10 text-[#ED2618] border border-[#ED2618]/20 shadow-sm">
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                    Provision Enterprise Operations &amp; Staff Profile
+                  </h2>
+                  <span className="px-2 py-0.5 rounded-full bg-red-100 dark:bg-red-500/20 text-[#ED2618] text-[10px] font-bold">
+                    IT Authority
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Systems IT Command account provisioning. Assigns workspace domains, official job roles, and issues one-time zero-trust activation keys.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Provision New Employee Account
-              </h2>
-              <p className="text-xs text-slate-500">
-                Direct IT account issuance. Issues activation key allowing the employee to establish their personal preferred password.
-              </p>
+
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-xs font-mono text-slate-500">Zero-Trust Directory Active</span>
             </div>
           </div>
 
-          {provisionSuccessCode && (
-            <div className="mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300">
-              <div className="flex items-center gap-2 font-semibold text-sm">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Staff Account Successfully Provisioned
+          {/* Success Banner */}
+          {provisionSuccessData && (
+            <div className="p-5 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/30 text-slate-900 dark:text-white space-y-3 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-5 w-5 shrink-0" />
+                  <span>Profile Provisioned: {provisionSuccessData.fullName}</span>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-xs font-mono font-bold">
+                  {provisionSuccessData.targetDomain}
+                </span>
               </div>
-              <p className="text-xs mt-1 text-slate-600 dark:text-slate-300">
-                Transmit this one-time activation key to the employee. They will use this key on the registration portal to establish their preferred personal password.
+
+              <p className="text-xs text-slate-600 dark:text-slate-300">
+                Official onboarding credentials for <strong>{provisionSuccessData.jobTitle}</strong> ({provisionSuccessData.email}) have been settled in the enterprise ledger.
               </p>
-              <div className="mt-3 flex items-center gap-2 font-mono text-xs bg-emerald-500/20 px-3 py-2 rounded-lg w-fit">
-                <span>Activation Authorization Key:</span>
-                <span className="font-bold tracking-wider">{provisionSuccessCode}</span>
-                <button
-                  type="button"
-                  onClick={() => copyToClipboard(provisionSuccessCode)}
-                  className="ml-2 hover:opacity-75"
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-emerald-500/30 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                    One-Time Activation Key
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-base font-black text-[#ED2618] tracking-widest select-all">
+                      {provisionSuccessData.activationKey}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        copyToClipboard(provisionSuccessData.activationKey);
+                        toastSuccess("Key Copied to clipboard");
+                      }}
+                      className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                      title="Copy Key"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-white dark:bg-black/40 border border-emerald-500/30 space-y-1">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                    Onboarding Portal Link
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-slate-600 dark:text-slate-300 truncate max-w-[220px]">
+                      {provisionSuccessData.activationUrl || "ops.dextaafrica.org/register"}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      {provisionSuccessData.activationUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            copyToClipboard(provisionSuccessData.activationUrl!);
+                            toastSuccess("Direct link copied to clipboard");
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                          title="Copy Link"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </button>
+                      )}
+                      {provisionSuccessData.activationUrl && (
+                        <a
+                          href={provisionSuccessData.activationUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1 rounded text-[#ED2618] hover:opacity-80"
+                          title="Open Link"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Activation instructions dispatched to employee via Mailpit &bull; SMTP</span>
+                </span>
+                <a
+                  href="http://localhost:8025"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-bold text-[#ED2618] hover:underline flex items-center gap-1"
                 >
-                  <Copy className="h-3.5 w-3.5" />
-                </button>
+                  <span>Open Mailpit Inbox</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleProvisionAccount} className="space-y-4">
+          <form onSubmit={handleProvisionAccount} className="space-y-5">
+            {/* 1. Target Workspace Domain Selection */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Target Workspace Domain *
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    id: "ops.dextaafrica.org",
+                    title: "Operations Workspace",
+                    sub: "ops.dextaafrica.org",
+                    dept: "OPERATIONS",
+                    defaultRole: "Operations Manager",
+                    icon: HardHat,
+                  },
+                  {
+                    id: "admin.dextafrica.org",
+                    title: "Systems IT Command",
+                    sub: "admin.dextafrica.org",
+                    dept: "IT",
+                    defaultRole: "Systems Security Architect",
+                    icon: Cpu,
+                  },
+                  {
+                    id: "dextafrica.org",
+                    title: "Corporate Executive",
+                    sub: "dextafrica.org",
+                    dept: "EXECUTIVE",
+                    defaultRole: "General Manager",
+                    icon: Landmark,
+                  },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isSelected = provisionForm.targetDomain === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() =>
+                        setProvisionForm({
+                          ...provisionForm,
+                          targetDomain: item.id,
+                          department: item.dept,
+                          jobTitle: item.defaultRole,
+                        })
+                      }
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer space-y-1.5 ${
+                        isSelected
+                          ? "border-[#ED2618] bg-red-50/50 dark:bg-red-500/10 shadow-sm"
+                          : "border-slate-200/80 dark:border-white/[0.08] bg-slate-50/40 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/20"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div
+                          className={`p-1.5 rounded-lg ${
+                            isSelected
+                              ? "bg-[#ED2618] text-white"
+                              : "bg-slate-100 dark:bg-white/10 text-slate-500"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        {isSelected && <CheckCircle2 className="h-4 w-4 text-[#ED2618]" />}
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                        {item.title}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-mono truncate">
+                        {item.sub}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 2. Employee Identity Fields */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                   Full Legal Name *
                 </label>
                 <Input
                   required
-                  placeholder="e.g. Adebayo Ogunlesi"
+                  placeholder="e.g. Ogba Peter"
                   value={provisionForm.fullName}
                   onChange={(e) => setProvisionForm({ ...provisionForm, fullName: e.target.value })}
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Official Work Email *
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Corporate Work Email *
                 </label>
                 <Input
                   type="email"
                   required
-                  placeholder="e.g. adebayo.ogunlesi@dextaafrica.com"
+                  placeholder="e.g. peter.ogba@dextaafrica.com"
                   value={provisionForm.email}
                   onChange={(e) => setProvisionForm({ ...provisionForm, email: e.target.value })}
                 />
               </div>
             </div>
 
+            {/* 3. Job Role & Department Hierarchy */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Department *
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Official Job Role *
                 </label>
                 <select
-                  aria-label="Department selection"
-                  value={provisionForm.department}
-                  onChange={(e) => setProvisionForm({ ...provisionForm, department: e.target.value })}
-                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-sm text-slate-900 dark:text-white"
-                >
-                  <option value="Executive">Executive</option>
-                  <option value="Engineering">Engineering</option>
-                  <option value="Architecture">Architecture</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Legal">Legal</option>
-                  <option value="HR">HR Department</option>
-                  <option value="IT">IT & Security</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  System Role *
-                </label>
-                <select
-                  aria-label="System role selection"
-                  value={provisionForm.role}
-                  onChange={(e) => setProvisionForm({ ...provisionForm, role: e.target.value })}
-                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-sm text-slate-900 dark:text-white"
-                >
-                  <option value="STAFF">Standard Staff</option>
-                  <option value="ADMIN">Administrator</option>
-                  <option value="SUPER_ADMIN">Executive Super Admin</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Job Title
-                </label>
-                <Input
-                  placeholder="e.g. Senior Structural Engineer"
                   value={provisionForm.jobTitle}
                   onChange={(e) => setProvisionForm({ ...provisionForm, jobTitle: e.target.value })}
-                />
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-xs font-medium text-slate-900 dark:text-white"
+                >
+                  <optgroup label="Operations Leadership & Management">
+                    <option value="Operations Manager">Operations Manager</option>
+                    <option value="General Manager">General Manager</option>
+                    <option value="Chief Executive Officer (CEO)">Chief Executive Officer (CEO)</option>
+                    <option value="Director of Operations">Director of Operations</option>
+                    <option value="Site Operations Lead">Site Operations Lead</option>
+                  </optgroup>
+                  <optgroup label="Site Engineering & Field Execution">
+                    <option value="Lead Supervising Engineer">Lead Supervising Engineer</option>
+                    <option value="Project Civil Engineer">Project Civil Engineer</option>
+                    <option value="Site Operations Officer">Site Operations Officer</option>
+                    <option value="Logistics & Fleet Coordinator">Logistics & Fleet Coordinator</option>
+                    <option value="Health, Safety & Environment (HSE) Officer">HSE Officer</option>
+                    <option value="Materials & Procurement Lead">Materials & Procurement Lead</option>
+                  </optgroup>
+                  <optgroup label="Corporate, Commercial & Admin">
+                    <option value="Administrative Officer">Administrative Officer</option>
+                    <option value="Sales & Commercial Lead">Sales & Commercial Lead</option>
+                    <option value="Human Resources (HR) Lead">Human Resources (HR) Lead</option>
+                    <option value="Finance & Site Budget Controller">Finance Controller</option>
+                  </optgroup>
+                  <optgroup label="Systems & Technology">
+                    <option value="Systems Security Architect">Systems Security Architect</option>
+                    <option value="Systems Administrator">Systems Administrator</option>
+                    <option value="Cloud Infrastructure Engineer">Cloud Infrastructure Engineer</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Directorate / Department *
+                </label>
+                <select
+                  value={provisionForm.department}
+                  onChange={(e) => setProvisionForm({ ...provisionForm, department: e.target.value })}
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-xs font-medium text-slate-900 dark:text-white"
+                >
+                  <option value="OPERATIONS">OPERATIONS</option>
+                  <option value="EXECUTIVE">EXECUTIVE</option>
+                  <option value="IT">IT &amp; SECURITY</option>
+                  <option value="HR">HR DEPARTMENT</option>
+                  <option value="FINANCE">FINANCE</option>
+                  <option value="COMMERCIAL">COMMERCIAL / SALES</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Clearance Tier *
+                </label>
+                <select
+                  value={provisionForm.seniorityLevel}
+                  onChange={(e) => setProvisionForm({ ...provisionForm, seniorityLevel: e.target.value })}
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-xs font-medium text-slate-900 dark:text-white"
+                >
+                  <option value="SENIOR">Level 2: Senior Department Lead</option>
+                  <option value="EXECUTIVE">Level 3: Executive Sovereign Sign-Off</option>
+                  <option value="MID">Level 1: Mid Operational Specialist</option>
+                  <option value="JUNIOR">Level 0: Field Operations Personnel</option>
+                </select>
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                Initial Security Activation Token / Key *
-              </label>
-              <div className="flex gap-2">
+            {/* 4. Phone & Activation Key */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Direct Mobile Phone
+                </label>
+                <Input
+                  type="tel"
+                  placeholder="+234 800 000 0000"
+                  value={provisionForm.phone}
+                  onChange={(e) => setProvisionForm({ ...provisionForm, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Security Activation Key *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const randomCode = `DXT-ACT-${Math.floor(1000 + Math.random() * 9000)}`;
+                      setProvisionForm({ ...provisionForm, temporaryPassword: randomCode });
+                    }}
+                    className="text-[11px] font-bold text-[#ED2618] hover:underline"
+                  >
+                    Generate Strong Key
+                  </button>
+                </div>
                 <Input
                   type="text"
                   required
@@ -946,30 +1188,42 @@ export default function ItGovernancePage() {
                   onChange={(e) =>
                     setProvisionForm({ ...provisionForm, temporaryPassword: e.target.value })
                   }
-                  className="font-mono text-sm"
+                  className="font-mono text-xs"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    const randomCode = `DXT-ACT-${Math.floor(1000 + Math.random() * 9000)}`;
-                    setProvisionForm({ ...provisionForm, temporaryPassword: randomCode });
-                  }}
-                  className="text-xs shrink-0 border-slate-200 dark:border-white/10"
-                >
-                  Generate Strong Key
-                </Button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">
-                The user will use this key on the registration portal to set their confidential preferred password.
-              </p>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-white/[0.08] flex justify-end">
+            {/* 5. Automated Email Notification Checkbox */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Mail className="h-4 w-4 text-[#ED2618]" />
+                <div>
+                  <span className="text-xs font-bold text-slate-900 dark:text-white block">
+                    Dispatch Automated Onboarding Welcome Email
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    Sends activation key &amp; direct onboarding URL to employee inbox via Mailpit / SMTP.
+                  </span>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={provisionForm.sendWelcomeEmail}
+                onChange={(e) => setProvisionForm({ ...provisionForm, sendWelcomeEmail: e.target.checked })}
+                className="h-4 w-4 rounded accent-[#ED2618] cursor-pointer"
+              />
+            </div>
+
+            {/* 6. Submit Button */}
+            <div className="pt-4 border-t border-slate-100 dark:border-white/[0.08] flex items-center justify-between">
+              <div className="text-xs text-slate-500 font-mono">
+                Assigned: <strong className="text-slate-900 dark:text-white">{provisionForm.targetDomain}</strong> &bull; {provisionForm.department}
+              </div>
+
               <Button
                 type="submit"
                 disabled={isProvisioning}
-                className="bg-[#ED2618] hover:bg-[#d02013] text-white px-6 font-semibold shadow-sm"
+                className="bg-[#ED2618] hover:bg-[#d02013] text-white px-6 font-bold shadow-md shadow-red-500/20"
               >
                 {isProvisioning ? (
                   <>
@@ -979,7 +1233,7 @@ export default function ItGovernancePage() {
                 ) : (
                   <>
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Authorize & Provision Account
+                    Authorize &amp; Provision Profile
                   </>
                 )}
               </Button>
