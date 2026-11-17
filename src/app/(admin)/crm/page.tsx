@@ -35,6 +35,11 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
+import {
+  CreateCrmClientSchema,
+  CreateCrmActivitySchema,
+  formatZodError,
+} from "@/lib/validation/schemas";
 
 interface CrmDeal {
   id: string;
@@ -133,6 +138,16 @@ export default function CrmDashboardPage() {
     tagString: "High Value, Flagship",
   });
   const [isSubmittingClient, setIsSubmittingClient] = React.useState(false);
+  const [clientFieldErrors, setClientFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearClientFieldError = (field: string) => {
+    setClientFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   // Log Activity Modal
   const [activityModalOpen, setActivityModalOpen] = React.useState(false);
@@ -144,6 +159,16 @@ export default function CrmDashboardPage() {
     outcome: "",
   });
   const [isSubmittingActivity, setIsSubmittingActivity] = React.useState(false);
+  const [activityFieldErrors, setActivityFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearActivityFieldError = (field: string) => {
+    setActivityFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   // Fetch Clients
   const fetchClients = React.useCallback(async () => {
@@ -168,37 +193,55 @@ export default function CrmDashboardPage() {
   // Create Client
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!clientForm.name || !clientForm.email) {
-      toastError("Contact name and email are mandatory");
+
+    const tags = clientForm.tagString
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const rawPayload = {
+      name: clientForm.name.trim(),
+      company: clientForm.company ? clientForm.company.trim() : undefined,
+      email: clientForm.email.trim(),
+      phone: clientForm.phone ? clientForm.phone.trim() : undefined,
+      category: clientForm.category as any,
+      stage: clientForm.stage as any,
+      estimatedValue: clientForm.estimatedValue ? parseFloat(clientForm.estimatedValue) : 0,
+      location: clientForm.location.trim(),
+      notes: clientForm.notes ? clientForm.notes.trim() : undefined,
+      tags,
+    };
+
+    const parsed = CreateCrmClientSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      const errMap: Record<string, string> = {};
+      for (const [k, v] of Object.entries(errResult.fieldErrors)) {
+        errMap[k] = v[0];
+      }
+      setClientFieldErrors(errMap);
+      toastError(errResult.error);
       return;
     }
 
+    setClientFieldErrors({});
     setIsSubmittingClient(true);
     try {
-      const tags = clientForm.tagString
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
-
       const res = await fetch("/api/crm/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: clientForm.name,
-          company: clientForm.company || undefined,
-          email: clientForm.email,
-          phone: clientForm.phone || undefined,
-          category: clientForm.category,
-          stage: clientForm.stage,
-          estimatedValue: clientForm.estimatedValue ? parseFloat(clientForm.estimatedValue) : 0,
-          location: clientForm.location,
-          notes: clientForm.notes,
-          tags,
-        }),
+        body: JSON.stringify(parsed.data),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
+        if (data.fieldErrors) {
+          const serverErrMap: Record<string, string> = {};
+          for (const [k, v] of Object.entries(data.fieldErrors)) {
+            serverErrMap[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+          }
+          setClientFieldErrors(serverErrMap);
+        }
         throw new Error(data.error || "Failed to create client profile");
       }
 
@@ -227,27 +270,49 @@ export default function CrmDashboardPage() {
   // Log Activity
   const handleLogActivity = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activityTargetClient || !activityForm.title) {
-      toastError("Interaction title is required");
+    if (!activityTargetClient) {
+      toastError("No target client selected");
       return;
     }
 
+    const rawPayload = {
+      clientId: activityTargetClient.id,
+      type: activityForm.type as any,
+      title: activityForm.title.trim(),
+      description: activityForm.description ? activityForm.description.trim() : undefined,
+      outcome: activityForm.outcome ? activityForm.outcome.trim() : undefined,
+    };
+
+    const parsed = CreateCrmActivitySchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      const errMap: Record<string, string> = {};
+      for (const [k, v] of Object.entries(errResult.fieldErrors)) {
+        errMap[k] = v[0];
+      }
+      setActivityFieldErrors(errMap);
+      toastError(errResult.error);
+      return;
+    }
+
+    setActivityFieldErrors({});
     setIsSubmittingActivity(true);
     try {
       const res = await fetch("/api/crm/activities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientId: activityTargetClient.id,
-          type: activityForm.type,
-          title: activityForm.title,
-          description: activityForm.description,
-          outcome: activityForm.outcome,
-        }),
+        body: JSON.stringify(parsed.data),
       });
 
+      const data = await res.json();
       if (!res.ok) {
-        const data = await res.json();
+        if (data.fieldErrors) {
+          const serverErrMap: Record<string, string> = {};
+          for (const [k, v] of Object.entries(data.fieldErrors)) {
+            serverErrMap[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+          }
+          setActivityFieldErrors(serverErrMap);
+        }
         throw new Error(data.error || "Failed to log interaction");
       }
 
@@ -644,51 +709,59 @@ export default function CrmDashboardPage() {
         <form onSubmit={handleCreateClient} className="space-y-4 pt-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Contact Name *
-              </label>
               <Input
+                label="Contact Name *"
                 required
                 placeholder="e.g. Chief Raymond Alade"
                 value={clientForm.name}
-                onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })}
+                error={clientFieldErrors.name}
+                onChange={(e) => {
+                  setClientForm({ ...clientForm, name: e.target.value });
+                  clearClientFieldError("name");
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Entity / Corporate Name
-              </label>
               <Input
+                label="Entity / Corporate Name"
                 placeholder="e.g. Eko Capital Holdings Ltd"
                 value={clientForm.company}
-                onChange={(e) => setClientForm({ ...clientForm, company: e.target.value })}
+                error={clientFieldErrors.company}
+                onChange={(e) => {
+                  setClientForm({ ...clientForm, company: e.target.value });
+                  clearClientFieldError("company");
+                }}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Official Email *
-              </label>
               <Input
+                label="Official Email *"
                 type="email"
                 required
                 placeholder="e.g. r.alade@ekocapital.ng"
                 value={clientForm.email}
-                onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
+                error={clientFieldErrors.email}
+                onChange={(e) => {
+                  setClientForm({ ...clientForm, email: e.target.value });
+                  clearClientFieldError("email");
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Telephone Number
-              </label>
               <Input
+                label="Telephone Number"
                 placeholder="e.g. +234 803 111 2233"
                 value={clientForm.phone}
-                onChange={(e) => setClientForm({ ...clientForm, phone: e.target.value })}
+                error={clientFieldErrors.phone}
+                onChange={(e) => {
+                  setClientForm({ ...clientForm, phone: e.target.value });
+                  clearClientFieldError("phone");
+                }}
               />
             </div>
           </div>
@@ -701,7 +774,10 @@ export default function CrmDashboardPage() {
               <select
                 aria-label="Relationship category"
                 value={clientForm.category}
-                onChange={(e) => setClientForm({ ...clientForm, category: e.target.value as any })}
+                onChange={(e) => {
+                  setClientForm({ ...clientForm, category: e.target.value as any });
+                  clearClientFieldError("category");
+                }}
                 className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-xs text-slate-900 dark:text-white"
               >
                 <option value="PROSPECT">Prospect</option>
@@ -719,7 +795,10 @@ export default function CrmDashboardPage() {
               <select
                 aria-label="Deal pipeline stage"
                 value={clientForm.stage}
-                onChange={(e) => setClientForm({ ...clientForm, stage: e.target.value as any })}
+                onChange={(e) => {
+                  setClientForm({ ...clientForm, stage: e.target.value as any });
+                  clearClientFieldError("stage");
+                }}
                 className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-xs text-slate-900 dark:text-white"
               >
                 <option value="INQUIRY">Initial Inquiry</option>
@@ -732,35 +811,37 @@ export default function CrmDashboardPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Estimated Deal Value ($)
-              </label>
               <Input
+                label="Estimated Deal Value ($)"
                 type="number"
                 placeholder="e.g. 5000000"
                 value={clientForm.estimatedValue}
-                onChange={(e) => setClientForm({ ...clientForm, estimatedValue: e.target.value })}
+                error={clientFieldErrors.estimatedValue}
+                onChange={(e) => {
+                  setClientForm({ ...clientForm, estimatedValue: e.target.value });
+                  clearClientFieldError("estimatedValue");
+                }}
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Primary Location
-              </label>
               <Input
+                label="Primary Location"
                 placeholder="e.g. Ikoyi, Lagos, Nigeria"
                 value={clientForm.location}
-                onChange={(e) => setClientForm({ ...clientForm, location: e.target.value })}
+                error={clientFieldErrors.location}
+                onChange={(e) => {
+                  setClientForm({ ...clientForm, location: e.target.value });
+                  clearClientFieldError("location");
+                }}
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Strategic Tags (Comma Separated)
-              </label>
               <Input
+                label="Strategic Tags (Comma Separated)"
                 placeholder="e.g. Residential, Flagship, Off-Plan"
                 value={clientForm.tagString}
                 onChange={(e) => setClientForm({ ...clientForm, tagString: e.target.value })}
@@ -841,14 +922,16 @@ export default function CrmDashboardPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Summary Subject *
-              </label>
               <Input
+                label="Summary Subject *"
                 required
                 placeholder="e.g. Terms of Escrow Review"
                 value={activityForm.title}
-                onChange={(e) => setActivityForm({ ...activityForm, title: e.target.value })}
+                error={activityFieldErrors.title}
+                onChange={(e) => {
+                  setActivityForm({ ...activityForm, title: e.target.value });
+                  clearActivityFieldError("title");
+                }}
               />
             </div>
           </div>

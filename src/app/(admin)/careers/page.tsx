@@ -90,6 +90,7 @@ export default function CareersPage() {
     setBenefitsText("• Competitive executive remuneration\n• Comprehensive health insurance\n• Global talent mobility opportunities");
     setStatus("open");
     setPublished(true);
+    setFieldErrors({});
     setIsFormOpen(true);
   };
 
@@ -105,11 +106,13 @@ export default function CareersPage() {
     setBenefitsText((item.benefits || []).join("\n"));
     setStatus(item.status);
     setPublished(item.published);
+    setFieldErrors({});
     setIsFormOpen(true);
   };
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
+    clearFieldError("title");
     if (!editingItem) {
       setSlug(
         val
@@ -118,17 +121,13 @@ export default function CareersPage() {
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-+|-+$/g, "")
       );
+      clearFieldError("slug");
     }
   };
 
   const handleSaveListing = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !slug.trim()) {
-      toastError("Validation Error", "Title and Slug are required");
-      return;
-    }
 
-    setIsSubmitting(true);
     const requirements = requirementsText
       .split("\n")
       .map((s) => s.replace(/^[•\-\*]\s*/, "").trim())
@@ -139,7 +138,7 @@ export default function CareersPage() {
       .map((s) => s.replace(/^[•\-\*]\s*/, "").trim())
       .filter(Boolean);
 
-    const payload = {
+    const rawPayload = {
       title: title.trim(),
       slug: slug.trim(),
       department: department.trim(),
@@ -155,6 +154,21 @@ export default function CareersPage() {
       published,
     };
 
+    const parsed = SaveCareerListingSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      const errMap: Record<string, string> = {};
+      for (const [k, v] of Object.entries(errResult.fieldErrors)) {
+        errMap[k] = v[0];
+      }
+      setFieldErrors(errMap);
+      toastError("Validation Error", errResult.error);
+      return;
+    }
+
+    setFieldErrors({});
+    setIsSubmitting(true);
+
     try {
       const url = editingItem
         ? `/api/backend/careers/listings/${editingItem.id}`
@@ -164,11 +178,18 @@ export default function CareersPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(parsed.data),
       });
 
       if (!res.ok) {
         const errorJson = await res.json().catch(() => ({}));
+        if (errorJson.fieldErrors) {
+          const serverErrMap: Record<string, string> = {};
+          for (const [k, v] of Object.entries(errorJson.fieldErrors)) {
+            serverErrMap[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+          }
+          setFieldErrors(serverErrMap);
+        }
         throw new Error(errorJson.error || "Save operation failed");
       }
 
@@ -390,6 +411,7 @@ export default function CareersPage() {
               label="Position Title"
               placeholder="e.g. Senior Architectural Project Manager"
               value={title}
+              error={fieldErrors.title}
               onChange={(e) => handleTitleChange(e.target.value)}
               required
             />
@@ -397,7 +419,11 @@ export default function CareersPage() {
               label="URL Slug"
               placeholder="e.g. senior-architectural-project-manager"
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
+              error={fieldErrors.slug}
+              onChange={(e) => {
+                setSlug(e.target.value);
+                clearFieldError("slug");
+              }}
               required
             />
           </div>
@@ -409,7 +435,10 @@ export default function CareersPage() {
               </label>
               <select
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
+                onChange={(e) => {
+                  setDepartment(e.target.value);
+                  clearFieldError("department");
+                }}
                 className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3.5 py-2.5 text-xs text-slate-900 dark:text-white"
               >
                 <option value="Architecture & Engineering">Architecture &amp; Engineering</option>
@@ -417,20 +446,29 @@ export default function CareersPage() {
                 <option value="Finance & Investment">Finance &amp; Investment</option>
                 <option value="Operations & Legal">Operations &amp; Legal</option>
               </select>
+              {fieldErrors.department && <p className="text-xs font-medium text-red-500">{fieldErrors.department}</p>}
             </div>
 
             <Input
               label="Location"
               placeholder="Lagos, Nigeria"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              error={fieldErrors.location}
+              onChange={(e) => {
+                setLocation(e.target.value);
+                clearFieldError("location");
+              }}
             />
 
             <Input
               label="Employment Type"
               placeholder="Full-Time / Contract"
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              error={fieldErrors.type}
+              onChange={(e) => {
+                setType(e.target.value);
+                clearFieldError("type");
+              }}
             />
           </div>
 
@@ -442,9 +480,13 @@ export default function CareersPage() {
               rows={2}
               placeholder="Brief high-level overview of the role..."
               value={summary}
-              onChange={(e) => setSummary(e.target.value)}
+              onChange={(e) => {
+                setSummary(e.target.value);
+                clearFieldError("summary");
+              }}
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500"
             />
+            {fieldErrors.summary && <p className="text-xs font-medium text-red-500">{fieldErrors.summary}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -455,9 +497,13 @@ export default function CareersPage() {
               <textarea
                 rows={4}
                 value={requirementsText}
-                onChange={(e) => setRequirementsText(e.target.value)}
+                onChange={(e) => {
+                  setRequirementsText(e.target.value);
+                  clearFieldError("requirements");
+                }}
                 className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500"
               />
+              {fieldErrors.requirements && <p className="text-xs font-medium text-red-500">{fieldErrors.requirements}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -467,9 +513,13 @@ export default function CareersPage() {
               <textarea
                 rows={4}
                 value={benefitsText}
-                onChange={(e) => setBenefitsText(e.target.value)}
+                onChange={(e) => {
+                  setBenefitsText(e.target.value);
+                  clearFieldError("benefits");
+                }}
                 className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500"
               />
+              {fieldErrors.benefits && <p className="text-xs font-medium text-red-500">{fieldErrors.benefits}</p>}
             </div>
           </div>
 

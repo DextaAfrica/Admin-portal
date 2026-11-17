@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate, getInitials } from "@/lib/utils";
+import { MarketingAudienceSubscriberSchema, formatZodError } from "@/lib/validation/schemas";
 
 interface Subscriber {
   id: string;
@@ -36,6 +37,17 @@ export default function AudiencePage() {
   const [lastName, setLastName] = React.useState("");
   const [tagInput, setTagInput] = React.useState("Client, Newsletter");
 
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const fetchAudience = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -55,16 +67,40 @@ export default function AudiencePage() {
 
   const handleAddSubscriber = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const tags = tagInput
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    const rawPayload = {
+      email: email.trim(),
+      firstName: firstName.trim() || undefined,
+      lastName: lastName.trim() || undefined,
+      tags,
+    };
+
+    const parsed = MarketingAudienceSubscriberSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      const errMap: Record<string, string> = {};
+      for (const [k, v] of Object.entries(errResult.fieldErrors)) {
+        errMap[k] = v[0];
+      }
+      setFieldErrors(errMap);
+      toastError("Validation Error", errResult.error);
+      return;
+    }
+
+    setFieldErrors({});
     try {
-      const tags = tagInput
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
       const res = await fetch("/api/marketing/audience", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, firstName, lastName, tags }),
+        body: JSON.stringify(parsed.data),
       });
+
+      const data = await res.json();
       if (res.ok) {
         toastSuccess("Contact Saved", `${email} has been added to your contacts directory.`);
         setIsAddOpen(false);
@@ -73,7 +109,14 @@ export default function AudiencePage() {
         setLastName("");
         fetchAudience();
       } else {
-        toastError("Save Error", "Could not add this contact.");
+        if (data.fieldErrors) {
+          const serverErrMap: Record<string, string> = {};
+          for (const [k, v] of Object.entries(data.fieldErrors)) {
+            serverErrMap[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+          }
+          setFieldErrors(serverErrMap);
+        }
+        toastError("Save Error", data.error || "Could not add this contact.");
       }
     } catch {
       toastError("Connection Error", "Please check your connection and try again.");
@@ -186,7 +229,11 @@ export default function AudiencePage() {
             label="Email Address"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            error={fieldErrors.email}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              clearFieldError("email");
+            }}
             placeholder="olamide@clientdomain.com"
             required
           />
@@ -195,13 +242,21 @@ export default function AudiencePage() {
             <Input
               label="First Name"
               value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
+              error={fieldErrors.firstName}
+              onChange={(e) => {
+                setFirstName(e.target.value);
+                clearFieldError("firstName");
+              }}
               placeholder="Olamide"
             />
             <Input
               label="Last Name"
               value={lastName}
-              onChange={(e) => setLastName(e.target.value)}
+              error={fieldErrors.lastName}
+              onChange={(e) => {
+                setLastName(e.target.value);
+                clearFieldError("lastName");
+              }}
               placeholder="Adeyemi"
             />
           </div>

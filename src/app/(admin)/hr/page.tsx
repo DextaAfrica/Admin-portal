@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
+import { CreateHrEmployeeSchema, formatZodError } from "@/lib/validation/schemas";
 
 interface EmployeeDocument {
   id: string;
@@ -126,6 +127,16 @@ export default function HrDashboardPage() {
     emergencyContact: "",
     notes: "",
   });
+  const [onboardFieldErrors, setOnboardFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearOnboardFieldError = (field: string) => {
+    setOnboardFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   const fetchData = React.useCallback(async () => {
     setIsLoading(true);
@@ -162,16 +173,53 @@ export default function HrDashboardPage() {
 
   const handleOnboardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const rawPayload = {
+      fullName: onboardForm.fullName.trim(),
+      workEmail: onboardForm.workEmail.trim(),
+      phone: onboardForm.phone ? onboardForm.phone.trim() : undefined,
+      department: onboardForm.department.trim(),
+      jobTitle: onboardForm.jobTitle.trim(),
+      employmentType: onboardForm.employmentType as any,
+      status: "ACTIVE" as any,
+      startDate: onboardForm.startDate,
+      location: onboardForm.location.trim(),
+      emergencyContact: onboardForm.emergencyContact ? onboardForm.emergencyContact.trim() : undefined,
+      notes: onboardForm.notes ? onboardForm.notes.trim() : undefined,
+    };
+
+    const parsed = CreateHrEmployeeSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      const errMap: Record<string, string> = {};
+      for (const [k, v] of Object.entries(errResult.fieldErrors)) {
+        errMap[k] = v[0];
+      }
+      setOnboardFieldErrors(errMap);
+      toastError("Validation Error", errResult.error);
+      return;
+    }
+
+    setOnboardFieldErrors({});
     setIsSubmitting(true);
     try {
       const res = await fetch("/api/hr/employees", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(onboardForm),
+        body: JSON.stringify(parsed.data),
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to onboard employee");
+      if (!res.ok) {
+        if (data.fieldErrors) {
+          const serverErrMap: Record<string, string> = {};
+          for (const [k, v] of Object.entries(data.fieldErrors)) {
+            serverErrMap[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+          }
+          setOnboardFieldErrors(serverErrMap);
+        }
+        throw new Error(data.error || "Failed to onboard employee");
+      }
 
       toastSuccess("Colleague Onboarded", `${onboardForm.fullName} has been added to the internal HR directory.`);
       setIsOnboardOpen(false);
@@ -670,7 +718,11 @@ export default function HrDashboardPage() {
               label="Full Name"
               placeholder="e.g. Babatunde Adeyemi"
               value={onboardForm.fullName}
-              onChange={(e) => setOnboardForm({ ...onboardForm, fullName: e.target.value })}
+              error={onboardFieldErrors.fullName}
+              onChange={(e) => {
+                setOnboardForm({ ...onboardForm, fullName: e.target.value });
+                clearOnboardFieldError("fullName");
+              }}
               required
             />
             <Input
@@ -678,7 +730,11 @@ export default function HrDashboardPage() {
               type="email"
               placeholder="babatunde@dextaafrica.com"
               value={onboardForm.workEmail}
-              onChange={(e) => setOnboardForm({ ...onboardForm, workEmail: e.target.value })}
+              error={onboardFieldErrors.workEmail}
+              onChange={(e) => {
+                setOnboardForm({ ...onboardForm, workEmail: e.target.value });
+                clearOnboardFieldError("workEmail");
+              }}
               required
             />
           </div>
@@ -690,7 +746,10 @@ export default function HrDashboardPage() {
               </label>
               <select
                 value={onboardForm.department}
-                onChange={(e) => setOnboardForm({ ...onboardForm, department: e.target.value })}
+                onChange={(e) => {
+                  setOnboardForm({ ...onboardForm, department: e.target.value });
+                  clearOnboardFieldError("department");
+                }}
                 className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3.5 py-2.5 text-xs text-slate-900 dark:text-white"
               >
                 {DEPARTMENTS.filter((d) => d !== "ALL").map((d) => (
@@ -699,13 +758,18 @@ export default function HrDashboardPage() {
                   </option>
                 ))}
               </select>
+              {onboardFieldErrors.department && <p className="text-xs font-medium text-red-500">{onboardFieldErrors.department}</p>}
             </div>
 
             <Input
               label="Job Title / Role"
               placeholder="e.g. Senior Project Architect"
               value={onboardForm.jobTitle}
-              onChange={(e) => setOnboardForm({ ...onboardForm, jobTitle: e.target.value })}
+              error={onboardFieldErrors.jobTitle}
+              onChange={(e) => {
+                setOnboardForm({ ...onboardForm, jobTitle: e.target.value });
+                clearOnboardFieldError("jobTitle");
+              }}
               required
             />
           </div>
@@ -715,13 +779,21 @@ export default function HrDashboardPage() {
               label="Direct Phone Number"
               placeholder="+234 803 000 0000"
               value={onboardForm.phone}
-              onChange={(e) => setOnboardForm({ ...onboardForm, phone: e.target.value })}
+              error={onboardFieldErrors.phone}
+              onChange={(e) => {
+                setOnboardForm({ ...onboardForm, phone: e.target.value });
+                clearOnboardFieldError("phone");
+              }}
               required
             />
             <Input
               label="Primary Work Location"
               value={onboardForm.location}
-              onChange={(e) => setOnboardForm({ ...onboardForm, location: e.target.value })}
+              error={onboardFieldErrors.location}
+              onChange={(e) => {
+                setOnboardForm({ ...onboardForm, location: e.target.value });
+                clearOnboardFieldError("location");
+              }}
             />
           </div>
 

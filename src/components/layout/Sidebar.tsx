@@ -62,37 +62,21 @@ interface PortalConfig {
   sections: NavSection[];
 }
 
-// 1. Operations Fleet Desk Navigation
+// 1. Operations Desk Navigation (Clean, Dedicated Workflow)
 const OPERATIONS_NAV: NavSection[] = [
   {
-    label: "Operations Command",
+    label: "Operations Desk",
     items: [
-      { title: "Operations Overview", href: "/dashboard?tab=operations", tabId: "operations", icon: LayoutDashboard, badge: "Live" },
-      { title: "Reports & Analytics", href: "/reports", icon: BarChart3, badge: "Telemetry" },
+      { title: "Operations Overview", href: "/dashboard?tab=operations", tabId: "operations", icon: LayoutDashboard },
+      { title: "Projects & Milestones", href: "/projects", icon: Building2 },
+      { title: "Reports & Dossiers", href: "/reports", icon: FileText },
     ],
   },
   {
-    label: "Site Deliveries & Projects",
+    label: "Field Execution",
     items: [
-      { title: "Landmark Developments", href: "/portfolio", icon: Building2, badge: "Active" },
-      { title: "Site Approvals & Clearances", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2, badge: "Reqs" },
-      { title: "Client Leads & Inquiries", href: "/enquiries", icon: MessageSquare, badge: "Leads" },
-    ],
-  },
-  {
-    label: "Logistics & Procurement",
-    items: [
-      { title: "Equipment & Asset Vault", href: "/storage", icon: HardDrive, badge: "S3" },
-      { title: "Capital Procurement Deals", href: "/crm", icon: Briefcase, badge: "Deals" },
-      { title: "Corporate Field Dispatch", href: "/dashboard?tab=dispatch", tabId: "dispatch", icon: Mail, badge: "SMTP" },
-    ],
-  },
-  {
-    label: "Field Workforce & Safety",
-    items: [
-      { title: "Field Operations Team", href: "/users", icon: Users },
-      { title: "Site Safety & Key Access", href: "/security", icon: ShieldCheck },
-      { title: "Site Incident Audit Logs", href: "/audit-logs", icon: FileText },
+      { title: "Operations Team", href: "/users", icon: Users },
+      { title: "Inter-Dept Clearances", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2 },
     ],
   },
 ];
