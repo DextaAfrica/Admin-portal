@@ -20,6 +20,18 @@ export async function GET() {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const userRole = (user.role || "").toUpperCase();
+    const userDept = (user.department || "").toUpperCase();
+    const isSuperAdmin = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
+    const isIT = userDept === "IT";
+
+    if (!isSuperAdmin && !isIT) {
+      return NextResponse.json(
+        { error: "Access Denied: Team Member Management is restricted to Systems IT Governance and Executive Directorate." },
+        { status: 403 }
+      );
+    }
+
     await ensureInitialEnterpriseData();
 
     const users = await prisma.user.findMany({

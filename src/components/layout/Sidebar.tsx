@@ -62,20 +62,14 @@ interface PortalConfig {
   sections: NavSection[];
 }
 
-// 1. Operations Desk Navigation (Clean, Dedicated Workflow)
+// 1. Operations Desk Navigation (Dedicated, Streamlined Workflow)
 const OPERATIONS_NAV: NavSection[] = [
   {
     label: "Operations Desk",
     items: [
-      { title: "Operations Overview", href: "/dashboard?tab=operations", tabId: "operations", icon: LayoutDashboard },
+      { title: "Operations Dashboard", href: "/dashboard", tabId: "operations", icon: LayoutDashboard },
       { title: "Projects & Milestones", href: "/projects", icon: Building2 },
       { title: "Reports & Dossiers", href: "/reports", icon: FileText },
-    ],
-  },
-  {
-    label: "Field Execution",
-    items: [
-      { title: "Operations Team", href: "/users", icon: Users },
       { title: "Inter-Dept Clearances", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2 },
     ],
   },

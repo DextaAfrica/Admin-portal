@@ -42,6 +42,7 @@ import {
   UserCheck,
   Award,
   Landmark,
+  Plus,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -49,7 +50,7 @@ import { Button } from "@/components/ui/Button";
 import { TelemetryChart } from "@/components/ui/TelemetryChart";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { formatBytes, timeAgo, formatDate } from "@/lib/utils";
+import { formatBytes, timeAgo, formatDate, getInitials } from "@/lib/utils";
 
 export interface DepartmentDashboardViewProps {
   currentUser: {
@@ -114,6 +115,8 @@ export interface DepartmentDashboardViewProps {
   initialPlatform?: "systems" | "operations" | "executive" | "finance" | "hr";
   initialTab?: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" | "personal";
   portfolioItems?: any[];
+  userProjects?: any[];
+  userReports?: any[];
   userSubmittedApprovals?: any[];
   userPendingActionApprovals?: any[];
   userAuditLogs?: any[];
@@ -138,6 +141,8 @@ export function DepartmentDashboardView({
   initialPlatform = "executive",
   initialTab = "overview",
   portfolioItems = [],
+  userProjects = [],
+  userReports = [],
   userSubmittedApprovals = [],
   userPendingActionApprovals = [],
   userAuditLogs = [],
@@ -1441,114 +1446,342 @@ export function DepartmentDashboardView({
       )}
 
       {/* ===================================================================== */}
-      {/* 3. TAB: SITE OPERATIONS */}
+      {/* 3. TAB: PERSONAL USER ACCOUNT ARCHITECTURE & SITE OPERATIONS */}
       {/* ===================================================================== */}
       {activeTab === "operations" && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Landmark Development &amp; Field Engineering Fleet
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Real-time logistics coordination across coastal towers and industrial commercial zones.
-                </p>
+        <div className="space-y-6 animate-fade-in">
+          {/* USER IDENTITY & PROFILE CARD (User-Centric Account Architecture) */}
+          <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[#ED2618] to-red-800 text-white font-black text-xl flex items-center justify-center shrink-0 shadow-md">
+                  {getInitials(currentUser.fullName)}
+                </div>
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                      {currentUser.fullName}
+                    </h2>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Active &bull; Authenticated
+                    </span>
+                  </div>
+
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    {currentUser.jobTitle || "Operations & Logistics Manager"} &bull;{" "}
+                    <span className="font-mono text-slate-400">{currentUser.email}</span>
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.05] font-semibold text-slate-700 dark:text-slate-300">
+                      Operations Fleet Desk
+                    </span>
+                    <span className="text-slate-300 dark:text-white/20">&bull;</span>
+                    <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">
+                      {seniorityBadgeLabel}
+                    </span>
+                    <span className="text-slate-300 dark:text-white/20">&bull;</span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                      <ShieldCheck className="h-3 w-3" />
+                      Zero-Trust Enforced
+                    </span>
+                  </div>
+                </div>
               </div>
-              <Badge variant={portfolioItems.length > 0 ? "success" : "outline"}>
-                {portfolioItems.length} {portfolioItems.length === 1 ? "Site Active" : "Sites Active"}
-              </Badge>
+
+              {/* Fast Operational Actions */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Link
+                  href="/projects"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>Enter New Project</span>
+                </Link>
+                <Link
+                  href="/reports"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] text-xs font-bold transition-all"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Draft Report</span>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  className="text-xs font-bold border-slate-200 dark:border-white/10"
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-[#ED2618]" />
+                  <span>Request Clearance</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* TELEMETRY RIBBON (Zero Mock Data, 100% Dynamic) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Total Projects
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
+                {userProjects.length}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Registered operations sites
+              </p>
             </div>
 
-            {portfolioItems && portfolioItems.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {portfolioItems.map((site: any, i: number) => (
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
+              <span className="text-xs font-bold text-amber-500 uppercase tracking-wider block">
+                Active In Progress
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                {userProjects.filter((p: any) => p.status === "IN_PROGRESS").length}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Live ground execution
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
+              <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider block">
+                Reports &amp; Dossiers
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                {userReports.length}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Field documentation submitted
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
+              <span className="text-xs font-bold text-blue-500 uppercase tracking-wider block">
+                Clearances Assigned
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                {userSubmittedApprovals.length}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Permits &amp; authorizations
+              </p>
+            </div>
+          </div>
+
+          {/* ACTIVE INFRASTRUCTURE PROJECTS (Direct Real Telemetry) */}
+          <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-5">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/[0.06]">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  Active Infrastructure Projects &amp; Sites
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Live operational sites, contractor squads, and ground milestones under your supervision.
+                </p>
+              </div>
+              <Link
+                href="/projects"
+                className="text-xs font-bold text-[#ED2618] hover:underline flex items-center gap-1"
+              >
+                <span>View All Projects &rarr;</span>
+              </Link>
+            </div>
+
+            {userProjects && userProjects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {userProjects.map((p: any) => (
                   <div
-                    key={site.id || i}
-                    className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] space-y-4"
+                    key={p.id}
+                    className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] space-y-3 hover:border-slate-300 dark:hover:border-white/20 transition-all"
                   >
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-mono font-bold text-[#ED2618] uppercase">
-                        Site Project #0{i + 1}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-mono text-[10px] font-bold text-[#ED2618] bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded-md">
+                          {p.code}
+                        </span>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1">
+                          {p.name}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 truncate">{p.location}</p>
+                      </div>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
+                        {p.status.replace("_", " ")}
                       </span>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        {site.name}
-                      </h4>
-                      <p className="text-xs text-slate-400">{site.location || "Coastal Corridor"}</p>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-white dark:bg-[#12151E] border border-slate-200/60 dark:border-white/[0.05] space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Status:</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize">
-                          {(site.status || "active").replace("_", " ")}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-slate-500">Delivery Velocity:</span>
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">
+                          {p.progressPct}%
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Catalog Access:</span>
-                        <span className="font-bold text-slate-900 dark:text-white font-mono">
-                          {site.published ? "Public Catalog" : "Internal Engineering"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Created:</span>
-                        <span className="font-mono text-slate-700 dark:text-slate-300">
-                          {formatDate(site.createdAt || new Date())}
-                        </span>
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#ED2618] rounded-full"
+                          style={{ width: `${p.progressPct}%` }}
+                        />
                       </div>
                     </div>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full text-xs"
-                      onClick={() => {
-                        setApprovalForm({
-                          ...approvalForm,
-                          title: `Logistics Clearance for ${site.name}`,
-                          toDepartment: "OPERATIONS",
-                          category: "PROCUREMENT_LOGISTICS",
-                        });
-                        setNewApprovalModalOpen(true);
-                      }}
-                    >
-                      Request Site Clearance
-                    </Button>
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{p.contractorTeam || "Dexta Squad Alpha"}</span>
+                      <Link
+                        href="/projects"
+                        className="font-bold text-[#ED2618] hover:underline"
+                      >
+                        Manage &rarr;
+                      </Link>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-12 text-center rounded-3xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-4">
-                <div className="h-12 w-12 mx-auto rounded-2xl bg-red-500/10 text-[#ED2618] flex items-center justify-center">
-                  <Building2 className="h-6 w-6" />
+              <div className="p-8 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-3">
+                <div className="h-10 w-10 mx-auto rounded-xl bg-red-50 text-[#ED2618] dark:bg-red-950/30 flex items-center justify-center">
+                  <Building2 className="h-5 w-5" />
                 </div>
-                <div className="space-y-1">
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                    No Field Engineering Projects Registered
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    No Projects Entered Yet
                   </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                    There are currently no active landmark development projects in the database. Deploy a new development to begin site inspections and contractor disbursements.
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    As Operations Manager, enter your infrastructure projects to establish ground milestones and assign contractor squads.
                   </p>
                 </div>
-                <div className="flex items-center justify-center gap-3">
+                <Link
+                  href="/projects"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>Enter New Project</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* TWO COLUMNS: RECENT FIELD REPORTS & CLEARANCES */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Recent Field Reports & Dossiers */}
+            <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    Your Reports &amp; Dossiers
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Field activity logs and line manager submissions.
+                  </p>
+                </div>
+                <Link
+                  href="/reports"
+                  className="text-xs font-bold text-[#ED2618] hover:underline"
+                >
+                  Reports Studio &rarr;
+                </Link>
+              </div>
+
+              {userReports && userReports.length > 0 ? (
+                <div className="space-y-2">
+                  {userReports.slice(0, 4).map((r: any) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 text-xs"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <span className="font-mono text-[10px] font-bold text-[#ED2618]">
+                          {r.reference}
+                        </span>
+                        <h5 className="font-bold text-slate-900 dark:text-white truncate">
+                          {r.title}
+                        </h5>
+                        <p className="text-[10px] text-slate-400">
+                          {r.cadence} &bull; {new Date(r.reportDate || r.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
+                        {r.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-2">
+                  <FileText className="h-6 w-6 text-slate-400 mx-auto" />
+                  <p className="text-xs text-slate-500">No field reports drafted yet.</p>
                   <Link
-                    href="/projects"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
+                    href="/reports"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#ED2618] hover:underline"
                   >
-                    <PlusCircle className="h-4 w-4" />
-                    <span>Enter Infrastructure Project</span>
+                    <span>Create New Report &rarr;</span>
                   </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Inter-Department Clearances */}
+            <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    Operations Clearances &amp; Permits
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Inter-department permits and contractor authorizations.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  className="h-7 text-xs font-bold"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  <span>New Request</span>
+                </Button>
+              </div>
+
+              {userSubmittedApprovals && userSubmittedApprovals.length > 0 ? (
+                <div className="space-y-2">
+                  {userSubmittedApprovals.slice(0, 4).map((a: any) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 text-xs"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <span className="font-mono text-[10px] font-bold text-[#ED2618]">
+                          {a.ticketCode}
+                        </span>
+                        <h5 className="font-bold text-slate-900 dark:text-white truncate">
+                          {a.title}
+                        </h5>
+                        <p className="text-[10px] text-slate-400">
+                          {a.fromDepartment} &rarr; {a.toDepartment}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
+                        {a.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-2">
+                  <CheckCircle2 className="h-6 w-6 text-slate-400 mx-auto" />
+                  <p className="text-xs text-slate-500">No active clearance requests pending.</p>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setNewApprovalModalOpen(true)}
-                    className="text-xs font-bold"
+                    className="h-7 text-xs font-bold"
                   >
-                    <span>Request Site Clearance</span>
+                    <span>Issue Clearance Ticket</span>
                   </Button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
