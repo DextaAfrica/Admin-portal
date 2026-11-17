@@ -48,9 +48,21 @@ export async function GET() {
       // Fallback to session values
     }
 
+    let jobTitle = baseUser.jobTitle;
+    if (!jobTitle || jobTitle.toLowerCase().includes("dev") || jobTitle.toLowerCase().includes("developer")) {
+      jobTitle = department.toUpperCase() === "EXECUTIVE"
+        ? "Executive Director"
+        : department.toUpperCase() === "FINANCE"
+        ? "Finance Lead"
+        : department.toUpperCase() === "HR"
+        ? "People & Culture Lead"
+        : "Operations Manager";
+    }
+
     return NextResponse.json({
       user: {
         ...baseUser,
+        jobTitle,
         department,
         seniorityLevel,
       },

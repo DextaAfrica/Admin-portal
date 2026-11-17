@@ -518,7 +518,9 @@ export function Header({
                   </span>
                 </div>
                 <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                  {profileData.jobTitle || "Operations & Infrastructure Lead"} &bull;{" "}
+                  {(!profileData.jobTitle || profileData.jobTitle.toLowerCase().includes("dev") || profileData.jobTitle.toLowerCase().includes("developer"))
+                    ? (profileData.department?.toUpperCase() === "OPERATIONS" ? "Operations Manager" : "Operations & Infrastructure Lead")
+                    : profileData.jobTitle} &bull;{" "}
                   <span className="text-[#ED2618]">{profileData.department}</span>
                 </p>
                 <p className="text-[11px] text-slate-400 font-mono">

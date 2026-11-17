@@ -181,6 +181,21 @@ export function DepartmentDashboardView({
     ? "Operational Review & Requisition Processing Authority"
     : "Staff Task Execution & Requisition Submission Authority";
 
+  // Sanitize and normalize display job title (eliminates inappropriate developer tags for business roles)
+  const userJobTitle = React.useMemo(() => {
+    const raw = (currentUser.jobTitle || "").trim();
+    if (!raw || raw.toLowerCase().includes("dev") || raw.toLowerCase().includes("developer")) {
+      return currentUser.department?.toUpperCase() === "EXECUTIVE"
+        ? "Executive Director"
+        : currentUser.department?.toUpperCase() === "FINANCE"
+        ? "Finance Lead"
+        : currentUser.department?.toUpperCase() === "HR"
+        ? "People & Culture Lead"
+        : "Operations Manager";
+    }
+    return raw;
+  }, [currentUser.jobTitle, currentUser.department]);
+
   // Sync tab and platform with URL search parameter (?tab=...), hostname, and sidebar events
   React.useEffect(() => {
     const syncFromUrl = () => {
@@ -215,6 +230,8 @@ export function DepartmentDashboardView({
       // Guard: non-IT users cannot view Systems IT tab
       if (tabParam === "systems" && userRole !== "SUPER_ADMIN" && userDept !== "IT") {
         setActiveTab(currentPlatform === "finance" ? "treasury" : "operations");
+      } else if (currentPlatform === "operations" && (tabParam === "personal" || tabParam === "communications" || tabParam === "dispatch" || tabParam === "systems" || tabParam === "treasury" || tabParam === "overview")) {
+        setActiveTab("operations");
       } else if (
         tabParam === "systems" ||
         tabParam === "operations" ||
@@ -240,6 +257,10 @@ export function DepartmentDashboardView({
 
     const handleSwitchTab = (e: any) => {
       const tab = e.detail;
+      if (platform === "operations" && (tab === "personal" || tab === "communications" || tab === "dispatch" || tab === "systems" || tab === "treasury" || tab === "overview")) {
+        setActiveTab("operations");
+        return;
+      }
       if (
         tab === "systems" ||
         tab === "operations" ||
@@ -579,15 +600,46 @@ export function DepartmentDashboardView({
                 : "Personalized executive command center governing infrastructure site deliveries, capital treasury settlements, and official communications."}
             </p>
 
-            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-              <span>{seniorityAuthorityLabel}</span>
+            <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {userJobTitle} &bull; <span className="font-mono text-slate-400">{currentUser.email}</span>
+              </span>
+              <span className="text-slate-300 dark:text-white/20">&bull;</span>
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                <span>{seniorityAuthorityLabel}</span>
+              </div>
             </div>
           </div>
 
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {platform === "systems" ? (
+            {platform === "operations" ? (
+              <>
+                <Link
+                  href="/projects"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>Enter New Project</span>
+                </Link>
+                <Link
+                  href="/reports"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] text-xs font-bold transition-all"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Draft Report</span>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  leftIcon={<CheckCircle2 className="h-4 w-4 text-[#ED2618]" />}
+                >
+                  Request Clearance
+                </Button>
+              </>
+            ) : platform === "systems" ? (
               <>
                 <Link
                   href="/it"
@@ -801,38 +853,42 @@ export function DepartmentDashboardView({
             )}
           </button>
 
-          {/* Corporate Dispatch (Available across workspaces) */}
-          <button
-            type="button"
-            onClick={() => setActiveTab("communications")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "communications"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <Mail className="h-3.5 w-3.5" />
-            <span>Corporate Dispatch</span>
-          </button>
+          {/* Corporate Dispatch (Available across workspaces except Operations) */}
+          {platform !== "operations" && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("communications")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "communications"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              <span>Corporate Dispatch</span>
+            </button>
+          )}
 
-          {/* Personalized User Workspace Hub */}
-          <button
-            type="button"
-            onClick={() => setActiveTab("personal")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "personal"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <UserCheck className="h-3.5 w-3.5" />
-            <span>My Workspace &amp; Tasks</span>
-            {userSubmittedApprovals.length > 0 && (
-              <span className="h-4 min-w-[16px] px-1 rounded-full bg-blue-500/20 text-blue-600 dark:bg-blue-500/30 dark:text-blue-200 text-[10px] font-black flex items-center justify-center">
-                {userSubmittedApprovals.length}
-              </span>
-            )}
-          </button>
+          {/* Personalized User Workspace Hub (Only for multi-department/Executive workspaces) */}
+          {platform !== "operations" && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("personal")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "personal"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <UserCheck className="h-3.5 w-3.5" />
+              <span>My Workspace &amp; Tasks</span>
+              {userSubmittedApprovals.length > 0 && (
+                <span className="h-4 min-w-[16px] px-1 rounded-full bg-blue-500/20 text-blue-600 dark:bg-blue-500/30 dark:text-blue-200 text-[10px] font-black flex items-center justify-center">
+                  {userSubmittedApprovals.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1446,79 +1502,10 @@ export function DepartmentDashboardView({
       )}
 
       {/* ===================================================================== */}
-      {/* 3. TAB: PERSONAL USER ACCOUNT ARCHITECTURE & SITE OPERATIONS */}
+      {/* 3. TAB: SITE OPERATIONS & FIELD REPOSITORY */}
       {/* ===================================================================== */}
       {activeTab === "operations" && (
         <div className="space-y-6 animate-fade-in">
-          {/* USER IDENTITY & PROFILE CARD (User-Centric Account Architecture) */}
-          <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-              <div className="flex items-start sm:items-center gap-4">
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-[#ED2618] to-red-800 text-white font-black text-xl flex items-center justify-center shrink-0 shadow-md">
-                  {getInitials(currentUser.fullName)}
-                </div>
-                <div className="space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                      {currentUser.fullName}
-                    </h2>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Active &bull; Authenticated
-                    </span>
-                  </div>
-
-                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                    {currentUser.jobTitle || "Operations & Logistics Manager"} &bull;{" "}
-                    <span className="font-mono text-slate-400">{currentUser.email}</span>
-                  </p>
-
-                  <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                    <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.05] font-semibold text-slate-700 dark:text-slate-300">
-                      Operations Fleet Desk
-                    </span>
-                    <span className="text-slate-300 dark:text-white/20">&bull;</span>
-                    <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">
-                      {seniorityBadgeLabel}
-                    </span>
-                    <span className="text-slate-300 dark:text-white/20">&bull;</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                      <ShieldCheck className="h-3 w-3" />
-                      Zero-Trust Enforced
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Fast Operational Actions */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Link
-                  href="/projects"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm"
-                >
-                  <PlusCircle className="h-4 w-4" />
-                  <span>Enter New Project</span>
-                </Link>
-                <Link
-                  href="/reports"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] text-xs font-bold transition-all"
-                >
-                  <FileText className="h-4 w-4" />
-                  <span>Draft Report</span>
-                </Link>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setNewApprovalModalOpen(true)}
-                  className="text-xs font-bold border-slate-200 dark:border-white/10"
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-[#ED2618]" />
-                  <span>Request Clearance</span>
-                </Button>
-              </div>
-            </div>
-          </div>
-
           {/* TELEMETRY RIBBON (Zero Mock Data, 100% Dynamic) */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
@@ -2149,7 +2136,7 @@ export function DepartmentDashboardView({
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {currentUser.email} &bull; {currentUser.department || "Operations"} &bull; {currentUser.jobTitle || currentUser.role}
+                    {currentUser.email} &bull; {currentUser.department || "Operations"} &bull; {userJobTitle}
                   </p>
                 </div>
               </div>
