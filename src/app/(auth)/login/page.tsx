@@ -112,7 +112,7 @@ export default function LoginPage() {
           "Verification Required",
           hasTotp
             ? "Please enter the 6-digit code from your authenticator app."
-            : "A 6-digit verification code has been dispatched to your corporate inbox (Mailpit)."
+            : "A 6-digit verification code has been dispatched to your corporate inbox."
         );
         return;
       }
@@ -369,7 +369,7 @@ export default function LoginPage() {
             <div className="space-y-3 text-center">
               <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                 {isEmailOtp
-                  ? "Enter the 6-digit verification code sent to your email (or local Mailpit: http://localhost:8025):"
+                  ? "Enter the 6-digit verification code sent to your corporate email:"
                   : "Enter the 6-digit verification code from your authenticator app:"}
               </p>
               <OTPInput

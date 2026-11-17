@@ -407,7 +407,7 @@ export function DepartmentDashboardView({
 
       toastSuccess(
         `Request ${decisionType === "APPROVED" ? "Approved" : "Declined"}`,
-        `Formal notice dispatched to ${selectedApproval.requesterEmail} via SMTP Mailpit.`
+        `Formal notice dispatched to ${selectedApproval.requesterEmail} via Enterprise SMTP.`
       );
     } catch (err: unknown) {
       toastError(err instanceof Error ? err.message : "Error saving decision");
@@ -924,7 +924,7 @@ export function DepartmentDashboardView({
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                Automated SMTP Routing via Mailpit
+                Automated Corporate SMTP Routing
               </p>
             </div>
           </div>
@@ -1332,7 +1332,7 @@ export function DepartmentDashboardView({
                   Email Dispatch &amp; Campaigns
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Scheduled broadcast queue, Mailpit delivery diagnostics, and corporate communication logs.
+                  Scheduled broadcast queue, delivery diagnostics, and corporate communication logs.
                 </p>
               </Link>
             </div>
@@ -1565,7 +1565,7 @@ export function DepartmentDashboardView({
                   Inter-Department Workflow &amp; Approvals
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Authorizations between HR, Operations, Finance, and Executive with automatic Mailpit dispatch.
+                  Authorizations between HR, Operations, Finance, and Executive with automatic email dispatch.
                 </p>
               </div>
 
@@ -1828,7 +1828,7 @@ export function DepartmentDashboardView({
                   Corporate Communications &amp; Dispatch Desk
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Official outbound and internal operations messaging wired directly to SMTP Mailpit.
+                  Official outbound and internal operations messaging wired directly to Corporate SMTP.
                 </p>
               </div>
 
@@ -2207,7 +2207,7 @@ export function DepartmentDashboardView({
         isOpen={newApprovalModalOpen}
         onClose={() => setNewApprovalModalOpen(false)}
         title="New Inter-Department Approval Request"
-        description="Submit an operational request for authorization. Dispatches automated notification and email to Mailpit."
+        description="Submit an operational request for authorization. Dispatches automated email notification."
         maxWidth="lg"
       >
         <form onSubmit={handleCreateApproval} className="space-y-4">
@@ -2393,7 +2393,7 @@ export function DepartmentDashboardView({
         isOpen={newEmailModalOpen}
         onClose={() => setNewEmailModalOpen(false)}
         title="Compose Corporate Email"
-        description="Dispatch official operations communication. Dispatches real SMTP email to Mailpit."
+        description="Dispatch official operations communication to verified recipients."
         maxWidth="lg"
       >
         <form onSubmit={handleSendCorporateEmail} className="space-y-4">

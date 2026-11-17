@@ -176,7 +176,7 @@ export function EnterpriseProfileWizard({
       setOtpCooldown(60);
       toastSuccess(
         "Verification Code Sent",
-        `We dispatched a 6-digit corporate verification code to ${targetEmail}. (View in Mailpit if developing locally).`
+        `We dispatched a 6-digit corporate verification code to ${targetEmail}.`
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to dispatch verification code.";
@@ -1222,7 +1222,7 @@ export function EnterpriseProfileWizard({
               {email.toLowerCase().trim()}
             </p>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              We dispatched an authorized 6-digit one-time passcode to confirm this address belongs to you. In development mode, check your local <strong className="text-slate-800 dark:text-slate-200">Mailpit inbox at http://localhost:8025</strong>.
+              We dispatched an authorized 6-digit one-time passcode to confirm this address belongs to you. Please check your corporate email inbox.
             </p>
           </div>
 
