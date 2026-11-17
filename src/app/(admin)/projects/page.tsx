@@ -831,195 +831,252 @@ export default function OperationsProjectsPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={modalMode === "create" ? "Enter New Infrastructure Project" : `Edit Project: ${name}`}
+        description="Record site specifications, ground mobilization schedule, supervising teams, and key milestones."
+        maxWidth="4xl"
       >
-        <form onSubmit={handleSubmitProject} className="space-y-4 text-slate-900 dark:text-white max-h-[80vh] overflow-y-auto px-1">
-          {/* Project Name */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-              Project Title / Name *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Eko Atlantic Maritime Logistics Corridor Phase 1"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
-            />
-          </div>
-
-          {/* Client or Entity */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Client / Sovereign Partner
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Federal Ministry of Works / Lagos State"
-                value={clientOrEntity}
-                onChange={(e) => setClientOrEntity(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
-              />
+        <form onSubmit={handleSubmitProject} className="space-y-5 text-slate-900 dark:text-white max-h-[80vh] overflow-y-auto px-1 sm:px-2">
+          {/* Card 1: Project Identity & Sector */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/[0.05]">
+              <Building2 className="h-4 w-4 text-[#ED2618]" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Project Identity &amp; Location
+              </h4>
             </div>
 
+            {/* Project Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Site Location Corridor *
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Project Title / Name *
               </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Lekki Coastal Expressway Corridor, Lagos"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
+                placeholder="e.g. Eko Atlantic Maritime Logistics Corridor Phase 1"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
               />
             </div>
-          </div>
 
-          {/* Category & Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Sector / Category
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
-              >
-                {CATEGORIES.filter((c) => c.value !== "ALL").map((c) => (
-                  <option key={c.value} value={c.value} className="bg-white dark:bg-slate-900">
-                    {c.label}
-                  </option>
-                ))}
-              </select>
+            {/* Client and Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Client / Sovereign Partner
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Federal Ministry of Works / Lagos State"
+                  value={clientOrEntity}
+                  onChange={(e) => setClientOrEntity(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Site Location Corridor *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Lekki Coastal Expressway Corridor, Lagos"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Execution Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
-              >
-                {STATUSES.filter((s) => s.value !== "ALL").map((s) => (
-                  <option key={s.value} value={s.value} className="bg-white dark:bg-slate-900">
-                    {s.label}
-                  </option>
-                ))}
-              </select>
+            {/* Category and Status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Sector / Category
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                >
+                  {CATEGORIES.filter((c) => c.value !== "ALL").map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Execution Status
+                </label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                >
+                  {STATUSES.filter((s) => s.value !== "ALL").map((s) => (
+                    <option key={s.value} value={s.value}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Progress Percentage */}
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Site Progress Percentage
-              </label>
-              <span className="text-xs font-mono font-bold text-[#ED2618]">
-                {progressPct}%
-              </span>
+          {/* Card 2: Field Supervision, Teams & Timeline */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-200/60 dark:border-white/[0.05]">
+              <HardHat className="h-4 w-4 text-[#ED2618]" />
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Ground Execution Teams &amp; Schedule
+              </h4>
             </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={progressPct}
-              onChange={(e) => setProgressPct(Number(e.target.value))}
-              className="w-full accent-[#ED2618]"
-            />
-          </div>
 
-          {/* Lead Engineer & Contractor Squad */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Lead Supervising Engineer
-              </label>
+            {/* Engineer and Contractor */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Lead Supervising Engineer
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Engr. Babatunde Alabi, FNSE"
+                  value={leadEngineer}
+                  onChange={(e) => setLeadEngineer(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Assigned Contractor Squad / Firm
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Julius Berger / Dexta Field Squad Alpha"
+                  value={contractorTeam}
+                  onChange={(e) => setContractorTeam(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
+            {/* Mobilization and Commissioning Dates */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Mobilization Start Date
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Target Commissioning Date
+                </label>
+                <input
+                  type="date"
+                  value={targetEndDate}
+                  onChange={(e) => setTargetEndDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
+            {/* Progress Percentage */}
+            <div className="p-3.5 rounded-xl bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 space-y-2">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-[#ED2618]" />
+                  <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    Site Progress Percentage
+                  </label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    {[0, 25, 50, 75, 100].map((pct) => (
+                      <button
+                        type="button"
+                        key={pct}
+                        onClick={() => setProgressPct(pct)}
+                        className={cn(
+                          "px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all",
+                          progressPct === pct
+                            ? "bg-[#ED2618] text-white"
+                            : "bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                        )}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-xs font-mono font-extrabold px-2 py-0.5 rounded-md bg-red-50 text-[#ED2618] dark:bg-red-950/40 border border-red-200 dark:border-red-900/40">
+                    {progressPct}%
+                  </span>
+                </div>
+              </div>
               <input
-                type="text"
-                placeholder="e.g. Engr. Babatunde Alabi, FNSE"
-                value={leadEngineer}
-                onChange={(e) => setLeadEngineer(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Assigned Contractor Squad / Firm
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. Julius Berger / Dexta Field Squad Alpha"
-                value={contractorTeam}
-                onChange={(e) => setContractorTeam(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
+                type="range"
+                min="0"
+                max="100"
+                value={progressPct}
+                onChange={(e) => setProgressPct(Number(e.target.value))}
+                className="w-full accent-[#ED2618] h-2 bg-slate-200 dark:bg-white/10 rounded-lg cursor-pointer"
               />
             </div>
           </div>
 
-          {/* Target Dates */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Mobilization Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Target Commissioning Date
-              </label>
-              <input
-                type="date"
-                value={targetEndDate}
-                onChange={(e) => setTargetEndDate(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
-              />
-            </div>
-          </div>
-
-          {/* Scope / Summary */}
-          <div>
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+          {/* Card 3: Scope / Summary */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] space-y-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
               Project Technical Scope &amp; Summary
             </label>
             <textarea
-              rows={2}
+              rows={3}
               placeholder="Provide executive scope, ground coordinates, and technical specifications..."
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
+              className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
             />
           </div>
 
-          {/* Milestones Management */}
-          <div className="border-t border-slate-200 dark:border-white/10 pt-3">
-            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">
-              Ground Execution Milestones
-            </label>
+          {/* Card 4: Milestones Management (Spacious 2-column grid on desktop) */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-white/[0.05]">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-[#ED2618]" />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Ground Execution Milestones
+                </h4>
+              </div>
+              <span className="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                {milestonesList.filter((m) => m.isCompleted).length} of {milestonesList.length} completed
+              </span>
+            </div>
 
-            {/* Existing Milestones List */}
-            <div className="space-y-2 mb-3 max-h-48 overflow-y-auto pr-1">
+            {/* Existing Milestones List in a 2-column desktop grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-60 overflow-y-auto pr-1">
               {milestonesList.map((m) => (
                 <div
                   key={m.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/5 text-xs"
+                  className={cn(
+                    "flex items-center justify-between p-3 rounded-xl border text-xs transition-all",
+                    m.isCompleted
+                      ? "bg-emerald-500/5 border-emerald-500/20 text-slate-700 dark:text-slate-300"
+                      : "bg-white dark:bg-black/20 border-slate-200/90 dark:border-white/10"
+                  )}
                 >
                   <div
-                    className="flex items-center gap-2 cursor-pointer flex-1"
+                    className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0"
                     onClick={() => handleToggleFormMilestone(m.id)}
                   >
                     {m.isCompleted ? (
@@ -1027,7 +1084,7 @@ export default function OperationsProjectsPage() {
                     ) : (
                       <Square className="h-4 w-4 text-slate-400 shrink-0" />
                     )}
-                    <span className={cn(m.isCompleted && "line-through text-slate-400 font-medium")}>
+                    <span className={cn("truncate font-medium", m.isCompleted && "line-through text-slate-400")}>
                       {m.title}
                     </span>
                   </div>
@@ -1035,7 +1092,8 @@ export default function OperationsProjectsPage() {
                   <button
                     type="button"
                     onClick={() => handleDeleteFormMilestone(m.id)}
-                    className="text-slate-400 hover:text-red-500 p-1"
+                    className="text-slate-400 hover:text-red-500 p-1 shrink-0 transition-colors"
+                    title="Remove milestone"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -1044,35 +1102,41 @@ export default function OperationsProjectsPage() {
             </div>
 
             {/* Add New Milestone */}
-            <div className="flex gap-2">
+            <div className="flex gap-2.5 pt-2">
               <input
                 type="text"
                 placeholder="Enter new milestone description..."
                 value={newMilestoneText}
                 onChange={(e) => setNewMilestoneText(e.target.value)}
-                className="flex-1 px-3 py-1.5 rounded-xl text-xs bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618]"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddMilestone();
+                  }
+                }}
+                className="flex-1 px-3.5 py-2 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
               />
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={handleAddMilestone}
-                className="text-xs h-8"
+                className="text-xs px-4 h-9 font-bold shrink-0"
               >
-                <Plus className="h-3 w-3 mr-1" />
-                <span>Add</span>
+                <Plus className="h-3.5 w-3.5 mr-1 text-[#ED2618]" />
+                <span>Add Milestone</span>
               </Button>
             </div>
           </div>
 
           {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-white/10">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-white/10 sticky bottom-0 bg-white dark:bg-[#12141D] py-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={() => setIsModalOpen(false)}
-              className="text-xs"
+              className="text-xs px-4"
             >
               Cancel
             </Button>
@@ -1081,9 +1145,9 @@ export default function OperationsProjectsPage() {
               variant="primary"
               size="sm"
               disabled={isSubmitting}
-              className="bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold"
+              className="bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold px-6 shadow-md"
             >
-              {isSubmitting ? "Saving..." : modalMode === "create" ? "Establish Project" : "Update Project"}
+              {isSubmitting ? "Saving..." : modalMode === "create" ? "Establish Infrastructure Project" : "Update Project"}
             </Button>
           </div>
         </form>

@@ -196,6 +196,22 @@ export function DepartmentDashboardView({
     return raw;
   }, [currentUser.jobTitle, currentUser.department]);
 
+  // First name extraction for friendly personal greeting
+  const userFirstName = React.useMemo(() => {
+    const raw = (currentUser.fullName || "").trim();
+    if (!raw) return "there";
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0];
+
+    // If email prefix matches one of the name tokens (e.g. peter4tech matches Peter)
+    const emailPrefix = (currentUser.email || "").toLowerCase().split("@")[0];
+    const match = parts.find((p) => p.length >= 3 && emailPrefix.includes(p.toLowerCase()));
+    if (match) return match;
+
+    // In cases where family name is first (e.g. Ogba Peter), prefer given name or first token
+    return parts[parts.length - 1] || parts[0];
+  }, [currentUser.fullName, currentUser.email]);
+
   // Sync tab and platform with URL search parameter (?tab=...), hostname, and sidebar events
   React.useEffect(() => {
     const syncFromUrl = () => {
@@ -553,62 +569,64 @@ export function DepartmentDashboardView({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Greeting & Identity */}
           <div className="space-y-2.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
-                {platform === "systems"
-                  ? "admin.dextaafrica.org • Zero-Trust Systems Command"
-                  : platform === "finance"
-                  ? "dextaafrica.org • Treasury & Financial Accounts Desk"
-                  : platform === "hr"
-                  ? "dextaafrica.org • People & Culture Desk"
-                  : platform === "operations"
-                  ? "ops.dextaafrica.org • Operations Fleet Desk"
-                  : "dextaafrica.org • Executive Leadership Suite"}
-              </span>
-              <span className="text-slate-300 dark:text-white/20">&bull;</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
-                {platform === "systems"
-                  ? `SYSTEMS & IT • ${currentUser.role || "ADMIN"}`
-                  : platform === "finance"
-                  ? `FINANCE & ACCOUNTS • ${currentUser.role || "ADMIN"}`
-                  : platform === "hr"
-                  ? `PEOPLE & HR • ${currentUser.role || "ADMIN"}`
-                  : platform === "operations"
-                  ? `OPERATIONS • ${currentUser.role || "ADMIN"}`
-                  : `${currentUser.department || "EXECUTIVE"} • ${currentUser.role || "ADMIN"}`}
-              </span>
-              <span className="text-slate-300 dark:text-white/20">&bull;</span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 uppercase tracking-wider border border-amber-500/25">
-                {seniorityBadgeLabel}
-              </span>
-            </div>
+            {platform === "operations" ? (
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[#ED2618]">
+                  Operations Workspace
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
+                  {platform === "systems"
+                    ? "admin.dextaafrica.org • Zero-Trust Systems Command"
+                    : platform === "finance"
+                    ? "dextaafrica.org • Treasury & Financial Accounts Desk"
+                    : platform === "hr"
+                    ? "dextaafrica.org • People & Culture Desk"
+                    : "dextaafrica.org • Executive Leadership Suite"}
+                </span>
+                <span className="text-slate-300 dark:text-white/20">&bull;</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
+                  {platform === "systems"
+                    ? `SYSTEMS & IT • ${currentUser.role || "ADMIN"}`
+                    : platform === "finance"
+                    ? `FINANCE & ACCOUNTS • ${currentUser.role || "ADMIN"}`
+                    : platform === "hr"
+                    ? `PEOPLE & HR • ${currentUser.role || "ADMIN"}`
+                    : `${currentUser.department || "EXECUTIVE"} • ${currentUser.role || "ADMIN"}`}
+                </span>
+                <span className="text-slate-300 dark:text-white/20">&bull;</span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 uppercase tracking-wider border border-amber-500/25">
+                  {seniorityBadgeLabel}
+                </span>
+              </div>
+            )}
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              {greeting}, <span className="text-[#ED2618]">{currentUser.fullName}</span>
+              {greeting}, <span className="text-[#ED2618]">{userFirstName}</span>
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-              {platform === "systems"
-                ? "Your zero-trust IT command center governing user access tokens, identity verification, watchdog firewalls, active sessions, and cloud microservices."
+              {platform === "operations"
+                ? "Manage ongoing projects, daily field reports, team logistics, and site approvals in one place."
+                : platform === "systems"
+                ? "Manage user access tokens, identity verification, active sessions, and cloud microservices."
                 : platform === "finance"
-                ? "Your personalized corporate ledger hub governing capital inflows, contractor disbursements, escrow balances, and financial authorizations."
+                ? "Manage corporate ledger records, capital inflows, contractor disbursements, and treasury accounts."
                 : platform === "hr"
-                ? "Your personalized workforce operations hub governing employee profiles, leave clearances, talent onboarding, and corporate staff dispatch."
-                : platform === "operations"
-                ? "Your personalized operational workspace for managing Landmark site developments, logistics procurement, and field contractor clearances."
-                : "Personalized executive command center governing infrastructure site deliveries, capital treasury settlements, and official communications."}
+                ? "Manage workforce operations, employee profiles, leave clearances, and team onboarding."
+                : "Executive leadership workspace governing enterprise infrastructure, capital investments, and operations."}
             </p>
 
-            <div className="flex items-center gap-3 pt-1 text-[11px] text-slate-500 dark:text-slate-400 flex-wrap">
+            <div className="flex items-center gap-2 pt-0.5 text-xs text-slate-500 dark:text-slate-400">
               <span className="font-semibold text-slate-700 dark:text-slate-300">
-                {userJobTitle} &bull; <span className="font-mono text-slate-400">{currentUser.email}</span>
+                {userJobTitle}
               </span>
               <span className="text-slate-300 dark:text-white/20">&bull;</span>
-              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                <span>{seniorityAuthorityLabel}</span>
-              </div>
+              <span className="font-mono text-slate-400">{currentUser.email}</span>
             </div>
           </div>
 
@@ -947,7 +965,7 @@ export function DepartmentDashboardView({
             <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Landmark Site Deliveries
+                  Project Site Deliveries
                 </span>
                 <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
                   <Building2 className="h-4 w-4" />
@@ -963,7 +981,7 @@ export function DepartmentDashboardView({
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                {portfolioItems.length > 0 ? portfolioItems.slice(0, 3).map((p: any) => p.name).join(" • ") : "No Landmark Developments Registered"}
+                {portfolioItems.length > 0 ? portfolioItems.slice(0, 3).map((p: any) => p.name).join(" • ") : "No Project Sites Registered"}
               </p>
             </div>
 
@@ -992,12 +1010,12 @@ export function DepartmentDashboardView({
 
           {/* Main Grid: Sites & Approvals Queue */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column (7 cols): Landmark Construction Projects */}
+            {/* Left Column (7 cols): Construction Projects */}
             <div className="lg:col-span-7 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-5">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/[0.06]">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Landmark Infrastructure Sites
+                    Active Project Sites
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Live operational progress and contractor disbursement tracking.
@@ -1050,7 +1068,7 @@ export function DepartmentDashboardView({
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                        No Landmark Developments Registered
+                        No Project Sites Registered
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                         Production database has zero registered site developments.

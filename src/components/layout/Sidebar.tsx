@@ -206,11 +206,11 @@ const FINANCE_NAV: NavSection[] = [
 const PORTALS: Record<PortalType, PortalConfig> = {
   operations: {
     id: "operations",
-    title: "Operations Fleet Desk",
+    title: "Operations Workspace",
     shortTitle: "Operations",
-    badge: "Fleet Ops",
+    badge: "Operations",
     subdomain: "ops.dextaafrica.org",
-    description: "Landmark developments, logistics fleet, and site deliveries",
+    description: "Ongoing projects, site progress, logistics, and field operations",
     icon: HardHat,
     sections: OPERATIONS_NAV,
   },
