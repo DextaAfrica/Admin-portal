@@ -191,6 +191,16 @@ export default async function DashboardPage() {
         orderBy: { transactionDate: "desc" },
       }),
       db.interDeptApproval.findMany({
+        where: isSuperAdmin
+          ? {}
+          : {
+              OR: [
+                { requesterId: user?.id },
+                { requesterEmail: user?.email },
+                { toDepartment: userDept },
+                { fromDepartment: userDept },
+              ],
+            },
         take: 20,
         orderBy: { createdAt: "desc" },
       }),
@@ -350,6 +360,14 @@ export default async function DashboardPage() {
           orderBy: { createdAt: "desc" },
         }),
         db.infrastructureProject.findMany({
+          where: isSuperAdmin
+            ? {}
+            : {
+                OR: [
+                  { createdByEmail: user.email },
+                  { leadEngineer: { contains: user.fullName } },
+                ],
+              },
           take: 8,
           orderBy: { createdAt: "desc" },
         }),

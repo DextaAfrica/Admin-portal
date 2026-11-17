@@ -41,9 +41,15 @@ export default function AdminPortalLoginPage() {
     buttonText?: string;
   } | null>(null);
   const [inactivityNotice, setInactivityNotice] = React.useState(false);
+  const [isLocalHost, setIsLocalHost] = React.useState(false);
+  const [devOtpCode, setDevOtpCode] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (typeof window !== "undefined") {
+      const host = window.location.hostname.toLowerCase();
+      if (host.includes("localhost") || host.includes("127.0.0.1")) {
+        setIsLocalHost(true);
+      }
       const params = new URLSearchParams(window.location.search);
       if (params.get("reason") === "inactivity") {
         setInactivityNotice(true);
@@ -135,6 +141,11 @@ export default function AdminPortalLoginPage() {
         setRecoveryCode("");
         setOtpError("");
         setUseRecoveryCode(false);
+        if (data.devOtpCode) {
+          setDevOtpCode(data.devOtpCode);
+        } else {
+          setDevOtpCode(null);
+        }
         setOtpModalOpen(true);
         setIsLoading(false);
         toastSuccess(
@@ -401,6 +412,47 @@ export default function AdminPortalLoginPage() {
                 </div>
               )}
 
+              {/* Local Dev Seed Credentials Quick Fill */}
+              {isLocalHost && (
+                <div className="p-3.5 rounded-2xl bg-slate-900/90 dark:bg-black/60 border border-slate-700/60 dark:border-white/10 text-xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-[10px] uppercase text-emerald-400 tracking-wider flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Local Testing Accounts
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono">Password: AdminPassword2026!</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("it.admin@dextaafrica.com");
+                        setPassword("AdminPassword2026!");
+                      }}
+                      className="p-2 rounded-xl border border-slate-700 bg-white/[0.04] hover:bg-white/[0.08] hover:border-[#ED2618] transition-all text-left group cursor-pointer"
+                    >
+                      <div className="font-bold text-white group-hover:text-[#ED2618] text-[11px] truncate">
+                        Systems IT Admin
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate">it.admin@dextaafrica.com</div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEmail("admin@dextaafrica.com");
+                        setPassword("AdminPassword2026!");
+                      }}
+                      className="p-2 rounded-xl border border-slate-700 bg-white/[0.04] hover:bg-white/[0.08] hover:border-[#ED2618] transition-all text-left group cursor-pointer"
+                    >
+                      <div className="font-bold text-white group-hover:text-[#ED2618] text-[11px] truncate">
+                        Super Admin
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate">admin@dextaafrica.com</div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="admin-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
@@ -504,6 +556,29 @@ export default function AdminPortalLoginPage() {
             <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-500 dark:text-red-400">
               <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{otpError}</span>
+            </div>
+          )}
+
+          {devOtpCode && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between text-xs">
+              <div>
+                <span className="font-bold text-amber-500 uppercase tracking-wider text-[10px] block">
+                  Local Dev Verification Code
+                </span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white text-base tracking-widest">
+                  {devOtpCode}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setOtpCode(devOtpCode);
+                  handleVerifyOtp(devOtpCode);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+              >
+                1-Click Verify &rarr;
+              </button>
             </div>
           )}
 
