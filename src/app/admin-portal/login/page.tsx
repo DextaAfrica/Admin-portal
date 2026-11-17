@@ -129,7 +129,7 @@ export default function AdminPortalLoginPage() {
       if (data.requiresMfa) {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
-        const hasTotp = Boolean(data.twoFactorEnabled);
+        const hasTotp = Boolean(data.hasTotp);
         setIsEmailOtp(!hasTotp);
         setOtpCode("");
         setRecoveryCode("");

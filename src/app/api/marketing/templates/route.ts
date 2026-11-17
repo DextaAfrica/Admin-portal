@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { CreateMarketingTemplateSchema, formatZodError } from "@/lib/validation/schemas";
 
 export async function GET() {
   try {
@@ -25,14 +26,21 @@ export async function POST(req: NextRequest) {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { name, subject, bodyHtml, variables } = await req.json();
+    const body = await req.json();
+    const parsed = CreateMarketingTemplateSchema.safeParse(body);
+    if (!parsed.success) {
+      const err = formatZodError(parsed.error);
+      return NextResponse.json(err, { status: 400 });
+    }
+
+    const { name, subject, bodyHtml, variables } = parsed.data;
 
     const template = await prisma.emailTemplate.create({
       data: {
         name,
         subject,
         bodyHtml,
-        variables: JSON.stringify(variables || []),
+        variables: JSON.stringify(variables),
       },
     });
 

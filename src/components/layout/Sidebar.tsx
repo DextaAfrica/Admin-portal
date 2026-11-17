@@ -31,6 +31,7 @@ import {
   Send,
   Layers,
   DollarSign,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
@@ -67,7 +68,7 @@ const OPERATIONS_NAV: NavSection[] = [
     label: "Operations Command",
     items: [
       { title: "Operations Overview", href: "/dashboard?tab=operations", tabId: "operations", icon: LayoutDashboard, badge: "Live" },
-      { title: "Operations Public Landing", href: "/", icon: Home },
+      { title: "Reports & Analytics", href: "/reports", icon: BarChart3, badge: "Telemetry" },
     ],
   },
   {
@@ -84,7 +85,6 @@ const OPERATIONS_NAV: NavSection[] = [
       { title: "Equipment & Asset Vault", href: "/storage", icon: HardDrive, badge: "S3" },
       { title: "Capital Procurement Deals", href: "/crm", icon: Briefcase, badge: "Deals" },
       { title: "Corporate Field Dispatch", href: "/dashboard?tab=dispatch", tabId: "dispatch", icon: Mail, badge: "SMTP" },
-      { title: "Email Campaign Broadcasts", href: "/marketing", icon: Send, badge: "Broadcast" },
     ],
   },
   {
@@ -103,7 +103,7 @@ const SYSTEMS_NAV: NavSection[] = [
     label: "Systems Workspace",
     items: [
       { title: "IT Command Overview", href: "/dashboard?tab=systems", tabId: "systems", icon: LayoutDashboard, badge: "Gov" },
-      { title: "Systems Landing", href: "/", icon: Home },
+      { title: "System Analytics & Reports", href: "/reports", icon: BarChart3, badge: "Metrics" },
     ],
   },
   {
@@ -140,7 +140,7 @@ const EXECUTIVE_NAV: NavSection[] = [
     label: "Executive Leadership",
     items: [
       { title: "MD / CEO Command Suite", href: "/dashboard?tab=overview", tabId: "overview", icon: LayoutDashboard, badge: "CEO" },
-      { title: "Enterprise Gateway", href: "/", icon: Home },
+      { title: "Executive Reports & Charts", href: "/reports", icon: BarChart3, badge: "BI" },
     ],
   },
   {
@@ -176,7 +176,6 @@ const HR_NAV: NavSection[] = [
     label: "People Workspace",
     items: [
       { title: "HR Command Overview", href: "/dashboard?tab=overview", tabId: "overview", icon: LayoutDashboard },
-      { title: "Enterprise Gateway", href: "/", icon: Home },
     ],
   },
   {
@@ -204,6 +203,7 @@ const FINANCE_NAV: NavSection[] = [
     label: "Treasury & Capital",
     items: [
       { title: "Treasury Liquidity", href: "/dashboard?tab=treasury", tabId: "treasury", icon: Landmark, badge: "Ledger" },
+      { title: "Financial Reports & Charts", href: "/reports", icon: BarChart3, badge: "Analytics" },
       { title: "Capital & Inflow Ledger", href: "/dashboard?tab=treasury", tabId: "treasury", icon: DollarSign, badge: "Inflow" },
       { title: "Sovereign Deals Pipeline", href: "/crm", icon: Briefcase, badge: "Deals" },
     ],

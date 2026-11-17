@@ -4,6 +4,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { sendEmail } from "@/lib/email/dispatcher";
 import { ensureInitialEnterpriseData } from "@/lib/automation/engine";
+import { CreateCredentialRequestSchema, formatZodError } from "@/lib/validation/schemas";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -107,25 +108,24 @@ export async function POST(req: NextRequest) {
     const { user } = await getCurrentSession();
 
     const body = await req.json();
+    const parsed = CreateCredentialRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      const err = formatZodError(parsed.error);
+      return NextResponse.json(err, { status: 400 });
+    }
+
     const {
       requesterEmail,
       requesterName,
-      department = "GENERAL",
-      requestType = "PASSWORD_RESET",
-      priority = "MEDIUM",
+      department,
+      requestType,
+      priority,
       reason,
-    } = body;
-
-    if (!requesterEmail || !reason) {
-      return NextResponse.json(
-        { error: "Requester email and reason for credential change are required" },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Lookup user if exists in DB
     const targetUser = await prisma.user.findUnique({
-      where: { email: requesterEmail.toLowerCase().trim() },
+      where: { email: requesterEmail },
     });
 
     const ticketNumber = `SEC-2026-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       data: {
         ticketNumber,
         userId: targetUser ? targetUser.id : user?.id,
-        requesterEmail: requesterEmail.toLowerCase().trim(),
+        requesterEmail,
         requesterName: requesterName || targetUser?.fullName || "Staff Member",
         department: department || (targetUser as any)?.department || "OPERATIONS",
         requestType,

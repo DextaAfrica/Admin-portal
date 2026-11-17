@@ -22,6 +22,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
 import type { Article } from "@/lib/backend-api";
+import { SaveArticleSchema, formatZodError } from "@/lib/validation/schemas";
 
 export default function JournalPage() {
   const { success: toastSuccess, error: toastError } = useToast();
@@ -30,6 +31,17 @@ export default function JournalPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [categoryFilter, setCategoryFilter] = React.useState("all");
+
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   // Modal State
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -78,6 +90,7 @@ export default function JournalPage() {
     setPublished(true);
     setSeoTitle("");
     setSeoDescription("");
+    setFieldErrors({});
     setIsFormOpen(true);
   };
 
@@ -92,11 +105,13 @@ export default function JournalPage() {
     setPublished(article.published);
     setSeoTitle(article.seoTitle || "");
     setSeoDescription(article.seoDescription || "");
+    setFieldErrors({});
     setIsFormOpen(true);
   };
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
+    clearFieldError("title");
     if (!editingItem) {
       setSlug(
         val
@@ -105,18 +120,14 @@ export default function JournalPage() {
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-+|-+$/g, "")
       );
+      clearFieldError("slug");
     }
   };
 
   const handleSaveArticle = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !slug.trim()) {
-      toastError("Validation Error", "Title and URL Slug are required");
-      return;
-    }
 
-    setIsSubmitting(true);
-    const payload = {
+    const rawPayload = {
       title: title.trim(),
       slug: slug.trim(),
       author: author.trim(),
@@ -133,6 +144,21 @@ export default function JournalPage() {
       seoDescription: seoDescription.trim() || excerpt.trim(),
     };
 
+    const parsed = SaveArticleSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      const errMap: Record<string, string> = {};
+      for (const [k, v] of Object.entries(errResult.fieldErrors)) {
+        errMap[k] = v[0];
+      }
+      setFieldErrors(errMap);
+      toastError("Validation Error", errResult.error);
+      return;
+    }
+
+    setFieldErrors({});
+    setIsSubmitting(true);
+
     try {
       const url = editingItem
         ? `/api/backend/journal/${editingItem.id}`
@@ -142,11 +168,18 @@ export default function JournalPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(parsed.data),
       });
 
       if (!res.ok) {
         const errorJson = await res.json().catch(() => ({}));
+        if (errorJson.fieldErrors) {
+          const serverErrMap: Record<string, string> = {};
+          for (const [k, v] of Object.entries(errorJson.fieldErrors)) {
+            serverErrMap[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+          }
+          setFieldErrors(serverErrMap);
+        }
         throw new Error(errorJson.error || "Save operation failed");
       }
 
@@ -373,6 +406,7 @@ export default function JournalPage() {
             label="Article Title"
             placeholder="e.g. Navigating Pan-African Commercial Real Estate in 2026"
             value={title}
+            error={fieldErrors.title}
             onChange={(e) => handleTitleChange(e.target.value)}
             required
           />
@@ -382,7 +416,11 @@ export default function JournalPage() {
               label="URL Slug"
               placeholder="e.g. navigating-pan-african-commercial-real-estate"
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
+              error={fieldErrors.slug}
+              onChange={(e) => {
+                setSlug(e.target.value);
+                clearFieldError("slug");
+              }}
               required
             />
             <div className="space-y-1.5">
@@ -391,7 +429,10 @@ export default function JournalPage() {
               </label>
               <select
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
+                onChange={(e) => {
+                  setCategory(e.target.value);
+                  clearFieldError("category");
+                }}
                 className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3.5 py-2.5 text-xs text-slate-900 dark:text-white"
               >
                 <option value="Market Insights">Market Insights</option>
@@ -399,6 +440,7 @@ export default function JournalPage() {
                 <option value="Investment Intelligence">Investment Intelligence</option>
                 <option value="Company News">Company News</option>
               </select>
+              {fieldErrors.category && <p className="text-xs font-medium text-red-500">{fieldErrors.category}</p>}
             </div>
           </div>
 
@@ -407,14 +449,22 @@ export default function JournalPage() {
               label="Author Name / Byline"
               placeholder="e.g. Dexta Research & Intelligence"
               value={author}
-              onChange={(e) => setAuthor(e.target.value)}
+              error={fieldErrors.author}
+              onChange={(e) => {
+                setAuthor(e.target.value);
+                clearFieldError("author");
+              }}
               required
             />
             <Input
               label="Cover Image CDN URL"
               placeholder="https://..."
               value={coverImageUrl}
-              onChange={(e) => setCoverImageUrl(e.target.value)}
+              error={fieldErrors.coverImageUrl}
+              onChange={(e) => {
+                setCoverImageUrl(e.target.value);
+                clearFieldError("coverImageUrl");
+              }}
             />
           </div>
 
@@ -426,9 +476,13 @@ export default function JournalPage() {
               rows={3}
               placeholder="Compelling opening synopsis summarizing the key findings..."
               value={excerpt}
-              onChange={(e) => setExcerpt(e.target.value)}
+              onChange={(e) => {
+                setExcerpt(e.target.value);
+                clearFieldError("excerpt");
+              }}
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500"
             />
+            {fieldErrors.excerpt && <p className="text-xs font-medium text-red-500">{fieldErrors.excerpt}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -436,13 +490,21 @@ export default function JournalPage() {
               label="SEO Title"
               placeholder="Article SEO Title | Dexta Africa"
               value={seoTitle}
-              onChange={(e) => setSeoTitle(e.target.value)}
+              error={fieldErrors.seoTitle}
+              onChange={(e) => {
+                setSeoTitle(e.target.value);
+                clearFieldError("seoTitle");
+              }}
             />
             <Input
               label="SEO Description"
               placeholder="Search engine preview text..."
               value={seoDescription}
-              onChange={(e) => setSeoDescription(e.target.value)}
+              error={fieldErrors.seoDescription}
+              onChange={(e) => {
+                setSeoDescription(e.target.value);
+                clearFieldError("seoDescription");
+              }}
             />
           </div>
 

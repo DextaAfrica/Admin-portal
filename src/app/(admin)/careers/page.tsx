@@ -20,6 +20,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
 import type { CareerListing } from "@/lib/backend-api";
+import { SaveCareerListingSchema, formatZodError } from "@/lib/validation/schemas";
 
 export default function CareersPage() {
   const { success: toastSuccess, error: toastError } = useToast();
@@ -28,6 +29,17 @@ export default function CareersPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [departmentFilter, setDepartmentFilter] = React.useState("all");
+
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   // Modal State
   const [isFormOpen, setIsFormOpen] = React.useState(false);

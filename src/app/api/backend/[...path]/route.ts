@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { generateBackendAdminToken, BACKEND_API_URL } from "@/lib/backend-api";
 import { logAuditEvent } from "@/lib/auth/audit";
+import {
+  SaveDevelopmentSchema,
+  SaveArticleSchema,
+  SaveCareerListingSchema,
+  SaveContentPageSchema,
+  formatZodError,
+} from "@/lib/validation/schemas";
 
 export async function GET(
   req: NextRequest,
@@ -77,6 +84,46 @@ async function handleProxy(
     if (method !== "GET" && method !== "HEAD") {
       headers["Content-Type"] = "application/json";
       body = await req.text();
+
+      // Pre-flight enterprise input validation before dispatching to Go core backend
+      if (body) {
+        try {
+          const jsonBody = JSON.parse(body);
+          const rootEntity = pathSegments[0]?.toLowerCase();
+          const subEntity = pathSegments[1]?.toLowerCase();
+
+          if (rootEntity === "portfolio" && (method === "POST" || method === "PUT")) {
+            const parsed = SaveDevelopmentSchema.safeParse(jsonBody);
+            if (!parsed.success) {
+              return NextResponse.json(formatZodError(parsed.error), { status: 400 });
+            }
+          } else if (rootEntity === "journal" && (method === "POST" || method === "PUT")) {
+            const parsed = SaveArticleSchema.safeParse(jsonBody);
+            if (!parsed.success) {
+              return NextResponse.json(formatZodError(parsed.error), { status: 400 });
+            }
+          } else if (
+            rootEntity === "careers" &&
+            (subEntity === "listings" || pathSegments.length === 3) &&
+            (method === "POST" || method === "PUT")
+          ) {
+            const parsed = SaveCareerListingSchema.safeParse(jsonBody);
+            if (!parsed.success) {
+              return NextResponse.json(formatZodError(parsed.error), { status: 400 });
+            }
+          } else if (rootEntity === "content" && method === "PUT") {
+            const parsed = SaveContentPageSchema.safeParse(jsonBody);
+            if (!parsed.success) {
+              return NextResponse.json(formatZodError(parsed.error), { status: 400 });
+            }
+          }
+        } catch (jsonErr) {
+          return NextResponse.json(
+            { error: "Invalid JSON payload structure" },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     const controller = new AbortController();

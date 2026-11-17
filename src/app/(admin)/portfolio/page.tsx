@@ -23,6 +23,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
 import type { Development } from "@/lib/backend-api";
+import { SaveDevelopmentSchema, formatZodError } from "@/lib/validation/schemas";
 
 export default function PortfolioPage() {
   const { success: toastSuccess, error: toastError } = useToast();
@@ -72,6 +73,17 @@ export default function PortfolioPage() {
     fetchDevelopments();
   }, [fetchDevelopments]);
 
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const openCreateModal = () => {
     setEditingItem(null);
     setName("");
@@ -85,6 +97,7 @@ export default function PortfolioPage() {
     setDisplayOrder(developments.length + 1);
     setSeoTitle("");
     setSeoDescription("");
+    setFieldErrors({});
     setIsFormOpen(true);
   };
 
@@ -101,11 +114,13 @@ export default function PortfolioPage() {
     setDisplayOrder(dev.displayOrder);
     setSeoTitle(dev.seoTitle || "");
     setSeoDescription(dev.seoDescription || "");
+    setFieldErrors({});
     setIsFormOpen(true);
   };
 
   const handleNameChange = (val: string) => {
     setName(val);
+    clearFieldError("name");
     if (!editingItem) {
       setSlug(
         val
@@ -114,18 +129,14 @@ export default function PortfolioPage() {
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-+|-+$/g, "")
       );
+      clearFieldError("slug");
     }
   };
 
   const handleSaveDevelopment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !slug.trim()) {
-      toastError("Validation Error", "Name and URL Slug are required");
-      return;
-    }
 
-    setIsSubmitting(true);
-    const payload = {
+    const rawPayload = {
       name: name.trim(),
       slug: slug.trim(),
       location: location.trim(),
@@ -144,6 +155,22 @@ export default function PortfolioPage() {
       seoDescription: seoDescription.trim() || summary.trim(),
     };
 
+    // Client-side zero-trust schema validation
+    const parsed = SaveDevelopmentSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      const errMap: Record<string, string> = {};
+      for (const [k, v] of Object.entries(errResult.fieldErrors)) {
+        errMap[k] = v[0];
+      }
+      setFieldErrors(errMap);
+      toastError("Validation Error", errResult.error);
+      return;
+    }
+
+    setFieldErrors({});
+    setIsSubmitting(true);
+
     try {
       const url = editingItem
         ? `/api/backend/portfolio/${editingItem.id}`
@@ -153,11 +180,18 @@ export default function PortfolioPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(parsed.data),
       });
 
       if (!res.ok) {
         const errorJson = await res.json().catch(() => ({}));
+        if (errorJson.fieldErrors) {
+          const serverErrMap: Record<string, string> = {};
+          for (const [k, v] of Object.entries(errorJson.fieldErrors)) {
+            serverErrMap[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+          }
+          setFieldErrors(serverErrMap);
+        }
         throw new Error(errorJson.error || "Save operation failed");
       }
 
@@ -437,6 +471,7 @@ export default function PortfolioPage() {
               label="Development Name"
               placeholder="e.g. The Grand Ikoyi Horizon"
               value={name}
+              error={fieldErrors.name}
               onChange={(e) => handleNameChange(e.target.value)}
               required
             />
@@ -444,7 +479,11 @@ export default function PortfolioPage() {
               label="URL Slug"
               placeholder="e.g. the-grand-ikoyi-horizon"
               value={slug}
-              onChange={(e) => setSlug(e.target.value)}
+              error={fieldErrors.slug}
+              onChange={(e) => {
+                setSlug(e.target.value);
+                clearFieldError("slug");
+              }}
               helperText="Unique URL identifier for the public website"
               required
             />
@@ -455,7 +494,12 @@ export default function PortfolioPage() {
               label="Physical Location"
               placeholder="e.g. Victoria Island, Lagos, Nigeria"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              error={fieldErrors.location}
+              onChange={(e) => {
+                setLocation(e.target.value);
+                clearFieldError("location");
+              }}
+              required
             />
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
@@ -463,13 +507,17 @@ export default function PortfolioPage() {
               </label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value as any)}
+                onChange={(e) => {
+                  setStatus(e.target.value as any);
+                  clearFieldError("status");
+                }}
                 className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3.5 py-2.5 text-xs text-slate-900 dark:text-white"
               >
                 <option value="planning">Planning &amp; Concept</option>
                 <option value="under_construction">Under Active Construction</option>
                 <option value="completed">Completed &amp; Handover</option>
               </select>
+              {fieldErrors.status && <p className="text-xs font-medium text-red-500">{fieldErrors.status}</p>}
             </div>
           </div>
 
@@ -477,7 +525,11 @@ export default function PortfolioPage() {
             label="Hero Image CDN URL"
             placeholder="https://..."
             value={heroImageUrl}
-            onChange={(e) => setHeroImageUrl(e.target.value)}
+            error={fieldErrors.heroImageUrl}
+            onChange={(e) => {
+              setHeroImageUrl(e.target.value);
+              clearFieldError("heroImageUrl");
+            }}
             helperText="High-resolution hero render or photography URL"
           />
 
@@ -489,9 +541,13 @@ export default function PortfolioPage() {
               rows={3}
               placeholder="High-end editorial summary for investor presentation..."
               value={summary}
-              onChange={(e) => setSummary(e.target.value)}
+              onChange={(e) => {
+                setSummary(e.target.value);
+                clearFieldError("summary");
+              }}
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500"
             />
+            {fieldErrors.summary && <p className="text-xs font-medium text-red-500">{fieldErrors.summary}</p>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -499,14 +555,22 @@ export default function PortfolioPage() {
               label="Search Engine (SEO) Meta Title"
               placeholder="The Grand Horizon | Dexta Africa"
               value={seoTitle}
-              onChange={(e) => setSeoTitle(e.target.value)}
+              error={fieldErrors.seoTitle}
+              onChange={(e) => {
+                setSeoTitle(e.target.value);
+                clearFieldError("seoTitle");
+              }}
             />
             <Input
               label="Display Order Priority"
               type="number"
               placeholder="1"
               value={String(displayOrder)}
-              onChange={(e) => setDisplayOrder(Number(e.target.value))}
+              error={fieldErrors.displayOrder}
+              onChange={(e) => {
+                setDisplayOrder(Number(e.target.value));
+                clearFieldError("displayOrder");
+              }}
             />
           </div>
 

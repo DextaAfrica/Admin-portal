@@ -9,6 +9,19 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Formats a currency amount into standard financial format ($1,250,000).
+ */
+export function formatCurrency(amount: number | string | null | undefined, currency = "USD"): string {
+  const num = typeof amount === "number" ? amount : parseFloat(String(amount || 0));
+  if (isNaN(num)) return "$0";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase() === "USD" ? "USD" : currency.toUpperCase() === "NGN" ? "NGN" : "USD",
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
+/**
  * Formats raw byte counts into human-friendly file size labels.
  */
 export function formatBytes(bytes: number, decimals = 1): string {
