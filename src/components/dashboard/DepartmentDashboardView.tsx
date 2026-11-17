@@ -996,10 +996,10 @@ export function DepartmentDashboardView({
                       </p>
                     </div>
                     <Link
-                      href="/portfolio"
+                      href="/projects"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
                     >
-                      <span>Deploy Landmark Project &rarr;</span>
+                      <span>Enter Infrastructure Project &rarr;</span>
                     </Link>
                   </div>
                 )}
@@ -1532,11 +1532,11 @@ export function DepartmentDashboardView({
                 </div>
                 <div className="flex items-center justify-center gap-3">
                   <Link
-                    href="/portfolio"
+                    href="/projects"
                     className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
                   >
                     <PlusCircle className="h-4 w-4" />
-                    <span>Register Development Project</span>
+                    <span>Enter Infrastructure Project</span>
                   </Link>
                   <Button
                     size="sm"

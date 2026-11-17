@@ -246,6 +246,21 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-6 pb-12 animate-fade-in">
+      {/* Quick link to Operations Projects Desk */}
+      <div className="flex items-center justify-between p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-xs">
+        <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
+          <Building2 className="h-4 w-4 shrink-0 text-[#ED2618]" />
+          <span>
+            Looking for <strong>Operations Projects &amp; Ground Milestones</strong>? Access the dedicated Operations Desk to enter site developments, track milestones, and manage contractor squads.
+          </span>
+        </div>
+        <a
+          href="/projects"
+          className="font-bold text-[#ED2618] hover:underline flex items-center gap-1 shrink-0 ml-3"
+        >
+          <span>Projects Desk &rarr;</span>
+        </a>
+      </div>
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-white/10 pb-5">
         <div>

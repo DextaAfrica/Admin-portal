@@ -88,6 +88,16 @@ export function CommandPalette({
         },
       },
       {
+        id: "nav-projects",
+        title: "Go to Infrastructure Projects & Milestones",
+        category: "Navigation",
+        icon: Building2,
+        action: () => {
+          router.push("/projects");
+          onClose();
+        },
+      },
+      {
         id: "nav-portfolio",
         title: "Go to Portfolio & Landmark Developments",
         category: "Navigation",
