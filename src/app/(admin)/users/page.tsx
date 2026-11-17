@@ -307,6 +307,7 @@ export default function UsersPage() {
         onClose={() => setIsAddOpen(false)}
         title="Invite a Team Member"
         description="Add a colleague to the Dexta Africa workspace and choose their responsibility level."
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateUser} className="space-y-4">
           <Input

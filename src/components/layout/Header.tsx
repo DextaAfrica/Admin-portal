@@ -458,7 +458,7 @@ export function Header({
         onClose={() => setUserProfileModalOpen(false)}
         title="Workspace Identity & Profile"
         description="Your personal identity card across Dexta Africa infrastructure command centers."
-        maxWidth="md"
+        maxWidth="2xl"
         footer={
           <div className="flex items-center justify-between w-full">
             <Button
@@ -638,7 +638,7 @@ export function Header({
         onClose={() => setEditProfileModalOpen(false)}
         title="Edit Personal Profile Details"
         description="Update your corporate identity, avatar, contact information, and biography."
-        maxWidth="md"
+        maxWidth="2xl"
         footer={
           <div className="flex items-center justify-end gap-2 w-full">
             <Button

@@ -476,9 +476,9 @@ export default function PortfolioPage() {
       <Modal
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        title={editingItem ? "Edit Development Project" : "New Landmark Development"}
+        title={editingItem ? "Edit Development Project" : "New Development Project"}
         description="Configure development attributes, architectural location, and public website publishing state."
-        maxWidth="lg"
+        maxWidth="3xl"
       >
         <form onSubmit={handleSaveDevelopment} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

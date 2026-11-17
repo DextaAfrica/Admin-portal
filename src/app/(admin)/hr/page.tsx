@@ -710,7 +710,7 @@ export default function HrDashboardPage() {
         onClose={() => setIsOnboardOpen(false)}
         title="Onboard New Team Member"
         description="Register an employee profile into the internal HR directory and document vault."
-        maxWidth="lg"
+        maxWidth="3xl"
       >
         <form onSubmit={handleOnboardSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -903,7 +903,7 @@ export default function HrDashboardPage() {
         onClose={() => setSelectedEmployee(null)}
         title={selectedEmployee ? `${selectedEmployee.fullName} — Staff Record` : "Staff Profile"}
         description="Unified employee file, emergency details, and internal contract vault."
-        maxWidth="lg"
+        maxWidth="4xl"
       >
         {selectedEmployee && (
           <div className="space-y-5 text-xs">

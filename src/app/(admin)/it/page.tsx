@@ -1435,7 +1435,7 @@ export default function ItGovernancePage() {
         }}
         title={`Security Ticket: ${selectedTicket?.ticketNumber || ""}`}
         description="IT Verification & Access Authorization Review"
-        maxWidth="lg"
+        maxWidth="3xl"
       >
         {selectedTicket && (
           <div className="space-y-4 pt-2">
@@ -1645,7 +1645,7 @@ export default function ItGovernancePage() {
         onClose={() => setNewTicketModalOpen(false)}
         title="Log IT Credential & Access Ticket"
         description="Submit employee credential rotation or account request to the IT queue."
-        maxWidth="md"
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateTicket} className="space-y-4 pt-2">
           <div>
@@ -1780,7 +1780,7 @@ export default function ItGovernancePage() {
         onClose={() => setSelectedAlert(null)}
         title={`Incident: ${selectedAlert?.title || "Policy Violation"}`}
         description="Company Policy Watchdog Incident Investigation"
-        maxWidth="lg"
+        maxWidth="3xl"
       >
         {selectedAlert && (
           <div className="space-y-4 pt-2">

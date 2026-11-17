@@ -170,15 +170,15 @@ export default function OperationsProjectsPage() {
     setClientOrEntity("");
     setLocation("");
     setCategory("INFRASTRUCTURE");
-    setStatus("IN_PROGRESS");
-    setProgressPct(10);
+    setStatus("PLANNING");
+    setProgressPct(0);
     setStartDate(new Date().toISOString().split("T")[0]);
     setTargetEndDate("");
     setLeadEngineer("");
     setContractorTeam("");
     setSummary("");
     setMilestonesList([
-      { id: `ms-1`, title: "Topographical Survey & Geotechnical Soil Boring", isCompleted: true },
+      { id: `ms-1`, title: "Topographical Survey & Geotechnical Soil Boring", isCompleted: false },
       { id: `ms-2`, title: "Corridor Mobilization, Site Access & Grading", isCompleted: false },
       { id: `ms-3`, title: "Primary Foundation, Structural Piling & Drainage", isCompleted: false },
       { id: `ms-4`, title: "Superstructure Erection & MEP Conduits", isCompleted: false },
@@ -251,15 +251,28 @@ export default function OperationsProjectsPage() {
     setMilestonesList(milestonesList.filter((m) => m.id !== id));
   };
 
+  // Real-time verification helpers
+  const isDateOrderValid = !startDate || !targetEndDate || new Date(targetEndDate) >= new Date(startDate);
+  const isTitleValid = name.trim().length >= 3;
+  const isLocationValid = location.trim().length >= 2;
+  const isFormProfessionallyVerified = isTitleValid && isLocationValid && isDateOrderValid;
+  const milestoneCalculatedPct = milestonesList.length > 0
+    ? Math.round((milestonesList.filter((m) => m.isCompleted).length / milestonesList.length) * 100)
+    : 0;
+
   // Submit Project (Create or Update)
   const handleSubmitProject = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toastError("Validation Error", "Project name is required.");
+    if (!isTitleValid) {
+      toastError("Validation Error", "Project name must be at least 3 characters.");
       return;
     }
-    if (!location.trim()) {
+    if (!isLocationValid) {
       toastError("Validation Error", "Project location / site corridor is required.");
+      return;
+    }
+    if (!isDateOrderValid) {
+      toastError("Validation Error", "Target commissioning date cannot be earlier than mobilization start date.");
       return;
     }
 
@@ -987,21 +1000,43 @@ export default function OperationsProjectsPage() {
                   type="date"
                   value={targetEndDate}
                   onChange={(e) => setTargetEndDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 focus:outline-none focus:border-[#ED2618] transition-all shadow-sm"
+                  className={cn(
+                    "w-full px-3.5 py-2.5 rounded-xl text-xs sm:text-sm bg-white dark:bg-black/20 border focus:outline-none transition-all shadow-sm",
+                    !isDateOrderValid
+                      ? "border-red-500 focus:border-red-500"
+                      : "border-slate-200 dark:border-white/10 focus:border-[#ED2618]"
+                  )}
                 />
               </div>
             </div>
+            {!isDateOrderValid && (
+              <p className="text-[11px] text-red-500 font-semibold flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                Target commissioning date cannot be earlier than mobilization start date.
+              </p>
+            )}
 
             {/* Progress Percentage */}
             <div className="p-3.5 rounded-xl bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-[#ED2618]" />
                   <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
                     Site Progress Percentage
                   </label>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {milestonesList.length > 0 && milestoneCalculatedPct !== progressPct && (
+                    <button
+                      type="button"
+                      onClick={() => setProgressPct(milestoneCalculatedPct)}
+                      className="text-[10px] px-2.5 py-0.5 rounded-lg bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold border border-amber-500/25 hover:bg-amber-500/25 transition-all flex items-center gap-1"
+                      title="Sync progress percentage with verified completed milestones"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      <span>Sync with Milestones ({milestoneCalculatedPct}%)</span>
+                    </button>
+                  )}
                   <div className="flex gap-1">
                     {[0, 25, 50, 75, 100].map((pct) => (
                       <button
@@ -1071,7 +1106,7 @@ export default function OperationsProjectsPage() {
                   className={cn(
                     "flex items-center justify-between p-3 rounded-xl border text-xs transition-all",
                     m.isCompleted
-                      ? "bg-emerald-500/5 border-emerald-500/20 text-slate-700 dark:text-slate-300"
+                      ? "bg-emerald-500/5 border-emerald-500/25 text-slate-700 dark:text-slate-300 shadow-sm"
                       : "bg-white dark:bg-black/20 border-slate-200/90 dark:border-white/10"
                   )}
                 >
@@ -1084,15 +1119,23 @@ export default function OperationsProjectsPage() {
                     ) : (
                       <Square className="h-4 w-4 text-slate-400 shrink-0" />
                     )}
-                    <span className={cn("truncate font-medium", m.isCompleted && "line-through text-slate-400")}>
-                      {m.title}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className={cn("block truncate font-medium", m.isCompleted && "line-through text-slate-400")}>
+                        {m.title}
+                      </span>
+                      {m.isCompleted && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="h-2.5 w-2.5" />
+                          Verified Ground Deliverable
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => handleDeleteFormMilestone(m.id)}
-                    className="text-slate-400 hover:text-red-500 p-1 shrink-0 transition-colors"
+                    className="text-slate-400 hover:text-red-500 p-1 shrink-0 transition-colors ml-2"
                     title="Remove milestone"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -1129,26 +1172,48 @@ export default function OperationsProjectsPage() {
             </div>
           </div>
 
-          {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-white/10 sticky bottom-0 bg-white dark:bg-[#12141D] py-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsModalOpen(false)}
-              className="text-xs px-4"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              disabled={isSubmitting}
-              className="bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold px-6 shadow-md"
-            >
-              {isSubmitting ? "Saving..." : modalMode === "create" ? "Establish Infrastructure Project" : "Update Project"}
-            </Button>
+          {/* Real-Time Operational Data Verification & Action Bar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-white/10 sticky bottom-0 bg-white dark:bg-[#12141D] py-3 -mx-1 px-1">
+            <div className="flex items-center gap-2 text-xs">
+              {isFormProfessionallyVerified ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold border border-emerald-500/20">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                  <span>Data Verified: Ready for Ledger</span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold border border-amber-500/20">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+                  <span>
+                    {!isTitleValid
+                      ? "Title required (min 3 chars)"
+                      : !isLocationValid
+                      ? "Corridor location required"
+                      : "Target date must follow mobilization"}
+                  </span>
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsModalOpen(false)}
+                className="text-xs px-4"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                disabled={isSubmitting || !isFormProfessionallyVerified}
+                className="bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold px-6 shadow-md disabled:opacity-50"
+              >
+                {isSubmitting ? "Saving..." : modalMode === "create" ? "Establish Infrastructure Project" : "Update Project"}
+              </Button>
+            </div>
           </div>
         </form>
       </Modal>

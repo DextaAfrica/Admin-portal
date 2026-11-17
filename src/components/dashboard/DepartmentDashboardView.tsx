@@ -2446,7 +2446,7 @@ export function DepartmentDashboardView({
         onClose={() => setNewApprovalModalOpen(false)}
         title="New Inter-Department Approval Request"
         description="Submit an operational request for authorization. Dispatches automated email notification."
-        maxWidth="lg"
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateApproval} className="space-y-4">
           <div>
@@ -2632,7 +2632,7 @@ export function DepartmentDashboardView({
         onClose={() => setNewEmailModalOpen(false)}
         title="Compose Corporate Email"
         description="Dispatch official operations communication to verified recipients."
-        maxWidth="lg"
+        maxWidth="3xl"
       >
         <form onSubmit={handleSendCorporateEmail} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2752,7 +2752,7 @@ export function DepartmentDashboardView({
         onClose={() => setNewTxnModalOpen(false)}
         title="Record Treasury Transaction"
         description="Record a disbursement, capital inflow, or contractor payout to the ledger."
-        maxWidth="lg"
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateTransaction} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

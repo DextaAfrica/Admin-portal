@@ -704,7 +704,7 @@ export default function CrmDashboardPage() {
         onClose={() => setNewClientModalOpen(false)}
         title="Onboard Strategic Client / Institutional Partner"
         description="Eliminates external spreadsheets. Direct database registration with deal pipeline linkage."
-        maxWidth="lg"
+        maxWidth="3xl"
       >
         <form onSubmit={handleCreateClient} className="space-y-4 pt-2">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -997,7 +997,7 @@ export default function CrmDashboardPage() {
         onClose={() => setSelectedClient(null)}
         title={selectedClient?.name || "Client Dossier"}
         description={`${selectedClient?.company || "Strategic Client"} • ${selectedClient?.location || "Lagos, Nigeria"}`}
-        maxWidth="xl"
+        maxWidth="4xl"
       >
         {selectedClient && (
           <div className="space-y-6 pt-2">
