@@ -154,10 +154,11 @@ export default function OperationsLandingPage() {
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-normal text-slate-950 dark:text-white leading-[1.3] sm:leading-[1.32] lg:leading-[1.28] animate-reveal-up">
+              <h1 className="text-2xl sm:text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-normal text-slate-950 dark:text-white leading-[1.35] sm:leading-[1.38] lg:leading-[1.32] animate-reveal-up">
                 Executing{" "}
-                <span className="italic text-flow-red pr-1">
-                  Landmark Infrastructure, Capital &amp; Field Deliveries.
+                <span className="italic text-flow-red pr-1 inline">
+                  <span className="inline-block whitespace-nowrap">Landmark Infrastructure,</span>{" "}
+                  <span className="inline-block">Capital &amp; Field Deliveries.</span>
                 </span>
               </h1>
 

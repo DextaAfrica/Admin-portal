@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
+import { CreateCrmActivitySchema, formatZodError } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -11,12 +12,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { clientId, type = "NOTE", title, description, outcome, activityDate } =
-      await req.json();
-
-    if (!title) {
-      return NextResponse.json({ error: "Activity title is required" }, { status: 400 });
+    const body = await req.json();
+    const parsed = CreateCrmActivitySchema.safeParse(body);
+    if (!parsed.success) {
+      const err = formatZodError(parsed.error);
+      return NextResponse.json(err, { status: 400 });
     }
+
+    const { clientId, type, title, description, outcome, activityDate } = parsed.data;
 
     const db = prisma as any;
     const activity = await db.crmActivity.create({
@@ -27,7 +30,7 @@ export async function POST(req: NextRequest) {
         title,
         description,
         outcome,
-        activityDate: activityDate ? new Date(activityDate) : new Date(),
+        activityDate: new Date(activityDate),
       },
     });
 

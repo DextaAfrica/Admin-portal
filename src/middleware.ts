@@ -33,6 +33,9 @@ export function middleware(req: NextRequest) {
       const subPath = pathname.replace(/^\/admin-portal/, "") || "/";
       return NextResponse.redirect(buildSubdomainRedirect("admin", subPath));
     }
+    if (token && pathname === "/") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
   }
 
   // 3. Subdomain Root & Auth Rewrites on OPS Subdomain
@@ -43,9 +46,19 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // Root serves the dedicated high-end Operations Welcome Landing page
+    // Email campaigns are exclusive to admin.dextafrica.org - redirect if requested on ops
+    if (pathname === "/marketing" || pathname.startsWith("/marketing/")) {
+      return NextResponse.redirect(buildSubdomainRedirect("admin", pathname));
+    }
+
+    // If already authenticated, redirect root and login to Operations Command dashboard (no conflicting landing)
+    if (token && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
+      return NextResponse.redirect(new URL("/dashboard?tab=operations", req.url));
+    }
+
+    // Unauthenticated root on operations subdomain redirects directly to /login (no conflicting landing)
     if (pathname === "/") {
-      return NextResponse.rewrite(new URL("/ops", req.url));
+      return NextResponse.redirect(new URL("/login", req.url));
     }
 
     if (pathname === "/login") {
@@ -65,7 +78,12 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // Root serves the dedicated high-end Systems Command Welcome Landing page
+    // If already authenticated, redirect root and login to Systems IT Command dashboard
+    if (token && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
+      return NextResponse.redirect(new URL("/dashboard?tab=systems", req.url));
+    }
+
+    // Unauthenticated root serves the dedicated high-end Systems Command Welcome Landing page
     if (pathname === "/") {
       return NextResponse.rewrite(new URL("/admin-portal", req.url));
     }

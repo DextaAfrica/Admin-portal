@@ -29,6 +29,7 @@ import {
   Download,
   AlertCircle,
   RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
@@ -58,6 +59,114 @@ const AVATAR_PRESETS = [
   { id: "amber", bg: "from-[#d97706] to-[#b45309]", label: "Amber Gold" },
 ];
 
+const OPERATIONS_ROLE_OPTIONS = [
+  {
+    category: "Operations Leadership & Management",
+    roles: [
+      "Operations Manager",
+      "General Manager",
+      "Chief Executive Officer (CEO)",
+      "Director of Operations",
+      "Site Operations Lead",
+    ],
+  },
+  {
+    category: "Site Engineering & Ground Execution",
+    roles: [
+      "Lead Supervising Engineer",
+      "Project Civil Engineer",
+      "Site Operations Officer",
+      "Logistics & Fleet Coordinator",
+      "Materials & Procurement Lead",
+      "Health, Safety & Environment (HSE) Officer",
+    ],
+  },
+  {
+    category: "Corporate, Commercial & Administration",
+    roles: [
+      "Administrative Officer",
+      "Sales & Commercial Lead",
+      "Human Resources (HR) Lead",
+      "Finance & Site Budget Controller",
+      "Field Operations Analyst",
+    ],
+  },
+  {
+    category: "Custom Title",
+    roles: ["Other / Custom Title..."],
+  },
+];
+
+const SYSTEMS_ROLE_OPTIONS = [
+  {
+    category: "Systems Security & Cloud Infrastructure",
+    roles: [
+      "Systems Security Architect",
+      "Systems Administrator",
+      "Cloud Infrastructure Engineer",
+      "Network & Zero-Trust Engineer",
+      "Database & Microservices Architect",
+    ],
+  },
+  {
+    category: "Leadership & IT Governance",
+    roles: [
+      "Chief Technology Officer (CTO)",
+      "General Manager",
+      "Chief Executive Officer (CEO)",
+      "IT Compliance & Security Auditor",
+      "DevOps / SRE Lead",
+      "IT Administrative Coordinator",
+    ],
+  },
+  {
+    category: "Custom Title",
+    roles: ["Other / Custom Title..."],
+  },
+];
+
+const MAIN_ROLE_OPTIONS = [
+  {
+    category: "Executive Directorate",
+    roles: [
+      "Chief Executive Officer (CEO)",
+      "Managing Director (MD)",
+      "General Manager",
+      "Executive Director",
+    ],
+  },
+  {
+    category: "Operations & Infrastructure",
+    roles: [
+      "Operations Manager",
+      "Site Operations Lead",
+      "Project Engineer",
+      "Logistics & Fleet Coordinator",
+    ],
+  },
+  {
+    category: "Commercial, Admin & HR",
+    roles: [
+      "Administrative Officer",
+      "Sales & Commercial Lead",
+      "Human Resources (HR) Lead",
+      "Finance & Budget Controller",
+    ],
+  },
+  {
+    category: "Technology & Systems",
+    roles: [
+      "Systems Administrator",
+      "Security Architect",
+      "Full-Stack Software Engineer",
+    ],
+  },
+  {
+    category: "Custom Title",
+    roles: ["Other / Custom Title..."],
+  },
+];
+
 export function EnterpriseProfileWizard({
   initialDepartment = "OPERATIONS",
   portalType = "main",
@@ -67,23 +176,45 @@ export function EnterpriseProfileWizard({
 
   const [currentStep, setCurrentStep] = React.useState<1 | 2 | 3 | 4>(1);
 
+  const roleOptions = React.useMemo(() => {
+    if (portalType === "operations") return OPERATIONS_ROLE_OPTIONS;
+    if (portalType === "systems") return SYSTEMS_ROLE_OPTIONS;
+    return MAIN_ROLE_OPTIONS;
+  }, [portalType]);
+
+  const defaultRole = React.useMemo(() => {
+    if (portalType === "operations") return "Operations Manager";
+    if (portalType === "systems") return "Systems Security Architect";
+    return "Operations Manager";
+  }, [portalType]);
+
   // Profile Identity State
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [phone, setPhone] = React.useState("");
   const [selectedCountry, setSelectedCountry] = React.useState<CountryDialCode>(SUPPORTED_COUNTRIES[0]);
-  const [department, setDepartment] = React.useState<string>(initialDepartment);
-  const [jobTitle, setJobTitle] = React.useState(
-    initialDepartment === "OPERATIONS"
-      ? "Operations & Logistics Lead"
-      : initialDepartment === "IT"
-      ? "Systems Security Architect"
-      : "Executive Director"
+  const [department, setDepartment] = React.useState<string>(
+    portalType === "operations" ? "OPERATIONS" : portalType === "systems" ? "IT" : initialDepartment
   );
+  const [selectedRole, setSelectedRole] = React.useState<string>(defaultRole);
+  const [customJobTitle, setCustomJobTitle] = React.useState<string>("");
+  const [jobTitle, setJobTitle] = React.useState<string>(defaultRole);
   const [bio, setBio] = React.useState("");
   const [avatarUrl, setAvatarUrl] = React.useState<string>("");
   const [selectedAvatarPreset, setSelectedAvatarPreset] = React.useState<string>("crimson");
+
+  const isCustomRole = selectedRole === "OTHER" || selectedRole === "Other / Custom Title...";
+  const effectiveJobTitle = isCustomRole ? customJobTitle.trim() : (jobTitle || selectedRole);
+
+  const handleRoleChange = (newRole: string) => {
+    setSelectedRole(newRole);
+    if (newRole !== "OTHER" && newRole !== "Other / Custom Title...") {
+      setJobTitle(newRole);
+    } else {
+      setJobTitle(customJobTitle.trim());
+    }
+  };
 
   // Contact Verification State (Zero-Trust OTP Gate)
   const [isEmailVerified, setIsEmailVerified] = React.useState(false);
@@ -176,7 +307,7 @@ export function EnterpriseProfileWizard({
       setOtpCooldown(60);
       toastSuccess(
         "Verification Code Sent",
-        `We dispatched a 6-digit corporate verification code to ${targetEmail}. (View in Mailpit if developing locally).`
+        `We dispatched a 6-digit corporate verification code to ${targetEmail}.`
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to dispatch verification code.";
@@ -289,7 +420,8 @@ export function EnterpriseProfileWizard({
     firstName.trim().length >= 2 &&
     lastName.trim().length >= 2 &&
     emailValidation.isValid &&
-    phoneValidation.isValid;
+    phoneValidation.isValid &&
+    (isCustomRole ? customJobTitle.trim().length >= 2 : Boolean(effectiveJobTitle));
 
   // Step 2 Validation
   const canProceedStep2 =
@@ -335,7 +467,7 @@ export function EnterpriseProfileWizard({
         password,
         confirmPassword,
         department,
-        jobTitle,
+        jobTitle: effectiveJobTitle || (portalType === "operations" ? "Operations Manager" : "Team Member"),
         phone: phoneValidation.formatted || phone,
         avatarUrl: avatarUrl || undefined,
         bio: bio || undefined,
@@ -375,10 +507,10 @@ export function EnterpriseProfileWizard({
 
   // Launch Target Workspace Dashboard
   const handleLaunchWorkspace = () => {
-    if (department === "OPERATIONS") {
+    if (portalType === "operations" || department === "OPERATIONS") {
       navigateToSubdomainWithSso("ops", "/dashboard?tab=operations");
       return;
-    } else if (department === "IT") {
+    } else if (portalType === "systems" || department === "IT") {
       navigateToSubdomainWithSso("admin", "/dashboard?tab=systems");
       return;
     }
@@ -394,13 +526,46 @@ export function EnterpriseProfileWizard({
         <div className="inline-flex items-center justify-center py-1">
           <DextaLogo className="h-10 w-auto" />
         </div>
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Create Your Enterprise Profile
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-            High-trust identity provisioning across Dexta Africa infrastructure command portals.
-          </p>
+        <div className="space-y-1.5">
+          {portalType === "operations" ? (
+            <>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 dark:bg-red-500/20 text-[#ED2618] text-xs font-bold">
+                <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
+                <span>Operations Fleet Portal &bull; ops.dextaafrica.org</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Operations Workspace Onboarding
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+                Dedicated profile onboarding for site operations, field logistics, engineering, and corporate delivery roles.
+              </p>
+            </>
+          ) : portalType === "systems" ? (
+            <>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-100 dark:bg-red-500/20 text-[#ED2618] text-xs font-bold">
+                <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
+                <span>Systems IT Command &bull; admin.dextafrica.org</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Systems IT Administration Provisioning
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+                Zero-trust identity access for IT administrators, cybersecurity, and infrastructure governance.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold">
+                <span>Dexta Africa Enterprise Workspace</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                Create Your Enterprise Profile
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-lg mx-auto">
+                High-trust identity provisioning across Dexta Africa infrastructure command portals.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
@@ -670,93 +835,213 @@ export function EnterpriseProfileWizard({
             </div>
           </div>
 
-          {/* Workspace Department Selection Cards */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-              Primary Department &amp; Workspace Domain
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                {
-                  id: "OPERATIONS",
-                  title: "Operations Fleet Desk",
-                  domain: "ops.dextaafrica.org",
-                  desc: "Landmark developments & contractor site deliveries",
-                  icon: HardHat,
-                },
-                {
-                  id: "IT",
-                  title: "Systems IT Command",
-                  domain: "admin.dextafrica.org",
-                  desc: "Identity governance & cloud watchdog firewalls",
-                  icon: Cpu,
-                },
-                {
-                  id: "EXECUTIVE",
-                  title: "MD / CEO Suite",
-                  domain: "dextaafrica.org",
-                  desc: "Sovereign treasury & corporate broadcast governance",
-                  icon: Landmark,
-                },
-              ].map((dept) => {
-                const DIcon = dept.icon;
-                const isSelected = department === dept.id;
-                return (
-                  <button
-                    key={dept.id}
-                    type="button"
-                    onClick={() => {
-                      setDepartment(dept.id);
-                      if (dept.id === "OPERATIONS") setJobTitle("Operations & Fleet Lead");
-                      else if (dept.id === "IT") setJobTitle("Systems Security Engineer");
-                      else setJobTitle("Executive Director");
-                    }}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer space-y-1.5 ${
-                      isSelected
-                        ? "border-[#ED2618] bg-red-50/50 dark:bg-red-500/10 shadow-sm"
-                        : "border-slate-200/80 dark:border-white/[0.08] bg-slate-50/40 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/20"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div
-                        className={`p-1.5 rounded-lg ${
-                          isSelected
-                            ? "bg-[#ED2618] text-white"
-                            : "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400"
-                        }`}
-                      >
-                        <DIcon className="h-4 w-4" />
-                      </div>
-                      {isSelected && <Check className="h-4 w-4 text-[#ED2618]" />}
+          {/* Workspace Department & Domain Section */}
+          {portalType === "operations" ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Assigned Workspace &amp; Domain
+                </label>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-200 dark:border-emerald-500/20">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Verified Operations Domain
+                </span>
+              </div>
+              <div className="p-4 rounded-2xl border-2 border-[#ED2618] bg-red-50/40 dark:bg-red-500/10 shadow-sm space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-[#ED2618] text-white shadow-sm shadow-red-500/20">
+                      <HardHat className="h-5 w-5" />
                     </div>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                      {dept.title}
-                    </h4>
-                    <p className="text-[10px] text-slate-400 font-mono truncate">
-                      {dept.domain}
-                    </p>
-                  </button>
-                );
-              })}
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Dexta Operations Workspace</span>
+                        <span className="px-2 py-0.5 rounded-md bg-white dark:bg-white/10 text-[10px] font-mono font-bold text-[#ED2618]">
+                          ops.dextaafrica.org
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Dedicated operations portal for site developments, logistics procurement, and operational reports.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Check className="h-4 w-4" />
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-red-200/50 dark:border-red-500/20 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+                  <span className="font-medium">
+                    Workspace Routing: <strong className="text-slate-900 dark:text-white font-semibold">Operations Command Hub</strong>
+                  </span>
+                  <span className="text-[#ED2618] font-bold">Standard Operations Access</span>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : portalType === "systems" ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Assigned Systems Command Domain
+                </label>
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-200 dark:border-emerald-500/20">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Verified IT Domain
+                </span>
+              </div>
+              <div className="p-4 rounded-2xl border-2 border-[#ED2618] bg-red-50/40 dark:bg-red-500/10 shadow-sm space-y-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-[#ED2618] text-white shadow-sm shadow-red-500/20">
+                      <Cpu className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <span>Systems IT Command Hub</span>
+                        <span className="px-2 py-0.5 rounded-md bg-white dark:bg-white/10 text-[10px] font-mono font-bold text-[#ED2618]">
+                          admin.dextafrica.org
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Privileged access for cloud infrastructure, identity governance, firewall watchdog, and audit logging.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Check className="h-4 w-4" />
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-red-200/50 dark:border-red-500/20 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 dark:text-slate-400">
+                  <span className="font-medium">
+                    Command Routing: <strong className="text-slate-900 dark:text-white font-semibold">Systems Architecture</strong>
+                  </span>
+                  <span className="text-[#ED2618] font-bold">Zero-Trust Enforced</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Primary Directorate &amp; Workspace Domain
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    id: "OPERATIONS",
+                    title: "Operations Fleet Desk",
+                    domain: "ops.dextaafrica.org",
+                    desc: "Site deliveries & field contractor operations",
+                    icon: HardHat,
+                  },
+                  {
+                    id: "IT",
+                    title: "Systems IT Command",
+                    domain: "admin.dextafrica.org",
+                    desc: "Identity governance & cloud firewalls",
+                    icon: Cpu,
+                  },
+                  {
+                    id: "EXECUTIVE",
+                    title: "Corporate Executive Suite",
+                    domain: "dextaafrica.org",
+                    desc: "Corporate governance & executive management",
+                    icon: Landmark,
+                  },
+                ].map((dept) => {
+                  const DIcon = dept.icon;
+                  const isSelected = department === dept.id;
+                  return (
+                    <button
+                      key={dept.id}
+                      type="button"
+                      onClick={() => {
+                        setDepartment(dept.id);
+                        if (dept.id === "OPERATIONS") handleRoleChange("Operations Manager");
+                        else if (dept.id === "IT") handleRoleChange("Systems Security Architect");
+                        else handleRoleChange("Executive Director");
+                      }}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer space-y-1.5 ${
+                        isSelected
+                          ? "border-[#ED2618] bg-red-50/50 dark:bg-red-500/10 shadow-sm"
+                          : "border-slate-200/80 dark:border-white/[0.08] bg-slate-50/40 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/20"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div
+                          className={`p-1.5 rounded-lg ${
+                            isSelected
+                              ? "bg-[#ED2618] text-white"
+                              : "bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400"
+                          }`}
+                        >
+                          <DIcon className="h-4 w-4" />
+                        </div>
+                        {isSelected && <Check className="h-4 w-4 text-[#ED2618]" />}
+                      </div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                        {dept.title}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-mono truncate">
+                        {dept.domain}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Job Title & Bio */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                Official Job Title
-              </label>
-              <div className="relative">
-                <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="e.g. Senior Project Manager"
-                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.03] pl-10 pr-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618] transition-all"
-                />
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Official Job Role <span className="text-[#ED2618]">*</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">Standardized Directorate Role</span>
               </div>
+              <div className="relative">
+                <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <select
+                  value={selectedRole}
+                  onChange={(e) => handleRoleChange(e.target.value)}
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#12141c] pl-10 pr-9 py-2.5 text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618] transition-all cursor-pointer appearance-none"
+                >
+                  {roleOptions.map((group) => (
+                    <optgroup
+                      key={group.category}
+                      label={group.category}
+                      className="font-bold text-slate-500 dark:text-slate-400 bg-white dark:bg-[#0c0d12]"
+                    >
+                      {group.roles.map((role) => (
+                        <option
+                          key={role}
+                          value={role === "Other / Custom Title..." ? "OTHER" : role}
+                          className="font-normal text-slate-900 dark:text-white py-1"
+                        >
+                          {role}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              </div>
+
+              {isCustomRole && (
+                <div className="pt-1.5 animate-fade-in">
+                  <input
+                    type="text"
+                    value={customJobTitle}
+                    onChange={(e) => {
+                      setCustomJobTitle(e.target.value);
+                      setJobTitle(e.target.value);
+                    }}
+                    placeholder="Enter official corporate title..."
+                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618] transition-all"
+                    required
+                  />
+                </div>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -767,7 +1052,13 @@ export function EnterpriseProfileWizard({
                 type="text"
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="e.g. Overseeing civil engineering deliveries across Lagos"
+                placeholder={
+                  portalType === "operations"
+                    ? "e.g. Managing ground site deliverables & contractor schedules"
+                    : portalType === "systems"
+                    ? "e.g. Overseeing IAM security architecture & zero-trust protocols"
+                    : "e.g. Strategic growth, infrastructure financing & operational oversight"
+                }
                 className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.03] px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#ED2618]/30 focus:border-[#ED2618] transition-all"
               />
             </div>
@@ -1222,7 +1513,7 @@ export function EnterpriseProfileWizard({
               {email.toLowerCase().trim()}
             </p>
             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-              We dispatched an authorized 6-digit one-time passcode to confirm this address belongs to you. In development mode, check your local <strong className="text-slate-800 dark:text-slate-200">Mailpit inbox at http://localhost:8025</strong>.
+              We dispatched an authorized 6-digit one-time passcode to confirm this address belongs to you. Please check your corporate email inbox.
             </p>
           </div>
 

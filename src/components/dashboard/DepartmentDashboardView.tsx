@@ -42,6 +42,7 @@ import {
   UserCheck,
   Award,
   Landmark,
+  Plus,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -49,7 +50,7 @@ import { Button } from "@/components/ui/Button";
 import { TelemetryChart } from "@/components/ui/TelemetryChart";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
-import { formatBytes, timeAgo, formatDate } from "@/lib/utils";
+import { formatBytes, timeAgo, formatDate, getInitials } from "@/lib/utils";
 
 export interface DepartmentDashboardViewProps {
   currentUser: {
@@ -114,6 +115,8 @@ export interface DepartmentDashboardViewProps {
   initialPlatform?: "systems" | "operations" | "executive" | "finance" | "hr";
   initialTab?: "overview" | "systems" | "operations" | "approvals" | "treasury" | "communications" | "personal";
   portfolioItems?: any[];
+  userProjects?: any[];
+  userReports?: any[];
   userSubmittedApprovals?: any[];
   userPendingActionApprovals?: any[];
   userAuditLogs?: any[];
@@ -138,6 +141,8 @@ export function DepartmentDashboardView({
   initialPlatform = "executive",
   initialTab = "overview",
   portfolioItems = [],
+  userProjects = [],
+  userReports = [],
   userSubmittedApprovals = [],
   userPendingActionApprovals = [],
   userAuditLogs = [],
@@ -176,6 +181,37 @@ export function DepartmentDashboardView({
     ? "Operational Review & Requisition Processing Authority"
     : "Staff Task Execution & Requisition Submission Authority";
 
+  // Sanitize and normalize display job title (eliminates inappropriate developer tags for business roles)
+  const userJobTitle = React.useMemo(() => {
+    const raw = (currentUser.jobTitle || "").trim();
+    if (!raw || raw.toLowerCase().includes("dev") || raw.toLowerCase().includes("developer")) {
+      return currentUser.department?.toUpperCase() === "EXECUTIVE"
+        ? "Executive Director"
+        : currentUser.department?.toUpperCase() === "FINANCE"
+        ? "Finance Lead"
+        : currentUser.department?.toUpperCase() === "HR"
+        ? "People & Culture Lead"
+        : "Operations Manager";
+    }
+    return raw;
+  }, [currentUser.jobTitle, currentUser.department]);
+
+  // First name extraction for friendly personal greeting
+  const userFirstName = React.useMemo(() => {
+    const raw = (currentUser.fullName || "").trim();
+    if (!raw) return "there";
+    const parts = raw.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) return parts[0];
+
+    // If email prefix matches one of the name tokens (e.g. peter4tech matches Peter)
+    const emailPrefix = (currentUser.email || "").toLowerCase().split("@")[0];
+    const match = parts.find((p) => p.length >= 3 && emailPrefix.includes(p.toLowerCase()));
+    if (match) return match;
+
+    // In cases where family name is first (e.g. Ogba Peter), prefer given name or first token
+    return parts[parts.length - 1] || parts[0];
+  }, [currentUser.fullName, currentUser.email]);
+
   // Sync tab and platform with URL search parameter (?tab=...), hostname, and sidebar events
   React.useEffect(() => {
     const syncFromUrl = () => {
@@ -210,6 +246,8 @@ export function DepartmentDashboardView({
       // Guard: non-IT users cannot view Systems IT tab
       if (tabParam === "systems" && userRole !== "SUPER_ADMIN" && userDept !== "IT") {
         setActiveTab(currentPlatform === "finance" ? "treasury" : "operations");
+      } else if (currentPlatform === "operations" && (tabParam === "personal" || tabParam === "communications" || tabParam === "dispatch" || tabParam === "systems" || tabParam === "treasury" || tabParam === "overview")) {
+        setActiveTab("operations");
       } else if (
         tabParam === "systems" ||
         tabParam === "operations" ||
@@ -235,6 +273,10 @@ export function DepartmentDashboardView({
 
     const handleSwitchTab = (e: any) => {
       const tab = e.detail;
+      if (platform === "operations" && (tab === "personal" || tab === "communications" || tab === "dispatch" || tab === "systems" || tab === "treasury" || tab === "overview")) {
+        setActiveTab("operations");
+        return;
+      }
       if (
         tab === "systems" ||
         tab === "operations" ||
@@ -407,7 +449,7 @@ export function DepartmentDashboardView({
 
       toastSuccess(
         `Request ${decisionType === "APPROVED" ? "Approved" : "Declined"}`,
-        `Formal notice dispatched to ${selectedApproval.requesterEmail} via SMTP Mailpit.`
+        `Formal notice dispatched to ${selectedApproval.requesterEmail} via Enterprise SMTP.`
       );
     } catch (err: unknown) {
       toastError(err instanceof Error ? err.message : "Error saving decision");
@@ -527,62 +569,95 @@ export function DepartmentDashboardView({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           {/* Greeting & Identity */}
           <div className="space-y-2.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
-                {platform === "systems"
-                  ? "admin.dextaafrica.org • Zero-Trust Systems Command"
-                  : platform === "finance"
-                  ? "dextaafrica.org • Treasury & Financial Accounts Desk"
-                  : platform === "hr"
-                  ? "dextaafrica.org • People & Culture Desk"
-                  : platform === "operations"
-                  ? "ops.dextaafrica.org • Operations Fleet Desk"
-                  : "dextaafrica.org • Executive Leadership Suite"}
-              </span>
-              <span className="text-slate-300 dark:text-white/20">&bull;</span>
-              <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
-                {platform === "systems"
-                  ? `SYSTEMS & IT • ${currentUser.role || "ADMIN"}`
-                  : platform === "finance"
-                  ? `FINANCE & ACCOUNTS • ${currentUser.role || "ADMIN"}`
-                  : platform === "hr"
-                  ? `PEOPLE & HR • ${currentUser.role || "ADMIN"}`
-                  : platform === "operations"
-                  ? `OPERATIONS • ${currentUser.role || "ADMIN"}`
-                  : `${currentUser.department || "EXECUTIVE"} • ${currentUser.role || "ADMIN"}`}
-              </span>
-              <span className="text-slate-300 dark:text-white/20">&bull;</span>
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 uppercase tracking-wider border border-amber-500/25">
-                {seniorityBadgeLabel}
-              </span>
-            </div>
+            {platform === "operations" ? (
+              <div className="flex items-center gap-2">
+                <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
+                <span className="text-xs font-bold uppercase tracking-wider text-[#ED2618]">
+                  Operations Workspace
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
+                  {platform === "systems"
+                    ? "admin.dextaafrica.org • Zero-Trust Systems Command"
+                    : platform === "finance"
+                    ? "dextaafrica.org • Treasury & Financial Accounts Desk"
+                    : platform === "hr"
+                    ? "dextaafrica.org • People & Culture Desk"
+                    : "dextaafrica.org • Executive Leadership Suite"}
+                </span>
+                <span className="text-slate-300 dark:text-white/20">&bull;</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">
+                  {platform === "systems"
+                    ? `SYSTEMS & IT • ${currentUser.role || "ADMIN"}`
+                    : platform === "finance"
+                    ? `FINANCE & ACCOUNTS • ${currentUser.role || "ADMIN"}`
+                    : platform === "hr"
+                    ? `PEOPLE & HR • ${currentUser.role || "ADMIN"}`
+                    : `${currentUser.department || "EXECUTIVE"} • ${currentUser.role || "ADMIN"}`}
+                </span>
+                <span className="text-slate-300 dark:text-white/20">&bull;</span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 uppercase tracking-wider border border-amber-500/25">
+                  {seniorityBadgeLabel}
+                </span>
+              </div>
+            )}
 
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              {greeting}, <span className="text-[#ED2618]">{currentUser.fullName}</span>
+              {greeting}, <span className="text-[#ED2618]">{userFirstName}</span>
             </h1>
 
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-              {platform === "systems"
-                ? "Your zero-trust IT command center governing user access tokens, identity verification, watchdog firewalls, active sessions, and cloud microservices."
+              {platform === "operations"
+                ? "Manage ongoing projects, daily field reports, team logistics, and site approvals in one place."
+                : platform === "systems"
+                ? "Manage user access tokens, identity verification, active sessions, and cloud microservices."
                 : platform === "finance"
-                ? "Your personalized corporate ledger hub governing capital inflows, contractor disbursements, escrow balances, and financial authorizations."
+                ? "Manage corporate ledger records, capital inflows, contractor disbursements, and treasury accounts."
                 : platform === "hr"
-                ? "Your personalized workforce operations hub governing employee profiles, leave clearances, talent onboarding, and corporate staff dispatch."
-                : platform === "operations"
-                ? "Your personalized operational workspace for managing Landmark site developments, logistics procurement, and field contractor clearances."
-                : "Personalized executive command center governing infrastructure site deliveries, capital treasury settlements, and official communications."}
+                ? "Manage workforce operations, employee profiles, leave clearances, and team onboarding."
+                : "Executive leadership workspace governing enterprise infrastructure, capital investments, and operations."}
             </p>
 
-            <div className="flex items-center gap-2 pt-1 text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-              <span>{seniorityAuthorityLabel}</span>
+            <div className="flex items-center gap-2 pt-0.5 text-xs text-slate-500 dark:text-slate-400">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">
+                {userJobTitle}
+              </span>
+              <span className="text-slate-300 dark:text-white/20">&bull;</span>
+              <span className="font-mono text-slate-400">{currentUser.email}</span>
             </div>
           </div>
 
           {/* Quick Action Buttons */}
           <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            {platform === "systems" ? (
+            {platform === "operations" ? (
+              <>
+                <Link
+                  href="/projects"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>Enter New Project</span>
+                </Link>
+                <Link
+                  href="/reports"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] text-xs font-bold transition-all"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Draft Report</span>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  leftIcon={<CheckCircle2 className="h-4 w-4 text-[#ED2618]" />}
+                >
+                  Request Clearance
+                </Button>
+              </>
+            ) : platform === "systems" ? (
               <>
                 <Link
                   href="/it"
@@ -796,38 +871,42 @@ export function DepartmentDashboardView({
             )}
           </button>
 
-          {/* Corporate Dispatch (Available across workspaces) */}
-          <button
-            type="button"
-            onClick={() => setActiveTab("communications")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "communications"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <Mail className="h-3.5 w-3.5" />
-            <span>Corporate Dispatch</span>
-          </button>
+          {/* Corporate Dispatch (Available across workspaces except Operations) */}
+          {platform !== "operations" && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("communications")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "communications"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <Mail className="h-3.5 w-3.5" />
+              <span>Corporate Dispatch</span>
+            </button>
+          )}
 
-          {/* Personalized User Workspace Hub */}
-          <button
-            type="button"
-            onClick={() => setActiveTab("personal")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "personal"
-                ? "bg-[#ED2618] text-white shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <UserCheck className="h-3.5 w-3.5" />
-            <span>My Workspace &amp; Tasks</span>
-            {userSubmittedApprovals.length > 0 && (
-              <span className="h-4 min-w-[16px] px-1 rounded-full bg-blue-500/20 text-blue-600 dark:bg-blue-500/30 dark:text-blue-200 text-[10px] font-black flex items-center justify-center">
-                {userSubmittedApprovals.length}
-              </span>
-            )}
-          </button>
+          {/* Personalized User Workspace Hub (Only for multi-department/Executive workspaces) */}
+          {platform !== "operations" && (
+            <button
+              type="button"
+              onClick={() => setActiveTab("personal")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === "personal"
+                  ? "bg-[#ED2618] text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+              }`}
+            >
+              <UserCheck className="h-3.5 w-3.5" />
+              <span>My Workspace &amp; Tasks</span>
+              {userSubmittedApprovals.length > 0 && (
+                <span className="h-4 min-w-[16px] px-1 rounded-full bg-blue-500/20 text-blue-600 dark:bg-blue-500/30 dark:text-blue-200 text-[10px] font-black flex items-center justify-center">
+                  {userSubmittedApprovals.length}
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
 
@@ -886,7 +965,7 @@ export function DepartmentDashboardView({
             <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Landmark Site Deliveries
+                  Project Site Deliveries
                 </span>
                 <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
                   <Building2 className="h-4 w-4" />
@@ -902,7 +981,7 @@ export function DepartmentDashboardView({
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                {portfolioItems.length > 0 ? portfolioItems.slice(0, 3).map((p: any) => p.name).join(" • ") : "No Landmark Developments Registered"}
+                {portfolioItems.length > 0 ? portfolioItems.slice(0, 3).map((p: any) => p.name).join(" • ") : "No Project Sites Registered"}
               </p>
             </div>
 
@@ -924,19 +1003,19 @@ export function DepartmentDashboardView({
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                Automated SMTP Routing via Mailpit
+                Automated Corporate SMTP Routing
               </p>
             </div>
           </div>
 
           {/* Main Grid: Sites & Approvals Queue */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column (7 cols): Landmark Construction Projects */}
+            {/* Left Column (7 cols): Construction Projects */}
             <div className="lg:col-span-7 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-5">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/[0.06]">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Landmark Infrastructure Sites
+                    Active Project Sites
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     Live operational progress and contractor disbursement tracking.
@@ -989,17 +1068,17 @@ export function DepartmentDashboardView({
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                        No Landmark Developments Registered
+                        No Project Sites Registered
                       </h4>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                         Production database has zero registered site developments.
                       </p>
                     </div>
                     <Link
-                      href="/portfolio"
+                      href="/projects"
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
                     >
-                      <span>Deploy Landmark Project &rarr;</span>
+                      <span>Enter Infrastructure Project &rarr;</span>
                     </Link>
                   </div>
                 )}
@@ -1332,7 +1411,7 @@ export function DepartmentDashboardView({
                   Email Dispatch &amp; Campaigns
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Scheduled broadcast queue, Mailpit delivery diagnostics, and corporate communication logs.
+                  Scheduled broadcast queue, delivery diagnostics, and corporate communication logs.
                 </p>
               </Link>
             </div>
@@ -1441,114 +1520,273 @@ export function DepartmentDashboardView({
       )}
 
       {/* ===================================================================== */}
-      {/* 3. TAB: SITE OPERATIONS */}
+      {/* 3. TAB: SITE OPERATIONS & FIELD REPOSITORY */}
       {/* ===================================================================== */}
       {activeTab === "operations" && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                  Landmark Development &amp; Field Engineering Fleet
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Real-time logistics coordination across coastal towers and industrial commercial zones.
-                </p>
+        <div className="space-y-6 animate-fade-in">
+          {/* TELEMETRY RIBBON (Zero Mock Data, 100% Dynamic) */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
+              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Total Projects
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono">
+                {userProjects.length}
               </div>
-              <Badge variant={portfolioItems.length > 0 ? "success" : "outline"}>
-                {portfolioItems.length} {portfolioItems.length === 1 ? "Site Active" : "Sites Active"}
-              </Badge>
+              <p className="text-[11px] text-slate-400">
+                Registered operations sites
+              </p>
             </div>
 
-            {portfolioItems && portfolioItems.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {portfolioItems.map((site: any, i: number) => (
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
+              <span className="text-xs font-bold text-amber-500 uppercase tracking-wider block">
+                Active In Progress
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                {userProjects.filter((p: any) => p.status === "IN_PROGRESS").length}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Live ground execution
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
+              <span className="text-xs font-bold text-emerald-500 uppercase tracking-wider block">
+                Reports &amp; Dossiers
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                {userReports.length}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Field documentation submitted
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-5 shadow-sm space-y-1">
+              <span className="text-xs font-bold text-blue-500 uppercase tracking-wider block">
+                Clearances Assigned
+              </span>
+              <div className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                {userSubmittedApprovals.length}
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Permits &amp; authorizations
+              </p>
+            </div>
+          </div>
+
+          {/* ACTIVE INFRASTRUCTURE PROJECTS (Direct Real Telemetry) */}
+          <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-5">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/[0.06]">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                  Active Infrastructure Projects &amp; Sites
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Live operational sites, contractor squads, and ground milestones under your supervision.
+                </p>
+              </div>
+              <Link
+                href="/projects"
+                className="text-xs font-bold text-[#ED2618] hover:underline flex items-center gap-1"
+              >
+                <span>View All Projects &rarr;</span>
+              </Link>
+            </div>
+
+            {userProjects && userProjects.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {userProjects.map((p: any) => (
                   <div
-                    key={site.id || i}
-                    className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] space-y-4"
+                    key={p.id}
+                    className="p-4 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] space-y-3 hover:border-slate-300 dark:hover:border-white/20 transition-all"
                   >
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-mono font-bold text-[#ED2618] uppercase">
-                        Site Project #0{i + 1}
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-mono text-[10px] font-bold text-[#ED2618] bg-red-50 dark:bg-red-950/30 px-2 py-0.5 rounded-md">
+                          {p.code}
+                        </span>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-1">
+                          {p.name}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 truncate">{p.location}</p>
+                      </div>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
+                        {p.status.replace("_", " ")}
                       </span>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        {site.name}
-                      </h4>
-                      <p className="text-xs text-slate-400">{site.location || "Coastal Corridor"}</p>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-white dark:bg-[#12151E] border border-slate-200/60 dark:border-white/[0.05] space-y-2 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Status:</span>
-                        <span className="font-semibold text-slate-800 dark:text-slate-200 capitalize">
-                          {(site.status || "active").replace("_", " ")}
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-slate-500">Delivery Velocity:</span>
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">
+                          {p.progressPct}%
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Catalog Access:</span>
-                        <span className="font-bold text-slate-900 dark:text-white font-mono">
-                          {site.published ? "Public Catalog" : "Internal Engineering"}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-slate-400">Created:</span>
-                        <span className="font-mono text-slate-700 dark:text-slate-300">
-                          {formatDate(site.createdAt || new Date())}
-                        </span>
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#ED2618] rounded-full"
+                          style={{ width: `${p.progressPct}%` }}
+                        />
                       </div>
                     </div>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full text-xs"
-                      onClick={() => {
-                        setApprovalForm({
-                          ...approvalForm,
-                          title: `Logistics Clearance for ${site.name}`,
-                          toDepartment: "OPERATIONS",
-                          category: "PROCUREMENT_LOGISTICS",
-                        });
-                        setNewApprovalModalOpen(true);
-                      }}
-                    >
-                      Request Site Clearance
-                    </Button>
+                    <div className="pt-2 border-t border-slate-200/60 dark:border-white/5 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>{p.contractorTeam || "Dexta Squad Alpha"}</span>
+                      <Link
+                        href="/projects"
+                        className="font-bold text-[#ED2618] hover:underline"
+                      >
+                        Manage &rarr;
+                      </Link>
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="p-12 text-center rounded-3xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-4">
-                <div className="h-12 w-12 mx-auto rounded-2xl bg-red-500/10 text-[#ED2618] flex items-center justify-center">
-                  <Building2 className="h-6 w-6" />
+              <div className="p-8 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-3">
+                <div className="h-10 w-10 mx-auto rounded-xl bg-red-50 text-[#ED2618] dark:bg-red-950/30 flex items-center justify-center">
+                  <Building2 className="h-5 w-5" />
                 </div>
-                <div className="space-y-1">
-                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
-                    No Field Engineering Projects Registered
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">
+                    No Projects Entered Yet
                   </h4>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-                    There are currently no active landmark development projects in the database. Deploy a new development to begin site inspections and contractor disbursements.
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    As Operations Manager, enter your infrastructure projects to establish ground milestones and assign contractor squads.
                   </p>
                 </div>
-                <div className="flex items-center justify-center gap-3">
+                <Link
+                  href="/projects"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  <span>Enter New Project</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* TWO COLUMNS: RECENT FIELD REPORTS & CLEARANCES */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left: Recent Field Reports & Dossiers */}
+            <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    Your Reports &amp; Dossiers
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Field activity logs and line manager submissions.
+                  </p>
+                </div>
+                <Link
+                  href="/reports"
+                  className="text-xs font-bold text-[#ED2618] hover:underline"
+                >
+                  Reports Studio &rarr;
+                </Link>
+              </div>
+
+              {userReports && userReports.length > 0 ? (
+                <div className="space-y-2">
+                  {userReports.slice(0, 4).map((r: any) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 text-xs"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <span className="font-mono text-[10px] font-bold text-[#ED2618]">
+                          {r.reference}
+                        </span>
+                        <h5 className="font-bold text-slate-900 dark:text-white truncate">
+                          {r.title}
+                        </h5>
+                        <p className="text-[10px] text-slate-400">
+                          {r.cadence} &bull; {new Date(r.reportDate || r.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
+                        {r.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-2">
+                  <FileText className="h-6 w-6 text-slate-400 mx-auto" />
+                  <p className="text-xs text-slate-500">No field reports drafted yet.</p>
                   <Link
-                    href="/portfolio"
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all shadow-sm"
+                    href="/reports"
+                    className="inline-flex items-center gap-1 text-xs font-bold text-[#ED2618] hover:underline"
                   >
-                    <PlusCircle className="h-4 w-4" />
-                    <span>Register Development Project</span>
+                    <span>Create New Report &rarr;</span>
                   </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Right: Inter-Department Clearances */}
+            <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+                <div>
+                  <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                    Operations Clearances &amp; Permits
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Inter-department permits and contractor authorizations.
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setNewApprovalModalOpen(true)}
+                  className="h-7 text-xs font-bold"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  <span>New Request</span>
+                </Button>
+              </div>
+
+              {userSubmittedApprovals && userSubmittedApprovals.length > 0 ? (
+                <div className="space-y-2">
+                  {userSubmittedApprovals.slice(0, 4).map((a: any) => (
+                    <div
+                      key={a.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 text-xs"
+                    >
+                      <div className="min-w-0 pr-2">
+                        <span className="font-mono text-[10px] font-bold text-[#ED2618]">
+                          {a.ticketCode}
+                        </span>
+                        <h5 className="font-bold text-slate-900 dark:text-white truncate">
+                          {a.title}
+                        </h5>
+                        <p className="text-[10px] text-slate-400">
+                          {a.fromDepartment} &rarr; {a.toDepartment}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
+                        {a.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center rounded-2xl bg-slate-50/50 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 space-y-2">
+                  <CheckCircle2 className="h-6 w-6 text-slate-400 mx-auto" />
+                  <p className="text-xs text-slate-500">No active clearance requests pending.</p>
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => setNewApprovalModalOpen(true)}
-                    className="text-xs font-bold"
+                    className="h-7 text-xs font-bold"
                   >
-                    <span>Request Site Clearance</span>
+                    <span>Issue Clearance Ticket</span>
                   </Button>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1565,7 +1803,7 @@ export function DepartmentDashboardView({
                   Inter-Department Workflow &amp; Approvals
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Authorizations between HR, Operations, Finance, and Executive with automatic Mailpit dispatch.
+                  Authorizations between HR, Operations, Finance, and Executive with automatic email dispatch.
                 </p>
               </div>
 
@@ -1828,7 +2066,7 @@ export function DepartmentDashboardView({
                   Corporate Communications &amp; Dispatch Desk
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Official outbound and internal operations messaging wired directly to SMTP Mailpit.
+                  Official outbound and internal operations messaging wired directly to Corporate SMTP.
                 </p>
               </div>
 
@@ -1916,7 +2154,7 @@ export function DepartmentDashboardView({
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {currentUser.email} &bull; {currentUser.department || "Operations"} &bull; {currentUser.jobTitle || currentUser.role}
+                    {currentUser.email} &bull; {currentUser.department || "Operations"} &bull; {userJobTitle}
                   </p>
                 </div>
               </div>
@@ -2207,8 +2445,8 @@ export function DepartmentDashboardView({
         isOpen={newApprovalModalOpen}
         onClose={() => setNewApprovalModalOpen(false)}
         title="New Inter-Department Approval Request"
-        description="Submit an operational request for authorization. Dispatches automated notification and email to Mailpit."
-        maxWidth="lg"
+        description="Submit an operational request for authorization. Dispatches automated email notification."
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateApproval} className="space-y-4">
           <div>
@@ -2393,8 +2631,8 @@ export function DepartmentDashboardView({
         isOpen={newEmailModalOpen}
         onClose={() => setNewEmailModalOpen(false)}
         title="Compose Corporate Email"
-        description="Dispatch official operations communication. Dispatches real SMTP email to Mailpit."
-        maxWidth="lg"
+        description="Dispatch official operations communication to verified recipients."
+        maxWidth="3xl"
       >
         <form onSubmit={handleSendCorporateEmail} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2514,7 +2752,7 @@ export function DepartmentDashboardView({
         onClose={() => setNewTxnModalOpen(false)}
         title="Record Treasury Transaction"
         description="Record a disbursement, capital inflow, or contractor payout to the ledger."
-        maxWidth="lg"
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateTransaction} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

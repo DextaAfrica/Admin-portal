@@ -87,7 +87,7 @@ export default function OperationsLoginPage() {
         setResendCooldown(30);
         setOtpError("");
         setOtpCode("");
-        toastSuccess("Code Dispatched", "A fresh verification code was sent to your inbox (Mailpit).");
+        toastSuccess("Code Dispatched", "A fresh verification code was sent to your inbox.");
       }
     } catch {
       // ignore
@@ -134,7 +134,7 @@ export default function OperationsLoginPage() {
       if (data.requiresMfa) {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
-        const hasTotp = Boolean(data.twoFactorEnabled);
+        const hasTotp = Boolean(data.hasTotp);
         setIsEmailOtp(!hasTotp);
         setOtpCode("");
         setRecoveryCode("");
@@ -146,7 +146,7 @@ export default function OperationsLoginPage() {
           "Verification Required",
           hasTotp
             ? "Please enter the 6-digit code from your authenticator app."
-            : "A 6-digit verification code has been dispatched to your corporate inbox (Mailpit)."
+            : "A 6-digit verification code has been dispatched to your corporate inbox."
         );
         return;
       }
@@ -269,7 +269,7 @@ export default function OperationsLoginPage() {
               className="object-cover"
               style={{ objectPosition: "50% 16%" }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/70 to-black/35" />
 
             {/* Top Subdomain Tag */}
             <div className="relative z-10 flex items-center justify-between">
@@ -285,21 +285,21 @@ export default function OperationsLoginPage() {
             </div>
 
             {/* Bottom Content Overlay */}
-            <div className="relative z-10 space-y-5 xl:space-y-6">
+            <div className="relative z-10 space-y-6 xl:space-y-7">
               <div>
                 <span className="inline-block px-3.5 py-1 rounded-lg bg-[#ED2618] text-[10px] xl:text-[11px] font-extrabold uppercase tracking-[0.14em] shadow-sm shadow-red-500/30">
                   Operations Fleet Portal
                 </span>
               </div>
 
-              <h2 className="text-2xl xl:text-[32px] 2xl:text-[34px] font-extrabold tracking-normal leading-[1.38] sm:leading-[1.42] text-white max-w-xl xl:max-w-2xl drop-shadow-md">
+              <h2 className="text-2xl sm:text-3xl xl:text-[32px] 2xl:text-[35px] font-extrabold tracking-normal leading-[1.45] sm:leading-[1.5] text-white max-w-xl xl:max-w-2xl drop-shadow-[0_2px_16px_rgba(0,0,0,0.85)]">
                 Executing{" "}
-                <span className="italic text-flow-white-red pr-1">
+                <span className="italic text-flow-white-red pr-1 font-extrabold">
                   Landmark Infrastructure, Capital Allocation &amp; Field Deliveries.
                 </span>
               </h2>
 
-              <p className="text-xs sm:text-sm xl:text-[15px] text-slate-200/95 leading-relaxed xl:leading-loose max-w-xl pt-1">
+              <p className="text-xs sm:text-sm xl:text-[15px] text-slate-100/95 leading-relaxed xl:leading-loose max-w-xl">
                 Direct authorized entry for Dexta Africa infrastructure directors, contractor procurement teams, and field engineering leads.
               </p>
 
@@ -524,7 +524,7 @@ export default function OperationsLoginPage() {
               </div>
               <p className="text-center text-xs text-slate-500 dark:text-slate-400">
                 {isEmailOtp
-                  ? "Check your corporate inbox or development Mailpit (http://localhost:8025) for the one-time authentication code."
+                  ? "Check your corporate inbox for the one-time authentication code."
                   : "Open your authenticator app (Google Authenticator, 1Password, etc.)"}
               </p>
             </div>

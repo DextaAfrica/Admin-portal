@@ -190,12 +190,15 @@ export async function POST(req: NextRequest) {
       emailOtpSent = false;
     }
 
+    const hasTotpSecret = Boolean(user.twoFactorEnabled && (user as any).twoFactorSecret);
+
     const res = NextResponse.json({
       requiresMfa: true,
       userId: user.id,
       email: user.email,
       fullName: user.fullName,
       twoFactorEnabled: user.twoFactorEnabled,
+      hasTotp: hasTotpSecret,
       emailOtpSent,
     });
 

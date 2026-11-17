@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
+import { CreateMarketingTemplateSchema, formatZodError } from "@/lib/validation/schemas";
 import {
   EmailComposerStudio,
   EMAIL_OCCASION_PRESETS,
@@ -82,6 +83,20 @@ export default function TemplatesPage() {
     contentHtml: string;
     occasion: EmailOccasionId;
   }) => {
+    const rawPayload = {
+      name: payload.title.trim(),
+      subject: payload.subject.trim(),
+      bodyHtml: payload.contentHtml,
+      variables: ["firstName"],
+    };
+
+    const parsed = CreateMarketingTemplateSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      toastError("Validation Error", errResult.error);
+      return;
+    }
+
     setIsSaving(true);
     try {
       const isUpdating = Boolean(payload.id);
@@ -90,10 +105,7 @@ export default function TemplatesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: payload.id,
-          name: payload.title,
-          subject: payload.subject,
-          bodyHtml: payload.contentHtml,
-          variables: ["firstName"],
+          ...parsed.data,
         }),
       });
       if (res.ok) {
@@ -107,7 +119,8 @@ export default function TemplatesPage() {
         setIsStudioOpen(false);
         fetchTemplates();
       } else {
-        toastError("Save Error", "Could not save this template.");
+        const errorJson = await res.json().catch(() => ({}));
+        toastError("Save Error", errorJson.error || "Could not save this template.");
       }
     } catch {
       toastError("Connection Error", "Please check your connection and try again.");

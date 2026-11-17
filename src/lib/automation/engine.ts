@@ -78,6 +78,25 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
       "esther.ade@dextaafrica.com",
     ];
 
+    const mockCrmEmails = [
+      "investments@heritagecapital.ng",
+      "procurement@apexlogistics.africa",
+      "consortium@ekoatlantic.com",
+      "investors@africantrust.org",
+    ];
+
+    await (db.crmActivity?.deleteMany?.({
+      where: { client: { email: { in: mockCrmEmails } } },
+    }) ?? Promise.resolve());
+
+    await (db.crmDeal?.deleteMany?.({
+      where: { client: { email: { in: mockCrmEmails } } },
+    }) ?? Promise.resolve());
+
+    await (db.crmClient?.deleteMany?.({
+      where: { email: { in: mockCrmEmails } },
+    }) ?? Promise.resolve());
+
     await (db.credentialRequest?.deleteMany?.({
       where: {
         OR: [
@@ -88,7 +107,7 @@ export async function ensureInitialEnterpriseData(): Promise<void> {
     }) ?? Promise.resolve());
 
     await (db.policyAlert?.deleteMany?.({
-      where: { userEmail: { in: mockEmails } },
+      where: { actorEmail: { in: mockEmails } },
     }) ?? Promise.resolve());
 
     await (db.leaveRequest?.deleteMany?.({

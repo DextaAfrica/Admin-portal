@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
+import { CreateHrEmployeeSchema, formatZodError } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -103,34 +104,36 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    const parsed = CreateHrEmployeeSchema.safeParse(body);
+    if (!parsed.success) {
+      const err = formatZodError(parsed.error);
+      return NextResponse.json(err, { status: 400 });
+    }
+
     const {
       fullName,
       workEmail,
       phone,
       department,
       jobTitle,
-      employmentType = "FULL_TIME",
-      status = "ACTIVE",
+      employmentType,
+      status,
       startDate,
-      location = "Lagos, Nigeria",
+      location,
       emergencyContact,
       notes,
-    } = body;
-
-    if (!fullName || !workEmail || !department || !jobTitle) {
-      return NextResponse.json(
-        { error: "Full Name, Work Email, Department, and Job Title are required" },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     const existing = await db.employeeProfile.findFirst({
-      where: { workEmail: workEmail.toLowerCase().trim() },
+      where: { workEmail },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: "An employee with this work email already exists" },
+        {
+          error: "An employee with this work email already exists",
+          fieldErrors: { workEmail: ["An employee record with this corporate email already exists"] },
+        },
         { status: 409 }
       );
     }
@@ -142,13 +145,13 @@ export async function POST(req: NextRequest) {
       data: {
         employeeNumber: empNumber,
         fullName,
-        workEmail: workEmail.toLowerCase().trim(),
+        workEmail,
         phone: phone || "+234 800 000 0000",
         department,
         jobTitle,
         employmentType,
         status,
-        startDate: startDate ? new Date(startDate) : new Date(),
+        startDate: new Date(startDate),
         location,
         emergencyContact,
         notes,

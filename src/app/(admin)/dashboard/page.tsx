@@ -305,15 +305,17 @@ export default async function DashboardPage() {
     seniorityLevel: "EXECUTIVE",
   };
 
-  // 4. Personalized User Context (Requisitions submitted by user, actions pending for their department, personal audit trail)
+  // 4. Personalized User Context & Operations Telemetry
   let userSubmittedApprovals: any[] = [];
   let userPendingActionApprovals: any[] = [];
   let userAuditLogs: any[] = [];
   let userLeaveRequests: any[] = [];
+  let userProjects: any[] = [];
+  let userReports: any[] = [];
 
   if (user?.id) {
     try {
-      const [usa, upa, ual, ulr] = await Promise.all([
+      const [usa, upa, ual, ulr, uprj, urpt] = await Promise.all([
         db.interDeptApproval.findMany({
           where: {
             OR: [
@@ -347,12 +349,23 @@ export default async function DashboardPage() {
           take: 5,
           orderBy: { createdAt: "desc" },
         }),
+        db.infrastructureProject.findMany({
+          take: 8,
+          orderBy: { createdAt: "desc" },
+        }),
+        db.reportDocument.findMany({
+          where: isSuperAdmin ? {} : { authorEmail: user.email },
+          take: 6,
+          orderBy: { createdAt: "desc" },
+        }),
       ]);
 
       userSubmittedApprovals = usa || [];
       userPendingActionApprovals = upa || [];
       userAuditLogs = ual || [];
       userLeaveRequests = ulr || [];
+      userProjects = uprj || [];
+      userReports = urpt || [];
     } catch {
       // Deferred
     }
@@ -366,6 +379,8 @@ export default async function DashboardPage() {
         initialPlatform={initialPlatform}
         initialTab={initialTab}
         portfolioItems={portfolioItems}
+        userProjects={userProjects}
+        userReports={userReports}
         userSubmittedApprovals={userSubmittedApprovals}
         userPendingActionApprovals={userPendingActionApprovals}
         userAuditLogs={userAuditLogs}

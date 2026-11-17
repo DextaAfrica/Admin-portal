@@ -20,6 +20,7 @@ import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
 import type { ContentPage } from "@/lib/backend-api";
+import { SaveContentPageSchema, formatZodError } from "@/lib/validation/schemas";
 
 export default function ContentCmsPage() {
   const { success: toastSuccess, error: toastError } = useToast();
@@ -27,6 +28,17 @@ export default function ContentCmsPage() {
   const [pages, setPages] = React.useState<ContentPage[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [selectedKey, setSelectedKey] = React.useState<string>("");
+
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
+
+  const clearFieldError = (field: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
 
   // Editor Form Fields
   const [activePage, setActivePage] = React.useState<ContentPage | null>(null);
@@ -95,24 +107,45 @@ export default function ContentCmsPage() {
       return;
     }
 
+    const rawPayload = {
+      key: activePage.key,
+      title: title.trim(),
+      content: parsedContent,
+      seoTitle: seoTitle.trim(),
+      seoDescription: seoDescription.trim(),
+      published,
+    };
+
+    const parsed = SaveContentPageSchema.safeParse(rawPayload);
+    if (!parsed.success) {
+      const errResult = formatZodError(parsed.error);
+      const errMap: Record<string, string> = {};
+      for (const [k, v] of Object.entries(errResult.fieldErrors)) {
+        errMap[k] = v[0];
+      }
+      setFieldErrors(errMap);
+      toastError("Validation Error", errResult.error);
+      return;
+    }
+
+    setFieldErrors({});
     setIsSaving(true);
     try {
-      const payload = {
-        title: title.trim(),
-        content: parsedContent,
-        seoTitle: seoTitle.trim(),
-        seoDescription: seoDescription.trim(),
-        published,
-      };
-
       const res = await fetch(`/api/backend/content/${activePage.key}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(parsed.data),
       });
 
       if (!res.ok) {
         const errorJson = await res.json().catch(() => ({}));
+        if (errorJson.fieldErrors) {
+          const serverErrMap: Record<string, string> = {};
+          for (const [k, v] of Object.entries(errorJson.fieldErrors)) {
+            serverErrMap[k] = Array.isArray(v) ? (v as string[])[0] : String(v);
+          }
+          setFieldErrors(serverErrMap);
+        }
         throw new Error(errorJson.error || "Save operation failed");
       }
 
@@ -124,7 +157,7 @@ export default function ContentCmsPage() {
       // Update local state
       const updated: ContentPage = {
         ...activePage,
-        ...payload,
+        ...parsed.data,
         updatedAt: new Date().toISOString(),
       };
       setActivePage(updated);
@@ -264,14 +297,22 @@ export default function ContentCmsPage() {
                 <Input
                   label="Editorial Page Title"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  error={fieldErrors.title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    clearFieldError("title");
+                  }}
                   required
                 />
                 <Input
                   label="SEO Meta Title"
                   placeholder="Page Title | Dexta Africa"
                   value={seoTitle}
-                  onChange={(e) => setSeoTitle(e.target.value)}
+                  error={fieldErrors.seoTitle}
+                  onChange={(e) => {
+                    setSeoTitle(e.target.value);
+                    clearFieldError("seoTitle");
+                  }}
                 />
               </div>
 
@@ -283,9 +324,13 @@ export default function ContentCmsPage() {
                   rows={2}
                   placeholder="Primary search engine synopsis for Google and social previews..."
                   value={seoDescription}
-                  onChange={(e) => setSeoDescription(e.target.value)}
+                  onChange={(e) => {
+                    setSeoDescription(e.target.value);
+                    clearFieldError("seoDescription");
+                  }}
                   className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500"
                 />
+                {fieldErrors.seoDescription && <p className="text-xs font-medium text-red-500">{fieldErrors.seoDescription}</p>}
               </div>
 
               {/* Dynamic JSON Schema Editor */}

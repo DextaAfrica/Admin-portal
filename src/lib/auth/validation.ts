@@ -133,12 +133,14 @@ export const RegisterSchema = z
     phone: z
       .string()
       .trim()
-      .optional()
+      .min(8, "Direct mobile phone number is required")
       .refine(
-        (val) => !val || validatePhoneNumber(val).isValid,
-        (val) => ({ message: val ? validatePhoneNumber(val).error || "Invalid phone number format" : "" })
+        (val) => validatePhoneNumber(val).isValid,
+        (val) => ({ message: validatePhoneNumber(val).error || "Invalid phone number format" })
       ),
-    verificationToken: z.string().optional(),
+    verificationToken: z
+      .string()
+      .min(10, "Zero-Trust Verification Required: You must verify your corporate email and phone with the 6-digit OTP before provisioning an account."),
     accessPasscode: z.string().trim().optional(),
     mfaSecret: z.string().optional(),
     mfaCode: z.string().optional(),

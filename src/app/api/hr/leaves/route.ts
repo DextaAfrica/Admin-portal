@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
+import {
+  CreateHrLeaveRequestSchema,
+  ReviewHrLeaveSchema,
+  formatZodError,
+} from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -80,14 +85,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { leaveType, startDate, endDate, daysCount, reason, handoverNotes } = await req.json();
-
-    if (!leaveType || !startDate || !endDate || !daysCount || !reason) {
-      return NextResponse.json(
-        { error: "Leave type, start date, end date, days count, and reason are required" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const parsed = CreateHrLeaveRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      const err = formatZodError(parsed.error);
+      return NextResponse.json(err, { status: 400 });
     }
+
+    const { leaveType, startDate, endDate, daysCount, reason, handoverNotes } = parsed.data;
 
     const leave = await db.leaveRequest.create({
       data: {
@@ -97,7 +102,7 @@ export async function POST(req: NextRequest) {
         leaveType,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
-        daysCount: Number(daysCount),
+        daysCount,
         reason,
         handoverNotes,
         status: "PENDING",
@@ -131,11 +136,14 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id, status, reviewerNotes } = await req.json();
-
-    if (!id || !status) {
-      return NextResponse.json({ error: "Leave ID and Status are required" }, { status: 400 });
+    const body = await req.json();
+    const parsed = ReviewHrLeaveSchema.safeParse(body);
+    if (!parsed.success) {
+      const err = formatZodError(parsed.error);
+      return NextResponse.json(err, { status: 400 });
     }
+
+    const { id, status, reviewerNotes } = parsed.data;
 
     const leave = await db.leaveRequest.findUnique({
       where: { id },

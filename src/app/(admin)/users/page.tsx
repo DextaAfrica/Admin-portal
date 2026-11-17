@@ -29,6 +29,7 @@ export default function UsersPage() {
   const { success: toastSuccess, error: toastError } = useToast();
   const [users, setUsers] = React.useState<UserItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [accessDenied, setAccessDenied] = React.useState(false);
   const [isAddOpen, setIsAddOpen] = React.useState(false);
   const [statusConfirmUser, setStatusConfirmUser] =
     React.useState<UserItem | null>(null);
@@ -61,6 +62,11 @@ export default function UsersPage() {
     setIsLoading(true);
     try {
       const res = await fetch("/api/users");
+      if (res.status === 403) {
+        setAccessDenied(true);
+        setIsLoading(false);
+        return;
+      }
       const data = await res.json();
       if (res.ok) setUsers(data.users || []);
     } catch {
@@ -148,6 +154,34 @@ export default function UsersPage() {
       setIsUpdatingStatus(false);
     }
   };
+
+  if (accessDenied) {
+    return (
+      <div className="space-y-6 animate-fade-in py-10">
+        <div className="max-w-xl mx-auto rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c0d12] p-8 text-center shadow-sm space-y-4">
+          <div className="h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center">
+            <ShieldCheck className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              Executive &amp; Systems IT Governance Area
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Global team member administration and account provisioning are restricted to Systems IT Governance and Executive Directorates.
+            </p>
+          </div>
+          <div className="pt-2">
+            <a
+              href="/dashboard"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#ED2618] hover:bg-red-700 text-white text-xs font-bold transition-all shadow-sm"
+            >
+              <span>Return to Your Operations Dashboard &rarr;</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -273,6 +307,7 @@ export default function UsersPage() {
         onClose={() => setIsAddOpen(false)}
         title="Invite a Team Member"
         description="Add a colleague to the Dexta Africa workspace and choose their responsibility level."
+        maxWidth="2xl"
       >
         <form onSubmit={handleCreateUser} className="space-y-4">
           <Input

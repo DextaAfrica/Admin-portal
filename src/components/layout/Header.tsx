@@ -458,7 +458,7 @@ export function Header({
         onClose={() => setUserProfileModalOpen(false)}
         title="Workspace Identity & Profile"
         description="Your personal identity card across Dexta Africa infrastructure command centers."
-        maxWidth="md"
+        maxWidth="2xl"
         footer={
           <div className="flex items-center justify-between w-full">
             <Button
@@ -518,7 +518,9 @@ export function Header({
                   </span>
                 </div>
                 <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">
-                  {profileData.jobTitle || "Operations & Infrastructure Lead"} &bull;{" "}
+                  {(!profileData.jobTitle || profileData.jobTitle.toLowerCase().includes("dev") || profileData.jobTitle.toLowerCase().includes("developer"))
+                    ? (profileData.department?.toUpperCase() === "OPERATIONS" ? "Operations Manager" : "Operations & Infrastructure Lead")
+                    : profileData.jobTitle} &bull;{" "}
                   <span className="text-[#ED2618]">{profileData.department}</span>
                 </p>
                 <p className="text-[11px] text-slate-400 font-mono">
@@ -636,7 +638,7 @@ export function Header({
         onClose={() => setEditProfileModalOpen(false)}
         title="Edit Personal Profile Details"
         description="Update your corporate identity, avatar, contact information, and biography."
-        maxWidth="md"
+        maxWidth="2xl"
         footer={
           <div className="flex items-center justify-end gap-2 w-full">
             <Button

@@ -483,4 +483,68 @@ model WorkflowAutomationRule {
   @@index([isEnabled])
 }
 
+// =============================================================================
+// EXECUTIVE CORPORATE REPORTS & DOCUMENT STUDIO
+// =============================================================================
+
+model ReportDocument {
+  id               String    @id @default(uuid())
+  reference        String    @unique // e.g. "RPT-OPS-2026-001"
+  title            String
+  cadence          String    @default("DAILY") // "DAILY", "WEEKLY", "MONTHLY", "AD_HOC"
+  department       String    @default("OPERATIONS")
+  authorName       String
+  authorTitle      String?
+  authorEmail      String
+  lineManagerName  String?
+  lineManagerTitle String?
+  status           String    @default("DRAFT") // "DRAFT", "SUBMITTED", "APPROVED", "CHANGES_REQUESTED"
+  reportDate       DateTime  @default(now())
+  summary          String?
+  sections         String?   // JSON array of narrative text sections
+  spreadsheetData  String?   // JSON array of Excel-like spreadsheet rows & metrics
+  images           String?   // JSON array of image attachments (data URL, caption, timestamp)
+  managerNotes     String?
+  metadata         String?   // JSON configuration
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([department])
+  @@index([status])
+  @@index([reportDate])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// OPERATIONS INFRASTRUCTURE PROJECTS & GROUND MILESTONES
+// =============================================================================
+
+model InfrastructureProject {
+  id             String    @id @default(uuid())
+  code           String    @unique // e.g. "PRJ-LEK-001"
+  name           String
+  clientOrEntity String?
+  location       String
+  category       String    @default("INFRASTRUCTURE") // "INFRASTRUCTURE", "COMMERCIAL", "RESIDENTIAL", "MARINE_PORT", "INDUSTRIAL"
+  status         String    @default("IN_PROGRESS") // "PLANNING", "IN_PROGRESS", "MILESTONE_INSPECTION", "COMPLETED", "ON_HOLD"
+  progressPct    Int       @default(0)
+  startDate      DateTime?
+  targetEndDate  DateTime?
+  leadEngineer   String?
+  contractorTeam String?
+  budget         Float?
+  currency       String    @default("NGN")
+  summary        String?
+  milestones     String?   // JSON list of milestones
+  images         String?   // JSON list of site photos
+  createdByEmail String?
+  createdByName  String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([createdAt])
+}
+
 

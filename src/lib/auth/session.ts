@@ -279,10 +279,22 @@ export async function getCurrentSession(): Promise<{
         // Fallback to defaults
       }
 
+      let jobTitle = session.user.jobTitle;
+      if (!jobTitle || jobTitle.toLowerCase().includes("dev") || jobTitle.toLowerCase().includes("developer")) {
+        jobTitle = dept.toUpperCase() === "EXECUTIVE"
+          ? "Executive Director"
+          : dept.toUpperCase() === "FINANCE"
+          ? "Finance Lead"
+          : dept.toUpperCase() === "HR"
+          ? "People & Culture Lead"
+          : "Operations Manager";
+      }
+
       sessionUser = {
         ...session.user,
         department: dept,
         seniorityLevel: seniority,
+        jobTitle,
       };
     }
 

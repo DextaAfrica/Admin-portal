@@ -55,30 +55,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2b. Zero-Trust Contact Verification Check
-    if (verificationToken) {
-      const tokenRecord = await prisma.systemSetting.findUnique({
-        where: { key: `EMAIL_VERIFIED_TOKEN_${verificationToken}` },
-      });
-
-      if (!tokenRecord || !tokenRecord.value) {
-        return NextResponse.json(
-          { error: "Contact verification token is invalid or expired. Please verify your email with the 6-digit code." },
-          { status: 400 }
-        );
-      }
-
-      const [tokenEmail, , expStr] = tokenRecord.value.split(":");
-      if (tokenEmail !== normalizedEmail || Date.now() > Number(expStr)) {
-        return NextResponse.json(
-          { error: "Contact verification token does not match this corporate email. Please re-verify." },
-          { status: 400 }
-        );
-      }
-
-      // Burn used token
-      await prisma.systemSetting.delete({ where: { key: `EMAIL_VERIFIED_TOKEN_${verificationToken}` } }).catch(() => {});
+    // 2b. Zero-Trust Contact Verification Check (Mandatory - No unverified registrations allowed)
+    if (!verificationToken) {
+      return NextResponse.json(
+        { error: "Zero-Trust Security Violation: Corporate email & phone must be verified via OTP challenge before account creation." },
+        { status: 400 }
+      );
     }
+
+    const tokenRecord = await prisma.systemSetting.findUnique({
+      where: { key: `EMAIL_VERIFIED_TOKEN_${verificationToken}` },
+    });
+
+    if (!tokenRecord || !tokenRecord.value) {
+      return NextResponse.json(
+        { error: "Contact verification token is invalid or expired. Please verify your email with the 6-digit code." },
+        { status: 400 }
+      );
+    }
+
+    const [tokenEmail, tokenPhone, expStr] = tokenRecord.value.split(":");
+    if (tokenEmail !== normalizedEmail || Date.now() > Number(expStr)) {
+      return NextResponse.json(
+        { error: "Contact verification token does not match this corporate email. Please complete verification." },
+        { status: 400 }
+      );
+    }
+
+    // Burn used token
+    await prisma.systemSetting.delete({ where: { key: `EMAIL_VERIFIED_TOKEN_${verificationToken}` } }).catch(() => {});
 
     let twoFactorEnabled = false;
     let validatedSecret: string | null = null;

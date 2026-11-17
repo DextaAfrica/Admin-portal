@@ -82,7 +82,7 @@ export default function AdminPortalLoginPage() {
         setResendCooldown(30);
         setOtpError("");
         setOtpCode("");
-        toastSuccess("Code Dispatched", "A fresh verification code was sent to your inbox (Mailpit).");
+        toastSuccess("Code Dispatched", "A fresh verification code was sent to your inbox.");
       }
     } catch {
       // ignore
@@ -129,7 +129,7 @@ export default function AdminPortalLoginPage() {
       if (data.requiresMfa) {
         setPendingUserId(data.userId);
         setPendingUserName(data.fullName || email);
-        const hasTotp = Boolean(data.twoFactorEnabled);
+        const hasTotp = Boolean(data.hasTotp);
         setIsEmailOtp(!hasTotp);
         setOtpCode("");
         setRecoveryCode("");
@@ -141,7 +141,7 @@ export default function AdminPortalLoginPage() {
           "Verification Required",
           hasTotp
             ? "Please enter the 6-digit code from your authenticator app."
-            : "A 6-digit verification code has been dispatched to your corporate inbox (Mailpit)."
+            : "A 6-digit verification code has been dispatched to your corporate inbox."
         );
         return;
       }
@@ -519,7 +519,7 @@ export default function AdminPortalLoginPage() {
               </div>
               <p className="text-center text-xs text-slate-500 dark:text-slate-400">
                 {isEmailOtp
-                  ? "Check your corporate inbox or development Mailpit (http://localhost:8025) for the one-time authentication code."
+                  ? "Check your corporate inbox for the one-time authentication code."
                   : "Open your authenticator app (Google Authenticator, 1Password, etc.)"}
               </p>
             </div>

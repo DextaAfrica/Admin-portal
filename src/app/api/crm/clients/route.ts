@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
+import { CreateCrmClientSchema, formatZodError } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -86,35 +87,36 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
+    const parsed = CreateCrmClientSchema.safeParse(body);
+    if (!parsed.success) {
+      const err = formatZodError(parsed.error);
+      return NextResponse.json(err, { status: 400 });
+    }
+
     const {
       name,
       company,
       email,
       phone,
-      category = "PROSPECT",
-      stage = "INQUIRY",
-      estimatedValue = 0,
-      currency = "USD",
-      location = "Lagos, Nigeria",
-      tags = [],
+      category,
+      stage,
+      estimatedValue,
+      currency,
+      location,
+      tags,
       notes,
-    } = body;
+    } = parsed.data;
 
-    if (!name || !email) {
-      return NextResponse.json(
-        { error: "Client / Organization Name and Email are required" },
-        { status: 400 }
-      );
-    }
-
-    const normalizedEmail = email.toLowerCase().trim();
     const existing = await db.crmClient.findUnique({
-      where: { email: normalizedEmail },
+      where: { email },
     });
 
     if (existing) {
       return NextResponse.json(
-        { error: "A client record with this email address already exists" },
+        {
+          error: "A client record with this email address already exists",
+          fieldErrors: { email: ["This email is already registered in CRM"] },
+        },
         { status: 409 }
       );
     }
@@ -123,11 +125,11 @@ export async function POST(req: NextRequest) {
       data: {
         name,
         company,
-        email: normalizedEmail,
+        email,
         phone,
         category,
         stage,
-        estimatedValue: Number(estimatedValue),
+        estimatedValue,
         currency,
         location,
         tags: JSON.stringify(tags),
@@ -158,7 +160,7 @@ export async function POST(req: NextRequest) {
       entityId: client.id,
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent"),
-      metadata: { name, company, email: normalizedEmail, category, stage },
+      metadata: { name, company, email: client.email, category, stage },
     });
 
     return NextResponse.json({ client }, { status: 201 });

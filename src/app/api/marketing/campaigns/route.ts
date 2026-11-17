@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent } from "@/lib/auth/audit";
+import { CreateMarketingCampaignSchema, formatZodError } from "@/lib/validation/schemas";
 
 export async function GET() {
   try {
@@ -29,14 +30,14 @@ export async function POST(req: NextRequest) {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { title, subject, contentHtml } = await req.json();
-
-    if (!title || !subject || !contentHtml) {
-      return NextResponse.json(
-        { error: "Title, subject, and content are required" },
-        { status: 400 }
-      );
+    const body = await req.json();
+    const parsed = CreateMarketingCampaignSchema.safeParse(body);
+    if (!parsed.success) {
+      const err = formatZodError(parsed.error);
+      return NextResponse.json(err, { status: 400 });
     }
+
+    const { title, subject, contentHtml } = parsed.data;
 
     const campaign = await prisma.emailCampaign.create({
       data: {
