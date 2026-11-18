@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!session || new Date() > session.expiresAt || session.user.status !== "ACTIVE") {
-      return NextResponse.redirect(new URL("/login", req.url));
+      return NextResponse.redirect(new URL("/api/auth/logout?next=/login", req.url));
     }
 
     const host = req.headers.get("host");
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
 
     if (!session || new Date() > session.expiresAt || session.user.status !== "ACTIVE") {
       const targetUrl = new URL(target);
-      return NextResponse.redirect(new URL("/login", targetUrl.origin));
+      return NextResponse.redirect(new URL("/api/auth/logout?next=/login", targetUrl.origin));
     }
 
     const newTicket = await createSsoTicket(currentToken);

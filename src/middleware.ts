@@ -51,8 +51,8 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(buildSubdomainRedirect("admin", pathname));
     }
 
-    // If already authenticated, redirect root and login to Operations Command dashboard (no conflicting landing)
-    if (token && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
+    // If already authenticated and hitting root, route to Operations Command dashboard
+    if (token && pathname === "/") {
       return NextResponse.redirect(new URL("/dashboard?tab=operations", req.url));
     }
 
@@ -78,8 +78,8 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(sub, req.url));
     }
 
-    // If already authenticated, redirect root and login to Systems IT Command dashboard
-    if (token && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
+    // If already authenticated and hitting root, route to Systems IT Command dashboard
+    if (token && pathname === "/") {
       return NextResponse.redirect(new URL("/dashboard?tab=systems", req.url));
     }
 
