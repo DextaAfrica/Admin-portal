@@ -13,8 +13,8 @@ import {
   HardHat,
   FileText,
   CheckCircle2,
-  Clock,
-  Layers,
+  Radio,
+  Sparkles,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 import { navigateToSubdomainWithSso } from "@/lib/routing";
@@ -32,7 +32,7 @@ const PORTRAITS: PortraitSlide[] = [
   {
     image: "/images/team-dexta.jpg",
     name: "Dexta Africa Leadership",
-    title: "Executive Team",
+    title: "Executive Operations",
     summary:
       "Guiding high-integrity capital projects, physical infrastructure delivery, and operational excellence across Africa.",
     objectPosition: "50% 14%",
@@ -55,8 +55,18 @@ const PORTRAITS: PortraitSlide[] = [
   },
 ];
 
+const TICKER_ITEMS = [
+  { site: "Eko Coastal Corridor", status: "Ground Piling Verified", progress: "85%" },
+  { site: "Landmark Marine Logistics", status: "Squad Alpha Mobilized", progress: "100%" },
+  { site: "Lekki Coastal Expressway", status: "Drainage Conduits In Progress", progress: "60%" },
+  { site: "Abuja Corporate Facility", status: "Topographical Survey Complete", progress: "100%" },
+  { site: "Port Harcourt Terminal Hub", status: "Foundation Piling Active", progress: "45%" },
+  { site: "Victoria Island Commercial Site", status: "MEP Conduits Inspection", progress: "70%" },
+];
+
 export default function LandingPage() {
   const [activeSlide, setActiveSlide] = React.useState(0);
+  const [slideProgressKey, setSlideProgressKey] = React.useState(0);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
@@ -67,21 +77,24 @@ export default function LandingPage() {
   React.useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % PORTRAITS.length);
-    }, 8000);
+      setSlideProgressKey((k) => k + 1);
+    }, 7500);
     return () => clearInterval(timer);
   }, [activeSlide]);
 
-  const nextSlide = () => {
+  const handleNextSlide = () => {
     setActiveSlide((prev) => (prev + 1) % PORTRAITS.length);
+    setSlideProgressKey((k) => k + 1);
   };
 
-  const prevSlide = () => {
+  const handlePrevSlide = () => {
     setActiveSlide((prev) => (prev - 1 + PORTRAITS.length) % PORTRAITS.length);
+    setSlideProgressKey((k) => k + 1);
   };
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#070A0F] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white transition-colors duration-200">
-      {/* Clean Top Navigation Bar */}
+      {/* 1. TOP NAVIGATION BAR */}
       <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#0C0F17]/95 backdrop-blur-md">
         <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
@@ -113,7 +126,7 @@ export default function LandingPage() {
               </button>
             )}
 
-            {/* Single Primary Action: Sign In / Access Workspace */}
+            {/* Single Primary Action: Sign In */}
             <button
               type="button"
               onClick={() => navigateToSubdomainWithSso("ops", "/dashboard")}
@@ -126,10 +139,10 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Main Hero & Value Proposition */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-10 py-12 sm:py-16 flex flex-col justify-center">
-        <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-          {/* Left Column: Focused Executive Copy & Primary Access */}
+      {/* 2. MAIN HERO SECTION */}
+      <main className="mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-10 pt-10 sm:pt-14 pb-8 flex flex-col justify-center">
+        <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+          {/* Left Column: Focused Executive Copy & Primary Action */}
           <div className="lg:col-span-6 space-y-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-red-200/80 dark:border-red-500/20 bg-red-50/80 dark:bg-red-500/10 px-3.5 py-1.5">
               <span className="h-2 w-2 rounded-full bg-[#ED2618]" />
@@ -170,38 +183,71 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* Structured Value Indicators */}
+            {/* Simple, Punchy Stat Strip */}
             <div className="pt-6 border-t border-slate-200/80 dark:border-white/[0.08] grid grid-cols-3 gap-4">
               <div>
-                <span className="text-lg sm:text-xl font-bold font-mono text-slate-900 dark:text-white block">
+                <span className="text-xl sm:text-2xl font-bold font-mono text-[#ED2618] block">
+                  100%
+                </span>
+                <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">
                   Ground Delivery
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                  Site milestones &amp; engineering
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                  Live site milestones
                 </span>
               </div>
               <div>
-                <span className="text-lg sm:text-xl font-bold font-mono text-slate-900 dark:text-white block">
-                  Field Dossiers
+                <span className="text-xl sm:text-2xl font-bold font-mono text-slate-900 dark:text-white block">
+                  Daily
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                  Daily logs &amp; executive reports
+                <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">
+                  Field Reports
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                  Shift logs &amp; photos
                 </span>
               </div>
               <div>
-                <span className="text-lg sm:text-xl font-bold font-mono text-slate-900 dark:text-white block">
-                  Clearances
+                <span className="text-xl sm:text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400 block">
+                  Direct
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 block">
-                  Multi-tier authorizations
+                <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">
+                  Sign-Offs
+                </span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                  Fast team approvals
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Clean, High-End Leadership Carousel */}
+          {/* Right Column: TV Broadcast-Style Executive Visual Frame */}
           <div className="lg:col-span-6">
-            <div className="relative aspect-[4/3] sm:aspect-[16/11] w-full overflow-hidden rounded-3xl border border-slate-200/90 dark:border-white/10 bg-slate-950 shadow-2xl">
+            <div className="relative aspect-[4/3] sm:aspect-[16/11] w-full overflow-hidden rounded-3xl border border-slate-200/90 dark:border-white/10 bg-slate-950 shadow-2xl group">
+              {/* Top TV Broadcast Live Pill */}
+              <div className="absolute top-4 left-4 z-20 flex items-center gap-2 px-3 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-white/15 text-[10px] font-mono font-bold text-white shadow-lg">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ED2618]" />
+                </span>
+                <span className="tracking-wider">LIVE OPERATIONS DESK</span>
+              </div>
+
+              {/* TV Broadcast Slide Number */}
+              <div className="absolute top-4 right-4 z-20 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-[10px] font-mono text-white/70">
+                0{activeSlide + 1} / 0{PORTRAITS.length}
+              </div>
+
+              {/* CRT Scanline Micro-Texture for TV Aesthetic */}
+              <div
+                className="absolute inset-0 pointer-events-none z-15 opacity-15"
+                style={{
+                  backgroundImage:
+                    "repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.45) 0px, rgba(0, 0, 0, 0.45) 1px, transparent 1px, transparent 3px)",
+                }}
+              />
+
+              {/* Active Image Carousel */}
               {PORTRAITS.map((slide, index) => {
                 const isActive = index === activeSlide;
 
@@ -221,19 +267,19 @@ export default function LandingPage() {
                       fill
                       priority={index === 0}
                       sizes="(max-width: 1024px) 100vw, 50vw"
-                      className="object-cover"
+                      className="object-cover transition-transform duration-7000 ease-out scale-100 group-hover:scale-105"
                       style={{
                         objectPosition: slide.objectPosition,
                       }}
                     />
-                    {/* Subtle, Natural Vignette */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+                    {/* Natural Vignette */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/30 to-transparent" />
                   </div>
                 );
               })}
 
-              {/* Slide Caption & Minimalist Controls */}
-              <div className="absolute bottom-0 inset-x-0 z-20 p-6 sm:p-8 flex items-end justify-between gap-4">
+              {/* Slide Caption & TV Control Pad */}
+              <div className="absolute bottom-0 inset-x-0 z-20 p-5 sm:p-7 flex items-end justify-between gap-4">
                 <div className="space-y-1.5 max-w-md">
                   <span className="inline-block rounded-full bg-[#ED2618] px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
                     {PORTRAITS[activeSlide].title}
@@ -249,7 +295,7 @@ export default function LandingPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <button
                     type="button"
-                    onClick={prevSlide}
+                    onClick={handlePrevSlide}
                     aria-label="Previous portrait"
                     className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 bg-white/10 backdrop-blur-md text-white hover:bg-[#ED2618] hover:border-[#ED2618] transition-all cursor-pointer"
                   >
@@ -257,7 +303,7 @@ export default function LandingPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={nextSlide}
+                    onClick={handleNextSlide}
                     aria-label="Next portrait"
                     className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/20 bg-white/10 backdrop-blur-md text-white hover:bg-[#ED2618] hover:border-[#ED2618] transition-all cursor-pointer"
                   >
@@ -265,14 +311,71 @@ export default function LandingPage() {
                   </button>
                 </div>
               </div>
+
+              {/* TV Broadcast Timeline Progress Line */}
+              <div className="absolute bottom-0 inset-x-0 h-1 bg-white/15 z-30 overflow-hidden">
+                <div
+                  key={slideProgressKey}
+                  className="h-full bg-[#ED2618] animate-slide-progress"
+                  style={{ animationDuration: "7.5s" }}
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 3-Pillar Operational Highlights Grid */}
-        <div className="mt-16 sm:mt-24 pt-12 border-t border-slate-200/80 dark:border-white/[0.08]">
+        {/* 3. ANIMATED SCROLLING TV TICKER RIBBON */}
+        <div className="mt-12 w-full overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100/90 dark:bg-white/[0.02] py-3 shadow-xs">
+          <div className="flex items-center">
+            {/* Ticker Lead Tag */}
+            <div className="flex items-center gap-2 px-4 shrink-0 border-r border-slate-300 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+              <Radio className="h-3.5 w-3.5 text-[#ED2618] animate-pulse" />
+              <span>Live Sites</span>
+            </div>
+
+            {/* Seamless Infinite Marquee */}
+            <div className="flex overflow-hidden whitespace-nowrap select-none">
+              <div className="flex items-center gap-8 animate-marquee">
+                {TICKER_ITEMS.map((item, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {item.site}:
+                    </span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      {item.status}
+                    </span>
+                    <span className="font-mono font-bold text-[11px] text-[#ED2618] bg-red-500/10 px-1.5 py-0.5 rounded">
+                      {item.progress}
+                    </span>
+                    <span className="text-slate-300 dark:text-white/20 ml-4">&bull;</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-8 animate-marquee" aria-hidden="true">
+                {TICKER_ITEMS.map((item, i) => (
+                  <div key={`dup-${i}`} className="flex items-center gap-2 text-xs">
+                    <span className="font-bold text-slate-800 dark:text-slate-200">
+                      {item.site}:
+                    </span>
+                    <span className="text-slate-500 dark:text-slate-400">
+                      {item.status}
+                    </span>
+                    <span className="font-mono font-bold text-[11px] text-[#ED2618] bg-red-500/10 px-1.5 py-0.5 rounded">
+                      {item.progress}
+                    </span>
+                    <span className="text-slate-300 dark:text-white/20 ml-4">&bull;</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 4. SIMPLIFIED 3-PILLAR OPERATIONAL HIGHLIGHTS */}
+        <div className="mt-10 pt-8 border-t border-slate-200/80 dark:border-white/[0.08]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
+            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-2.5 hover:border-slate-300 dark:hover:border-white/20 transition-all">
               <div className="h-10 w-10 rounded-xl bg-red-500/10 text-[#ED2618] flex items-center justify-center">
                 <HardHat className="h-5 w-5" />
               </div>
@@ -280,41 +383,38 @@ export default function LandingPage() {
                 Site &amp; Ground Infrastructure
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Track active development corridors, contractor squads, and physical delivery
-                progress across every milestone from ground mobilization to final commissioning.
+                Track active development sites, assigned contractor squads, and project milestones in real time.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
+            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-2.5 hover:border-slate-300 dark:hover:border-white/20 transition-all">
               <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
                 <FileText className="h-5 w-5" />
               </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Daily Field Reports &amp; Dossiers
+                Daily Field Reports
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Generate structured operations summaries, site photo evidence logs, and
-                work breakdown matrices ready for line manager review and publication-grade export.
+                Log shift progress, upload site photo evidence, and submit clean reports to management.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
+            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-2.5 hover:border-slate-300 dark:hover:border-white/20 transition-all">
               <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Inter-Department Clearances
+                Quick Team Clearances
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Seamless approval routing for field requisitions, contractor disbursements, and
-                management sign-offs between Operations, Finance, and Executive leadership.
+                Fast-track site requisitions, disbursements, and sign-offs directly between departments.
               </p>
             </div>
           </div>
         </div>
       </main>
 
-      {/* Clean Minimalist Corporate Footer */}
+      {/* 5. MINIMALIST CORPORATE FOOTER */}
       <footer className="border-t border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#09090B] py-6 text-xs text-slate-500">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
