@@ -78,36 +78,20 @@ const OPERATIONS_NAV: NavSection[] = [
 // 2. Systems IT Command Navigation (Streamlined & Non-Technical)
 const SYSTEMS_NAV: NavSection[] = [
   {
-    label: "Overview",
+    label: "Main",
     items: [
       { title: "Dashboard", href: "/dashboard?tab=systems", tabId: "systems", icon: LayoutDashboard },
-      { title: "Analytics & Reports", href: "/reports", icon: BarChart3 },
-    ],
-  },
-  {
-    label: "Team & Security",
-    items: [
-      { title: "Team Members", href: "/users", icon: UserCheck },
-      { title: "Security Policies", href: "/it", icon: ShieldCheck },
-      { title: "Two-Step Login (2FA)", href: "/security", icon: KeyRound },
-      { title: "Activity Logs", href: "/audit-logs", icon: FileText },
-    ],
-  },
-  {
-    label: "Storage & Clearances",
-    items: [
+      { title: "Team Members", href: "/users", icon: Users },
       { title: "Document Storage", href: "/storage", icon: HardDrive },
-      { title: "Platform Status", href: "/endpoints", icon: Radio },
       { title: "Clearances & Approvals", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2 },
+      { title: "Email Broadcasts", href: "/dashboard?tab=communications", tabId: "communications", icon: Mail },
     ],
   },
   {
-    label: "Company Content",
+    label: "Settings & Records",
     items: [
-      { title: "Website Content", href: "/content", icon: FileCode2 },
-      { title: "Email Broadcasts", href: "/marketing", icon: Mail },
-      { title: "News & Articles", href: "/journal", icon: BookOpen },
-      { title: "Job Openings", href: "/careers", icon: Briefcase },
+      { title: "Security Policies", href: "/it", icon: ShieldCheck },
+      { title: "Activity Logs", href: "/audit-logs", icon: FileText },
     ],
   },
 ];
