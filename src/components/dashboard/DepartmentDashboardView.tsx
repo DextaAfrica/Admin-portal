@@ -581,7 +581,7 @@ export function DepartmentDashboardView({
                 <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
                 <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
                   {platform === "systems"
-                    ? "admin.dextaafrica.org • Zero-Trust Systems Command"
+                    ? "admin.dextafrica.org • Systems IT Administration"
                     : platform === "finance"
                     ? "dextaafrica.org • Treasury & Financial Accounts Desk"
                     : platform === "hr"
@@ -613,7 +613,7 @@ export function DepartmentDashboardView({
               {platform === "operations"
                 ? "Manage ongoing projects, daily field reports, team logistics, and site approvals in one place."
                 : platform === "systems"
-                ? "Manage user access tokens, identity verification, active sessions, and cloud microservices."
+                ? "Manage team accounts, platform security, documents, and system clearances in one place."
                 : platform === "finance"
                 ? "Manage corporate ledger records, capital inflows, contractor disbursements, and treasury accounts."
                 : platform === "hr"
@@ -664,7 +664,7 @@ export function DepartmentDashboardView({
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white px-3.5 py-2 text-xs font-bold transition-all shadow-sm"
                 >
                   <ShieldCheck className="h-4 w-4" />
-                  <span>Security Firewall</span>
+                  <span>Security Policies</span>
                 </Link>
 
                 <Link
@@ -672,7 +672,7 @@ export function DepartmentDashboardView({
                   className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all"
                 >
                   <Users className="h-4 w-4" />
-                  <span>User Governance</span>
+                  <span>Team Accounts</span>
                 </Link>
 
                 <a
@@ -681,7 +681,7 @@ export function DepartmentDashboardView({
                   className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all cursor-pointer"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Audit Logs (CSV)</span>
+                  <span className="hidden sm:inline">Activity Logs (CSV)</span>
                   <span className="inline sm:hidden">CSV</span>
                 </a>
               </>
@@ -816,7 +816,7 @@ export function DepartmentDashboardView({
               }`}
             >
               <ShieldCheck className="h-3.5 w-3.5" />
-              <span>Systems IT Command</span>
+              <span>System Overview</span>
             </button>
           )}
 
@@ -863,7 +863,7 @@ export function DepartmentDashboardView({
             }`}
           >
             <CheckCircle2 className="h-3.5 w-3.5" />
-            <span>Approval Desk</span>
+            <span>Clearances &amp; Approvals</span>
             {pendingApprovalsCount > 0 && (
               <span className="h-4 min-w-[16px] px-1 rounded-full bg-red-500/20 text-[#ED2618] dark:bg-white/20 dark:text-white text-[10px] font-black flex items-center justify-center">
                 {pendingApprovalsCount}
@@ -883,7 +883,7 @@ export function DepartmentDashboardView({
               }`}
             >
               <Mail className="h-3.5 w-3.5" />
-              <span>Corporate Dispatch</span>
+              <span>Email &amp; Broadcasts</span>
             </button>
           )}
 
@@ -899,7 +899,7 @@ export function DepartmentDashboardView({
               }`}
             >
               <UserCheck className="h-3.5 w-3.5" />
-              <span>My Workspace &amp; Tasks</span>
+              <span>My Tasks</span>
               {userSubmittedApprovals.length > 0 && (
                 <span className="h-4 min-w-[16px] px-1 rounded-full bg-blue-500/20 text-blue-600 dark:bg-blue-500/30 dark:text-blue-200 text-[10px] font-black flex items-center justify-center">
                   {userSubmittedApprovals.length}
@@ -1194,13 +1194,13 @@ export function DepartmentDashboardView({
       {/* ===================================================================== */}
       {activeTab === "systems" && (
         <div className="space-y-6">
-          {/* Top 4 Systems Telemetry Cards */}
+          {/* Top 4 Clean Operational Status Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* 1. 2FA Zero-Trust Adoption */}
+            {/* 1. Account Security (2FA) */}
             <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Zero-Trust 2FA Adoption
+                  Account Security
                 </span>
                 <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                   <ShieldCheck className="h-4 w-4" />
@@ -1212,19 +1212,19 @@ export function DepartmentDashboardView({
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
                   <Check className="h-3.5 w-3.5" />
-                  <span>{itMetrics.mfaUsers} of {itMetrics.totalUsers || 1} accounts enforced</span>
+                  <span>{itMetrics.mfaUsers} of {itMetrics.totalUsers || 1} accounts protected</span>
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                Strict TOTP Authenticator &amp; Recovery Codes
+                Two-factor verification enabled
               </p>
             </div>
 
-            {/* 2. Security Watchdog Defense */}
+            {/* 2. System Protection */}
             <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Security Watchdog Defense
+                  System Protection
                 </span>
                 <div className="p-2 rounded-xl bg-red-500/10 text-[#ED2618]">
                   <ShieldAlert className="h-4 w-4" />
@@ -1232,23 +1232,23 @@ export function DepartmentDashboardView({
               </div>
               <div>
                 <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                  {itMetrics.openAlerts === 0 ? "Threat Matrix Clear" : `${itMetrics.openAlerts} Incidents`}
+                  {itMetrics.openAlerts === 0 ? "Normal & Secure" : `${itMetrics.openAlerts} Items to Review`}
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
                   <Zap className="h-3.5 w-3.5 text-[#ED2618]" />
-                  <span>Automated Perimeter Watchdog Live</span>
+                  <span>Active security protection</span>
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                0 Critical Vulnerabilities Detected
+                All system checks passing
               </p>
             </div>
 
-            {/* 3. AWS S3 Storage Vault */}
+            {/* 3. Document Storage */}
             <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  AWS S3 Storage Vault
+                  Document Storage
                 </span>
                 <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
                   <HardDrive className="h-4 w-4" />
@@ -1259,19 +1259,19 @@ export function DepartmentDashboardView({
                   {formatBytes(itMetrics.totalStorageBytes)}
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-600 dark:text-slate-300 font-semibold">
-                  <span>Quota: {itMetrics.storagePercent}% of 50 GB allocated</span>
+                  <span>Using {itMetrics.storagePercent}% of storage limit</span>
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                Site Blue-Prints &bull; Legal Contracts &bull; Media Assets
+                Site drawings &bull; Contracts &bull; Media files
               </p>
             </div>
 
-            {/* 4. Microservice API Health */}
+            {/* 4. Platform Services Status */}
             <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Microservice Gateway
+                  Platform Status
                 </span>
                 <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500">
                   <Radio className="h-4 w-4" />
@@ -1279,15 +1279,15 @@ export function DepartmentDashboardView({
               </div>
               <div>
                 <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
-                  {itMetrics.healthyEndpoints} / {itMetrics.totalEndpoints || 1} Healthy
+                  All Systems Online
                 </div>
                 <div className="flex items-center gap-1.5 mt-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
                   <Activity className="h-3.5 w-3.5" />
-                  <span>Core Backend Latency: {itMetrics.backendLatency || 12}ms</span>
+                  <span>Response speed: fast &amp; normal</span>
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100 dark:border-white/[0.04]">
-                Subdomain Mesh: admin &bull; ops &bull; gateway
+                Admin &amp; Operations portals active
               </p>
             </div>
           </div>
@@ -1297,13 +1297,13 @@ export function DepartmentDashboardView({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Systems IT Core Governance Modules
+                  Administrative Tools
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Direct administrative control planes for identity, cloud assets, firewall rules, and microservices.
+                  Quick shortcuts to manage team accounts, security, documents, and notifications.
                 </p>
               </div>
-              <Badge variant="outline">Enterprise IT Mode</Badge>
+              <Badge variant="outline">Admin Tools</Badge>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1318,10 +1318,10 @@ export function DepartmentDashboardView({
                   <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                  Identity &amp; User Governance
+                  Team &amp; User Accounts
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Manage user accounts, assign department RBAC permissions, and revoke sessions across subdomains.
+                  Create and manage staff accounts, set department roles, and handle logins.
                 </p>
               </Link>
 
@@ -1336,10 +1336,10 @@ export function DepartmentDashboardView({
                   <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                  Security &amp; Inactivity Guard
+                  Security &amp; Passwords
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Configure perimeter firewall policies, 2FA enforcement, and backend inactivity logout threshold.
+                  Update security rules, two-step verification, and login timeouts.
                 </p>
               </Link>
 
@@ -1354,10 +1354,10 @@ export function DepartmentDashboardView({
                   <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                  AWS S3 Storage Asset Vault
+                  Files &amp; Documents
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Explore uploaded contractor site drawings, architectural BIM files, and multimedia assets.
+                  Browse uploaded construction drawings, agreements, and company files.
                 </p>
               </Link>
 
@@ -1372,10 +1372,10 @@ export function DepartmentDashboardView({
                   <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                  Microservices &amp; API Health
+                  Platform Status
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Monitor live latency pings, HTTP status returns, and endpoint heartbeat metrics.
+                  Check platform uptime, response speed, and operational services.
                 </p>
               </Link>
 
@@ -1390,10 +1390,10 @@ export function DepartmentDashboardView({
                   <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                  Immutable Audit Trails
+                  Activity History
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Cryptographically verified event logs for compliance, sign-ins, privilege elevations, and data mutations.
+                  Review team sign-ins, approvals, and recent administrative updates.
                 </p>
               </Link>
 
@@ -1408,38 +1408,38 @@ export function DepartmentDashboardView({
                   <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
                 </div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                  Email Dispatch &amp; Campaigns
+                  Email &amp; Announcements
                 </h4>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Scheduled broadcast queue, delivery diagnostics, and corporate communication logs.
+                  Send company updates, email broadcasts, and notifications.
                 </p>
               </Link>
             </div>
           </div>
 
-          {/* Connected Microservices & Recent Audit Stream */}
+          {/* Connected Services & Recent Activity Stream */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left 6 cols: Live Microservice Topology */}
+            {/* Left 6 cols: Platform Services Status */}
             <div className="lg:col-span-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Core Microservices Telemetry
+                    Platform Services Status
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Continuous heartbeat ping status across internal Dexta services.
+                    Live availability of Dexta Africa workspaces.
                   </p>
                 </div>
-                <Badge variant="success">All Systems Nominal</Badge>
+                <Badge variant="success">All Services Online</Badge>
               </div>
 
               <div className="space-y-2.5">
                 {[
-                  { name: "Dexta Core Go API Gateway", route: "/api/v1/health", status: "HEALTHY", latency: "12ms" },
-                  { name: "Cloud AWS S3 Storage Ingestion", route: "s3.eu-west-1.amazonaws.com", status: "ONLINE", latency: "28ms" },
-                  { name: "Zero-Trust Session Inactivity Daemon", route: "internal://session-guard", status: "ACTIVE", latency: "4ms" },
-                  { name: "Enterprise SMTP Dispatcher", route: "smtp://mailpit:1025", status: "ONLINE", latency: "15ms" },
-                  { name: "Immutable SQLite WAL Database Engine", route: "file://admin_portal.db", status: "OPTIMAL", latency: "2ms" },
+                  { name: "Admin Portal", desc: "User management and platform settings", status: "ONLINE", speed: "Fast" },
+                  { name: "Operations Desk", desc: "Field project delivery and ground logs", status: "ONLINE", speed: "Fast" },
+                  { name: "Document Storage", desc: "Cloud file uploads and attachments", status: "ONLINE", speed: "Normal" },
+                  { name: "Email & Notifications", desc: "Broadcast dispatch and alerts", status: "ONLINE", speed: "Fast" },
+                  { name: "Encrypted Database", desc: "Operational data records", status: "ONLINE", speed: "Optimal" },
                 ].map((svc, i) => (
                   <div
                     key={i}
@@ -1451,14 +1451,14 @@ export function DepartmentDashboardView({
                         <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
                           {svc.name}
                         </p>
-                        <p className="text-[10px] font-mono text-slate-400 truncate">
-                          {svc.route}
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {svc.desc}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[10px] font-mono text-slate-400">
-                        {svc.latency}
+                      <span className="text-[11px] text-slate-400">
+                        {svc.speed}
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
                         {svc.status}
@@ -1469,15 +1469,15 @@ export function DepartmentDashboardView({
               </div>
             </div>
 
-            {/* Right 6 cols: Recent Security & Audit Logs */}
+            {/* Right 6 cols: Recent Activity Logs */}
             <div className="lg:col-span-6 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                    Live Security &amp; Audit Logs
+                    Recent Activity
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Real-time audit events verified by immutable audit trail.
+                    Latest team sign-ins, approvals, and actions.
                   </p>
                 </div>
                 <Link
@@ -1496,21 +1496,21 @@ export function DepartmentDashboardView({
                       className="flex items-center justify-between p-3 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.04]"
                     >
                       <div className="min-w-0 pr-3">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate font-mono">
-                          {log.action}
+                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          {log.action?.replace(/_/g, " ") || "Activity"}
                         </p>
                         <p className="text-[10px] text-slate-400 truncate">
-                          {log.actorEmail || "system"} &bull; {log.entity}
+                          {log.actorEmail || "System"} &bull; {log.entity || "Account"}
                         </p>
                       </div>
-                      <span className="text-[10px] text-slate-400 font-mono whitespace-nowrap">
+                      <span className="text-[10px] text-slate-400 whitespace-nowrap">
                         {timeAgo(log.createdAt)}
                       </span>
                     </div>
                   ))
                 ) : (
                   <div className="py-8 text-center text-xs text-slate-400">
-                    No security incidents or audit warnings detected.
+                    No recent activity to display.
                   </div>
                 )}
               </div>
