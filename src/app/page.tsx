@@ -14,7 +14,7 @@ import {
   FileText,
   CheckCircle2,
   Radio,
-  Sparkles,
+  ChevronRight,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 import { navigateToSubdomainWithSso } from "@/lib/routing";
@@ -36,7 +36,7 @@ const SHOWCASE_SLIDES: ShowcaseSlide[] = [
   },
   {
     image: "/images/olufemi-dexta.png",
-    title: "Infrastructure Delivery",
+    title: "Infrastructure Execution",
     tagline: "Rigorous ground mobilization, site supervision, and civil standards.",
     objectPosition: "50% 15%",
   },
@@ -61,11 +61,23 @@ const OPERATIONAL_PILLARS = [
 export default function LandingPage() {
   const [activeSlide, setActiveSlide] = React.useState(0);
   const [slideProgressKey, setSlideProgressKey] = React.useState(0);
+  const [isScrolled, setIsScrolled] = React.useState(false);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
+
+    const handleScroll = () => {
+      if (window.scrollY > 20) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   React.useEffect(() => {
@@ -87,17 +99,33 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#070A0F] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white transition-colors duration-200">
-      {/* 1. TOP NAVIGATION BAR */}
-      <header className="sticky top-0 z-30 w-full border-b border-slate-200/80 dark:border-white/[0.08] bg-white/95 dark:bg-[#0C0F17]/95 backdrop-blur-md">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#080B11] text-slate-900 dark:text-white flex flex-col justify-between selection:bg-[#ED2618] selection:text-white transition-colors duration-300 relative overflow-x-hidden">
+      {/* Dynamic Ambient Background Canvas */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        {/* Top Centered Atmospheric Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1100px] h-[550px] bg-gradient-to-b from-red-600/[0.08] via-slate-600/[0.03] to-transparent blur-[140px] rounded-full dark:opacity-100 opacity-40" />
+        {/* Side Accent */}
+        <div className="absolute top-1/3 -right-40 w-[600px] h-[400px] bg-slate-700/[0.05] blur-[150px] rounded-full dark:opacity-100 opacity-30" />
+      </div>
+
+      {/* 1. TOP NAVIGATION BAR WITH DYNAMIC SCROLL TRANSITION */}
+      <header
+        className={cn(
+          "sticky top-0 z-40 w-full transition-all duration-300 ease-in-out",
+          isScrolled
+            ? "border-b border-slate-200/90 dark:border-white/[0.08] bg-white/85 dark:bg-[#080B11]/85 backdrop-blur-xl shadow-sm shadow-black/[0.02] py-0"
+            : "border-b border-transparent bg-transparent py-2"
+        )}
+      >
+        <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center shrink-0">
-              <DextaLogo className="h-7 sm:h-9 w-auto" />
+            <Link href="/" className="flex items-center shrink-0 group">
+              <DextaLogo className="h-7 sm:h-9 w-auto transition-transform group-hover:scale-[1.02]" />
             </Link>
             <div className="hidden sm:flex items-center gap-2 border-l border-slate-200 dark:border-white/10 pl-3">
+              <span className="flex h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span className="text-xs font-semibold tracking-wide text-slate-500 dark:text-slate-400">
-                Operations &amp; Infrastructure
+                Operations Platform
               </span>
             </div>
           </div>
@@ -108,7 +136,7 @@ export default function LandingPage() {
               <button
                 type="button"
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 hover:border-[#ED2618] hover:text-[#ED2618] dark:text-slate-300 dark:hover:border-[#ED2618] dark:hover:text-white transition-all cursor-pointer shrink-0"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-white/[0.03] backdrop-blur-md text-slate-600 hover:border-[#ED2618] hover:text-[#ED2618] dark:text-slate-300 dark:hover:border-[#ED2618] dark:hover:text-white transition-all cursor-pointer shrink-0"
                 title="Switch light or dark appearance"
                 aria-label="Toggle appearance theme"
               >
@@ -124,7 +152,7 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => navigateToSubdomainWithSso("ops", "/dashboard")}
-              className="btn-crimson-exec h-10 rounded-xl px-5 sm:px-6 text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+              className="h-10 rounded-xl px-5 sm:px-6 text-xs sm:text-sm font-bold flex items-center gap-2 cursor-pointer bg-gradient-to-r from-[#ED2618] to-[#d01f12] text-white shadow-md shadow-red-500/20 hover:shadow-lg hover:shadow-red-500/35 hover:scale-[1.02] active:scale-[0.98] transition-all"
             >
               <span>Sign In</span>
               <ArrowRight className="h-4 w-4" />
@@ -134,11 +162,11 @@ export default function LandingPage() {
       </header>
 
       {/* 2. MAIN HERO SECTION */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-10 pt-10 sm:pt-14 pb-8 flex flex-col justify-center">
+      <main className="relative z-10 mx-auto w-full max-w-7xl flex-1 px-4 sm:px-6 lg:px-10 pt-8 sm:pt-12 pb-12 flex flex-col justify-center">
         <div className="grid w-full grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
-          {/* Left Column: Clear Executive Purpose (Zero Mock Data) */}
+          {/* Left Column: Clear Executive Purpose */}
           <div className="lg:col-span-6 space-y-6 animate-fade-in">
-            <div className="inline-flex items-center gap-2 rounded-full border border-red-200/80 dark:border-red-500/20 bg-red-50/80 dark:bg-red-500/10 px-3.5 py-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-red-200/80 dark:border-red-500/20 bg-red-50/80 dark:bg-red-500/10 px-3.5 py-1.5 backdrop-blur-md">
               <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
               <span className="text-[11px] font-bold uppercase tracking-wider text-[#ED2618] dark:text-red-400">
                 Dexta Africa &bull; Enterprise Operations
@@ -160,7 +188,7 @@ export default function LandingPage() {
               <button
                 type="button"
                 onClick={() => navigateToSubdomainWithSso("ops", "/dashboard")}
-                className="btn-crimson-exec h-12 px-7 rounded-xl text-sm font-bold flex items-center gap-2.5 shadow-lg shadow-red-500/20 hover:shadow-red-500/30 cursor-pointer transition-all active:scale-[0.98]"
+                className="btn-crimson-exec h-12 px-7 rounded-xl text-sm font-bold flex items-center gap-2.5 shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-[1.01] cursor-pointer transition-all active:scale-[0.98]"
               >
                 <Building2 className="h-4 w-4" />
                 <span>Access Operations Portal</span>
@@ -177,24 +205,24 @@ export default function LandingPage() {
               </button>
             </div>
 
-            {/* Clean Operational Capabilities Badges (Zero Fabricated Numbers) */}
+            {/* Clean Capability Indicators (Zero Mock Stats) */}
             <div className="pt-6 border-t border-slate-200/80 dark:border-white/[0.08] flex flex-wrap items-center gap-2.5">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-2xs">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618]" />
                 <span>Ground Mobilization</span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-2xs">
                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
                 <span>Field Documentation</span>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/70 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-2xs">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 <span>Department Clearances</span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: TV Broadcast-Style Visual Showcase (Zero Personal Bios) */}
+          {/* Right Column: TV Broadcast-Style Visual Showcase */}
           <div className="lg:col-span-6 animate-fade-in">
             <div className="relative aspect-[4/3] sm:aspect-[16/11] w-full overflow-hidden rounded-3xl border border-slate-200/90 dark:border-white/10 bg-slate-950 shadow-2xl group">
               {/* TV Live Stream Badge */}
@@ -211,7 +239,7 @@ export default function LandingPage() {
                 0{activeSlide + 1} / 0{SHOWCASE_SLIDES.length}
               </div>
 
-              {/* Subtle CRT Scanline Texture Overlay */}
+              {/* CRT Scanline Micro-Texture Overlay */}
               <div
                 className="absolute inset-0 pointer-events-none z-15 opacity-15"
                 style={{
@@ -220,7 +248,7 @@ export default function LandingPage() {
                 }}
               />
 
-              {/* Image Carousel with Subtle Ken Burns Effect */}
+              {/* Image Carousel */}
               {SHOWCASE_SLIDES.map((slide, index) => {
                 const isActive = index === activeSlide;
 
@@ -251,7 +279,7 @@ export default function LandingPage() {
                 );
               })}
 
-              {/* Clean Corporate Caption & TV Controls (Zero Persona Bios) */}
+              {/* Clean Corporate Caption & TV Controls */}
               <div className="absolute bottom-0 inset-x-0 z-20 p-5 sm:p-7 flex items-end justify-between gap-4">
                 <div className="space-y-1 max-w-md">
                   <span className="inline-block rounded-full bg-[#ED2618] px-3 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-white">
@@ -294,11 +322,11 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* 3. CONTINUOUS ANIMATED TV TICKER (Brand Tenets, Zero Mock Sites) */}
-        <div className="mt-12 w-full overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-100/90 dark:bg-white/[0.02] py-3 shadow-xs">
+        {/* 3. CONTINUOUS ANIMATED TV TICKER */}
+        <div className="mt-12 w-full overflow-hidden rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-white/[0.02] backdrop-blur-md py-3 shadow-2xs">
           <div className="flex items-center">
             {/* Live Ticker Lead Tag */}
-            <div className="flex items-center gap-2 px-4 shrink-0 border-r border-slate-300 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <div className="flex items-center gap-2 px-4 shrink-0 border-r border-slate-300/80 dark:border-white/10 text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
               <Radio className="h-3.5 w-3.5 text-[#ED2618] animate-pulse" />
               <span>Operations Stream</span>
             </div>
@@ -330,42 +358,60 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* 4. SIMPLIFIED 3-PILLAR OPERATIONAL HIGHLIGHTS */}
-        <div className="mt-10 pt-8 border-t border-slate-200/80 dark:border-white/[0.08]">
+        {/* 4. ULTRA-SIMPLE, READABLE 3-PILLAR HIGHLIGHTS (Non-Technical & Human) */}
+        <div className="mt-12 pt-8 border-t border-slate-200/80 dark:border-white/[0.08]">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-2.5 hover:border-[#ED2618]/40 hover:shadow-md transition-all duration-300 group">
-              <div className="h-10 w-10 rounded-xl bg-red-500/10 text-[#ED2618] flex items-center justify-center group-hover:scale-105 transition-transform">
-                <HardHat className="h-5 w-5" />
+            {/* Card 1: Projects & Sites */}
+            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm hover:border-[#ED2618]/50 hover:shadow-lg hover:shadow-red-500/5 hover:-translate-y-1 transition-all duration-300 group cursor-default">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-10 w-10 rounded-xl bg-red-500/10 text-[#ED2618] flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  Sites
+                </span>
               </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Site &amp; Ground Infrastructure
+              <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                Projects &amp; Sites
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Track active development sites, assigned contractor squads, and project milestones in real time.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                View ongoing construction sites and see ground progress live.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-2.5 hover:border-[#ED2618]/40 hover:shadow-md transition-all duration-300 group">
-              <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <FileText className="h-5 w-5" />
+            {/* Card 2: Daily Reports */}
+            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/5 hover:-translate-y-1 transition-all duration-300 group cursor-default">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-10 w-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  Reports
+                </span>
               </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Daily Field Reports
+              <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-blue-500 transition-colors">
+                Daily Reports
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Log shift progress, upload site photo evidence, and submit clean reports to management.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                Send daily site updates and attach field photos in seconds.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-2.5 hover:border-[#ED2618]/40 hover:shadow-md transition-all duration-300 group">
-              <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <CheckCircle2 className="h-5 w-5" />
+            {/* Card 3: Approvals & Sign-Offs */}
+            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm hover:border-emerald-500/50 hover:shadow-lg hover:shadow-emerald-500/5 hover:-translate-y-1 transition-all duration-300 group cursor-default">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  Clearance
+                </span>
               </div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Quick Team Clearances
+              <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors">
+                Approvals &amp; Sign-Offs
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Fast-track site requisitions, disbursements, and sign-offs directly between departments.
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                Get project requests and team expenses approved with one click.
               </p>
             </div>
           </div>
@@ -373,7 +419,7 @@ export default function LandingPage() {
       </main>
 
       {/* 5. MINIMALIST CORPORATE FOOTER */}
-      <footer className="border-t border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#09090B] py-6 text-xs text-slate-500">
+      <footer className="relative z-10 border-t border-slate-200/80 dark:border-white/[0.08] bg-white/60 dark:bg-[#080B11]/90 backdrop-blur-md py-6 text-xs text-slate-500">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <DextaLogo className="h-5 w-auto" />
