@@ -273,55 +273,52 @@ export default function AdminPortalLoginPage() {
               priority
               sizes="(max-width: 1024px) 100vw, 58vw"
               className="object-cover"
-              style={{ objectPosition: "50% 15%" }}
+              style={{ objectPosition: "50% 12%" }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/50 to-black/20" />
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-slate-950/20" />
 
             {/* Top Subdomain Tag */}
             <div className="relative z-10 flex items-center justify-between">
-              <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 text-xs font-mono">
+              <div className="inline-flex items-center gap-2 bg-slate-950/70 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/15 text-xs font-mono">
                 <span className="h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
                 <span>admin.dextafrica.org &bull; Systems Command</span>
               </div>
 
-              <div className="inline-flex items-center gap-1.5 bg-red-500/20 backdrop-blur-md px-3 py-1 rounded-full border border-red-500/30 text-[11px] font-bold text-red-300">
-                <ShieldCheck className="h-3.5 w-3.5 text-[#ED2618]" />
-                <span>Encrypted Perimeter</span>
+              <div className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full border border-white/15 text-[11px] font-medium text-slate-200">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Secure Gateway</span>
               </div>
             </div>
 
-            {/* Bottom Content Overlay */}
-            <div className="relative z-10 space-y-5 xl:space-y-6">
+            {/* Bottom Content Overlay (Clean, Unclustered & Non-Technical) */}
+            <div className="relative z-10 space-y-3.5 max-w-xl">
               <div>
-                <span className="inline-block px-3.5 py-1 rounded-lg bg-[#ED2618] text-[10px] xl:text-[11px] font-extrabold uppercase tracking-[0.14em] shadow-sm shadow-red-500/30">
-                  IT &amp; Systems Architecture
+                <span className="inline-block px-3 py-1 rounded-lg bg-[#ED2618] text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-red-500/25">
+                  Enterprise Administration
                 </span>
               </div>
 
-              <h2 className="text-2xl xl:text-[32px] 2xl:text-[34px] font-extrabold tracking-normal leading-[1.38] sm:leading-[1.42] text-white max-w-xl xl:max-w-2xl drop-shadow-md">
-                Centralized{" "}
-                <span className="italic text-flow-white-red pr-1">
-                  Governance, Identity Protection &amp; Infrastructure Watchdog.
-                </span>
+              <h2 className="text-2xl xl:text-3xl font-extrabold tracking-tight text-white leading-tight drop-shadow-md">
+                Centralized Systems &amp; Access Control.
               </h2>
 
-              <p className="text-xs sm:text-sm xl:text-[15px] text-slate-200/95 leading-relaxed xl:leading-loose max-w-xl pt-1">
-                Administrative access point for Dexta Africa systems architects, security directors, and technical operations controllers.
+              <p className="text-xs sm:text-sm text-slate-200/90 leading-relaxed max-w-lg">
+                Secure workspace for managing team profiles, administrative permissions, and company platform operations.
               </p>
 
               {/* Value Indicator Pills */}
-              <div className="pt-2 flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15 text-xs">
-                  <Cpu className="h-3.5 w-3.5 text-[#ED2618]" />
-                  <span>Cloud Node Watchdog</span>
+              <div className="pt-1.5 flex items-center gap-2.5 flex-wrap text-xs text-slate-200">
+                <div className="flex items-center gap-2 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                  <Lock className="h-3.5 w-3.5 text-[#ED2618]" />
+                  <span>Access Control</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15 text-xs">
+                <div className="flex items-center gap-2 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
                   <Activity className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>Real-Time Audit Trail</span>
+                  <span>Audit Logs</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15 text-xs">
-                  <Lock className="h-3.5 w-3.5 text-blue-400" />
-                  <span>Two-Step Verification</span>
+                <div className="flex items-center gap-2 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                  <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
+                  <span>2-Step Verification</span>
                 </div>
               </div>
             </div>
@@ -338,33 +335,33 @@ export default function AdminPortalLoginPage() {
                 priority
                 sizes="(max-width: 1024px) 100vw, 420px"
                 className="object-cover"
-                style={{ objectPosition: "50% 15%" }}
+                style={{ objectPosition: "50% 12%" }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/40 to-transparent" />
               <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-[11px]">
                 <div className="flex items-center gap-1.5 font-bold">
                   <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
-                  <span>Systems IT Command Gateway</span>
+                  <span>IT &amp; Systems Admin</span>
                 </div>
-                <span className="text-[10px] text-white/80 font-mono">24/7 Monitored</span>
+                <span className="text-[10px] text-slate-300 font-mono">Protected Gateway</span>
               </div>
             </div>
 
             <div className="rounded-3xl border border-slate-200/90 dark:border-white/[0.14] bg-white/95 dark:bg-[#121522]/95 backdrop-blur-2xl p-6 sm:p-9 shadow-2xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] dark:ring-1 dark:ring-white/[0.08] relative overflow-hidden space-y-6">
               <div className="flex flex-col items-center text-center space-y-3">
-                <Link href={landingPath}>
-                  <DextaLogo className="h-9 w-auto" />
+                <Link href={landingPath} className="group">
+                  <DextaLogo className="h-9 w-auto transition-transform group-hover:scale-[1.02]" />
                 </Link>
-                <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1 text-[11px] font-bold text-[#ED2618] dark:text-red-400">
-                  <Terminal className="h-3.5 w-3.5" />
-                  <span>Zero-Trust Infrastructure Gateway</span>
+                <div className="inline-flex items-center gap-2 rounded-full border border-red-200/80 dark:border-red-500/25 bg-red-50/80 dark:bg-red-500/10 px-3.5 py-1 text-[11px] font-bold text-[#ED2618] dark:text-red-400">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span>IT Administration Portal</span>
                 </div>
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                    Systems &amp; Web Sign In
+                    Administrator Sign In
                   </h1>
-                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                    Authenticate with administrative credentials to manage web editorial, storage vaults, and IT watchdog rules.
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1.5 max-w-sm mx-auto">
+                    Sign in with your IT administrator credentials to manage accounts and system settings.
                   </p>
                 </div>
               </div>
@@ -412,15 +409,17 @@ export default function AdminPortalLoginPage() {
                 </div>
               )}
 
-              {/* Local Dev Seed Credentials Quick Fill */}
+              {/* Local Dev Seed Credentials Quick Fill (Ultra-Modern & Clean) */}
               {isLocalHost && (
-                <div className="p-3.5 rounded-2xl bg-slate-900/90 dark:bg-black/60 border border-slate-700/60 dark:border-white/10 text-xs space-y-2.5">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/10 text-xs space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-[10px] uppercase text-emerald-400 tracking-wider flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Local Testing Accounts
+                    <span className="font-mono font-bold text-[10px] uppercase text-emerald-600 dark:text-emerald-400 tracking-wider flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Quick Test Accounts
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Password: AdminPassword2026!</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      PW: AdminPassword2026!
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -429,12 +428,15 @@ export default function AdminPortalLoginPage() {
                         setEmail("it.admin@dextaafrica.com");
                         setPassword("AdminPassword2026!");
                       }}
-                      className="p-2 rounded-xl border border-slate-700 bg-white/[0.04] hover:bg-white/[0.08] hover:border-[#ED2618] transition-all text-left group cursor-pointer"
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:border-[#ED2618] dark:hover:border-[#ED2618] hover:shadow-xs transition-all text-left group cursor-pointer"
                     >
-                      <div className="font-bold text-white group-hover:text-[#ED2618] text-[11px] truncate">
-                        Systems IT Admin
+                      <div className="font-bold text-slate-800 dark:text-white group-hover:text-[#ED2618] text-[11px] truncate flex items-center justify-between">
+                        <span>IT Admin</span>
+                        <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-[#ED2618]" />
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">it.admin@dextaafrica.com</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 font-mono">
+                        it.admin@dextaafrica.com
+                      </div>
                     </button>
                     <button
                       type="button"
@@ -442,12 +444,15 @@ export default function AdminPortalLoginPage() {
                         setEmail("admin@dextaafrica.com");
                         setPassword("AdminPassword2026!");
                       }}
-                      className="p-2 rounded-xl border border-slate-700 bg-white/[0.04] hover:bg-white/[0.08] hover:border-[#ED2618] transition-all text-left group cursor-pointer"
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:border-[#ED2618] dark:hover:border-[#ED2618] hover:shadow-xs transition-all text-left group cursor-pointer"
                     >
-                      <div className="font-bold text-white group-hover:text-[#ED2618] text-[11px] truncate">
-                        Super Admin
+                      <div className="font-bold text-slate-800 dark:text-white group-hover:text-[#ED2618] text-[11px] truncate flex items-center justify-between">
+                        <span>Super Admin</span>
+                        <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-[#ED2618]" />
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">admin@dextaafrica.com</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 font-mono">
+                        admin@dextaafrica.com
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -505,16 +510,16 @@ export default function AdminPortalLoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="btn-crimson-exec w-full h-12 rounded-xl text-sm font-bold shadow-lg shadow-red-500/25 hover:shadow-red-500/40 cursor-pointer disabled:opacity-50 mt-2"
+                  className="w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-gradient-to-r from-[#ED2618] to-[#d01f12] text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 mt-2"
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <span className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                      <span>Authorizing Gateway...</span>
+                      <span>Authenticating...</span>
                     </div>
                   ) : (
                     <div className="flex items-center justify-center gap-2">
-                      <span>Sign In to Systems Command</span>
+                      <span>Sign In to Admin Portal</span>
                       <ArrowRight className="h-4 w-4" />
                     </div>
                   )}
@@ -522,8 +527,8 @@ export default function AdminPortalLoginPage() {
               </form>
 
               {/* Links */}
-              <div className="pt-3 border-t border-slate-200 dark:border-white/10 text-center text-xs text-slate-600 dark:text-slate-400">
-                Need systems authorization?{" "}
+              <div className="pt-3 border-t border-slate-200/80 dark:border-white/10 text-center text-xs text-slate-600 dark:text-slate-400">
+                Need an administrator account?{" "}
                 <Link href={registerPath} className="font-bold text-[#ED2618] hover:underline">
                   Create Account &rarr;
                 </Link>
@@ -537,7 +542,7 @@ export default function AdminPortalLoginPage() {
       <Modal
         isOpen={otpModalOpen}
         onClose={() => setOtpModalOpen(false)}
-        title="Zero-Trust Authentication Challenge"
+        title="Security Verification"
       >
         <div className="space-y-4 p-2 text-slate-900 dark:text-white">
           <div className="flex items-center gap-3 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-600 dark:text-red-400">

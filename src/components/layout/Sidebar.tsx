@@ -75,39 +75,23 @@ const OPERATIONS_NAV: NavSection[] = [
   },
 ];
 
-// 2. Systems IT Command Navigation
+// 2. Systems IT Command Navigation (Streamlined & Non-Technical)
 const SYSTEMS_NAV: NavSection[] = [
   {
-    label: "Systems Workspace",
+    label: "Main",
     items: [
-      { title: "IT Command Overview", href: "/dashboard?tab=systems", tabId: "systems", icon: LayoutDashboard, badge: "Gov" },
-      { title: "System Analytics & Reports", href: "/reports", icon: BarChart3, badge: "Metrics" },
+      { title: "Dashboard", href: "/dashboard?tab=systems", tabId: "systems", icon: LayoutDashboard },
+      { title: "Team Members", href: "/users", icon: Users },
+      { title: "Document Storage", href: "/storage", icon: HardDrive },
+      { title: "Clearances & Approvals", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2 },
+      { title: "Email Broadcasts", href: "/dashboard?tab=communications", tabId: "communications", icon: Mail },
     ],
   },
   {
-    label: "Zero-Trust Identity",
+    label: "Settings & Records",
     items: [
-      { title: "Identity & User Governance", href: "/users", icon: UserCheck, badge: "RBAC" },
-      { title: "Security & Firewall Policies", href: "/it", icon: ShieldCheck, badge: "Enforced" },
-      { title: "Account Protection & 2FA", href: "/security", icon: KeyRound },
-      { title: "Immutable Audit Trails", href: "/audit-logs", icon: FileText },
-    ],
-  },
-  {
-    label: "Cloud & Microservices",
-    items: [
-      { title: "S3 Enterprise Storage Vault", href: "/storage", icon: HardDrive, badge: "AWS S3" },
-      { title: "Connected Microservices", href: "/endpoints", icon: Radio, badge: "Live" },
-      { title: "System Clearances", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2 },
-    ],
-  },
-  {
-    label: "Web Core CMS",
-    items: [
-      { title: "Editorial CMS & Pages", href: "/content", icon: FileCode2 },
-      { title: "Email Campaigns & Marketing", href: "/marketing", icon: Mail, badge: "SMTP" },
-      { title: "Journal & Insights", href: "/journal", icon: BookOpen },
-      { title: "Career Openings", href: "/careers", icon: Briefcase },
+      { title: "Security Policies", href: "/it", icon: ShieldCheck },
+      { title: "Activity Logs", href: "/audit-logs", icon: FileText },
     ],
   },
 ];
@@ -216,11 +200,11 @@ const PORTALS: Record<PortalType, PortalConfig> = {
   },
   systems: {
     id: "systems",
-    title: "Systems IT Command",
+    title: "Systems IT Portal",
     shortTitle: "Systems IT",
-    badge: "Zero-Trust",
+    badge: "Admin",
     subdomain: "admin.dextafrica.org",
-    description: "Identity governance, watchdog shields, and cloud S3 assets",
+    description: "User accounts, platform security, and company storage",
     icon: ShieldCheck,
     sections: SYSTEMS_NAV,
   },

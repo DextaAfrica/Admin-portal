@@ -50,8 +50,14 @@ const config: Config = {
         "text-shimmer": "textShimmer 6s ease-in-out infinite",
         "text-glow": "textGlow 4s ease-in-out infinite",
         "text-flow": "textFlow 4s linear infinite",
+        "marquee": "marquee 32s linear infinite",
+        "marquee-fast": "marquee 18s linear infinite",
       },
       keyframes: {
+        marquee: {
+          "0%": { transform: "translateX(0%)" },
+          "100%": { transform: "translateX(-50%)" },
+        },
         textFlow: {
           "0%": {
             "background-position": "0% center",

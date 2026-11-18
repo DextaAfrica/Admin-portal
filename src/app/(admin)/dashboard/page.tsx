@@ -26,7 +26,7 @@ export default async function DashboardPage() {
   const { user, sessionToken } = await getCurrentSession();
 
   if (!user) {
-    redirect("/login");
+    redirect("/api/auth/logout?next=/login");
   }
 
   // Detect Host / Portal Subdomain from Incoming Request

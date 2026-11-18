@@ -295,38 +295,35 @@ export default function OperationsLoginPage() {
               </div>
             </div>
 
-            {/* Bottom Content Overlay */}
-            <div className="relative z-10 space-y-6 xl:space-y-7">
+            {/* Bottom Content Overlay (Clean, Unclustered & Non-Technical) */}
+            <div className="relative z-10 space-y-3.5 max-w-xl">
               <div>
-                <span className="inline-block px-3.5 py-1 rounded-lg bg-[#ED2618] text-[10px] xl:text-[11px] font-extrabold uppercase tracking-[0.14em] shadow-sm shadow-red-500/30">
-                  Operations Fleet Portal
+                <span className="inline-block px-3 py-1 rounded-lg bg-[#ED2618] text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-red-500/25">
+                  Operations &amp; Infrastructure
                 </span>
               </div>
 
-              <h2 className="text-2xl sm:text-3xl xl:text-[32px] 2xl:text-[35px] font-extrabold tracking-normal leading-[1.45] sm:leading-[1.5] text-white max-w-xl xl:max-w-2xl drop-shadow-[0_2px_16px_rgba(0,0,0,0.85)]">
-                Executing{" "}
-                <span className="italic text-flow-white-red pr-1 font-extrabold">
-                  Landmark Infrastructure, Capital Allocation &amp; Field Deliveries.
-                </span>
+              <h2 className="text-2xl xl:text-3xl font-extrabold tracking-tight text-white leading-tight drop-shadow-md">
+                Field Operations &amp; Site Delivery.
               </h2>
 
-              <p className="text-xs sm:text-sm xl:text-[15px] text-slate-100/95 leading-relaxed xl:leading-loose max-w-xl">
-                Direct authorized entry for Dexta Africa infrastructure directors, contractor procurement teams, and field engineering leads.
+              <p className="text-xs sm:text-sm text-slate-200/90 leading-relaxed max-w-lg">
+                Direct access for Dexta Africa project directors, site supervisors, and field engineering leads.
               </p>
 
               {/* Value Indicator Pills */}
-              <div className="pt-2 flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15 text-xs">
+              <div className="pt-1.5 flex items-center gap-2.5 flex-wrap text-xs text-slate-200">
+                <div className="flex items-center gap-2 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
                   <Activity className="h-3.5 w-3.5 text-[#ED2618]" />
-                  <span>Live Ground Milestones</span>
+                  <span>Ground Milestones</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15 text-xs">
+                <div className="flex items-center gap-2 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>24/7 Desk Availability</span>
+                  <span>Daily Reporting</span>
                 </div>
-                <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/15 text-xs">
-                  <Lock className="h-3.5 w-3.5 text-blue-400" />
-                  <span>Two-Step Verification</span>
+                <div className="flex items-center gap-2 bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
+                  <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
+                  <span>Clearance Workflows</span>
                 </div>
               </div>
             </div>
@@ -417,15 +414,17 @@ export default function OperationsLoginPage() {
                 </div>
               )}
 
-              {/* Local Dev Seed Credentials Quick Fill */}
+              {/* Local Dev Seed Credentials Quick Fill (Ultra-Modern & Clean) */}
               {isLocalHost && (
-                <div className="p-3.5 rounded-2xl bg-slate-900/90 dark:bg-black/60 border border-slate-700/60 dark:border-white/10 text-xs space-y-2.5">
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/10 text-xs space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-[10px] uppercase text-emerald-400 tracking-wider flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      Operations Testing Accounts
+                    <span className="font-mono font-bold text-[10px] uppercase text-emerald-600 dark:text-emerald-400 tracking-wider flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      Quick Test Accounts
                     </span>
-                    <span className="text-[10px] text-slate-400 font-mono">Password: AdminPassword2026!</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                      PW: AdminPassword2026!
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -434,12 +433,15 @@ export default function OperationsLoginPage() {
                         setEmail("peter4tech@gmail.com");
                         setPassword("AdminPassword2026!");
                       }}
-                      className="p-2 rounded-xl border border-slate-700 bg-white/[0.04] hover:bg-white/[0.08] hover:border-[#ED2618] transition-all text-left group cursor-pointer"
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:border-[#ED2618] dark:hover:border-[#ED2618] hover:shadow-xs transition-all text-left group cursor-pointer"
                     >
-                      <div className="font-bold text-white group-hover:text-[#ED2618] text-[11px] truncate">
-                        Operations Manager
+                      <div className="font-bold text-slate-800 dark:text-white group-hover:text-[#ED2618] text-[11px] truncate flex items-center justify-between">
+                        <span>Lead Engineer</span>
+                        <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-[#ED2618]" />
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">peter4tech@gmail.com</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 font-mono">
+                        peter4tech@gmail.com
+                      </div>
                     </button>
                     <button
                       type="button"
@@ -447,12 +449,15 @@ export default function OperationsLoginPage() {
                         setEmail("chinedu.ops@dextaafrica.com");
                         setPassword("AdminPassword2026!");
                       }}
-                      className="p-2 rounded-xl border border-slate-700 bg-white/[0.04] hover:bg-white/[0.08] hover:border-[#ED2618] transition-all text-left group cursor-pointer"
+                      className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:border-[#ED2618] dark:hover:border-[#ED2618] hover:shadow-xs transition-all text-left group cursor-pointer"
                     >
-                      <div className="font-bold text-white group-hover:text-[#ED2618] text-[11px] truncate">
-                        Operations Officer
+                      <div className="font-bold text-slate-800 dark:text-white group-hover:text-[#ED2618] text-[11px] truncate flex items-center justify-between">
+                        <span>Ops Officer</span>
+                        <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-[#ED2618]" />
                       </div>
-                      <div className="text-[10px] text-slate-400 truncate">chinedu.ops@dextaafrica.com</div>
+                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 font-mono">
+                        chinedu.ops@dextaafrica.com
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -510,7 +515,7 @@ export default function OperationsLoginPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="btn-crimson-exec w-full h-12 rounded-xl text-sm font-bold shadow-lg shadow-red-500/25 hover:shadow-red-500/40 cursor-pointer disabled:opacity-50 mt-2"
+                  className="w-full h-12 rounded-xl text-sm font-bold flex items-center justify-center gap-2 bg-gradient-to-r from-[#ED2618] to-[#d01f12] text-white shadow-lg shadow-red-500/25 hover:shadow-red-500/40 hover:scale-[1.01] active:scale-[0.98] transition-all cursor-pointer disabled:opacity-50 mt-2"
                 >
                   {isLoading ? (
                     <div className="flex items-center gap-2">

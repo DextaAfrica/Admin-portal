@@ -105,7 +105,7 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: "Missing sessionId parameter" }, { status: 400 });
     }
 
-    await prisma.session.delete({
+    await prisma.session.deleteMany({
       where: { id: sessionId },
     });
 

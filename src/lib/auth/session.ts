@@ -235,8 +235,8 @@ export async function getCurrentSession(): Promise<{
     const timeoutMs = effectiveTimeout * 60 * 1000;
 
     if (inactiveMs > 0 && inactiveMs > timeoutMs) {
-      // Session expired due to inactivity -> automatically delete session from database
-      await prisma.session.delete({ where: { id: session.id } }).catch(() => {});
+      // Session expired due to inactivity -> automatically delete session from database safely
+      await prisma.session.deleteMany({ where: { id: session.id } }).catch(() => {});
       await prisma.auditLog.create({
         data: {
           actorId: session.userId,
@@ -255,7 +255,7 @@ export async function getCurrentSession(): Promise<{
 
     // Touch lastActiveAt if more than 30 seconds have passed to minimize write contention
     if (inactiveMs > 30 * 1000) {
-      await prisma.session.update({
+      await prisma.session.updateMany({
         where: { id: session.id },
         data: { lastActiveAt: new Date() },
       }).catch(() => {});
@@ -310,7 +310,7 @@ export async function getCurrentSession(): Promise<{
 }
 
 export async function revokeSession(sessionId: string) {
-  return prisma.session.delete({
+  return prisma.session.deleteMany({
     where: { id: sessionId },
   });
 }
