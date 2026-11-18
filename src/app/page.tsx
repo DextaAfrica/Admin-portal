@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   Radio,
   ChevronRight,
+  ShieldCheck,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 import { navigateToSubdomainWithSso } from "@/lib/routing";
@@ -198,10 +199,11 @@ export default function LandingPage() {
               <button
                 type="button"
                 onClick={() => navigateToSubdomainWithSso("admin", "/dashboard")}
-                className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors cursor-pointer flex items-center gap-1"
+                className="group h-12 px-5 sm:px-6 rounded-xl text-sm font-semibold flex items-center gap-2 border border-slate-300/80 dark:border-white/15 bg-white/70 dark:bg-white/[0.04] backdrop-blur-md text-slate-700 dark:text-slate-200 shadow-2xs hover:border-slate-400 dark:hover:border-white/30 hover:bg-slate-100/90 dark:hover:bg-white/[0.08] hover:text-slate-950 dark:hover:text-white hover:shadow-md hover:-translate-y-0.5 active:scale-[0.97] active:translate-y-0 transition-all duration-200 cursor-pointer"
               >
+                <ShieldCheck className="h-4 w-4 text-slate-500 dark:text-slate-400 group-hover:text-[#ED2618] transition-colors" />
                 <span>IT Administrator Access</span>
-                <ArrowRight className="h-3 w-3" />
+                <ArrowRight className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white group-hover:translate-x-0.5 transition-all" />
               </button>
             </div>
 
