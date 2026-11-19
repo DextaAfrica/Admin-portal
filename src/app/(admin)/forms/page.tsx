@@ -5,43 +5,69 @@ import Link from "next/link";
 import {
   Link as LinkIcon,
   Plus,
+  RefreshCw,
+  ExternalLink,
   Copy,
   Check,
-  ExternalLink,
-  BarChart3,
-  Calendar,
-  MapPin,
-  Users,
-  RefreshCw,
-  Sparkles,
   Trash2,
-  Share2,
-  FileText,
-  UserCheck,
-  Building,
+  Calendar,
+  Building2,
+  Users,
   CheckCircle2,
   ArrowRight,
   ShieldCheck,
   Mail,
   Sliders,
   Settings,
-  Edit3,
   HelpCircle,
   AlertCircle,
   FileSpreadsheet,
+  FileText,
+  Image as ImageIcon,
+  CheckSquare,
+  CircleDot,
+  CalendarDays,
+  Globe,
+  Hash,
+  ChevronUp,
+  ChevronDown,
+  Layers,
+  Eye,
+  UploadCloud,
+  FileCheck2,
+  Phone,
+  Sparkles,
+  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 
+export type CustomFieldType =
+  | "text"
+  | "textarea"
+  | "file"
+  | "image"
+  | "select"
+  | "radio"
+  | "checkbox"
+  | "date"
+  | "number"
+  | "phone"
+  | "email"
+  | "url";
+
 export interface CustomFieldDef {
   id: string;
   label: string;
-  type: "text" | "number" | "email" | "phone" | "select" | "textarea" | "checkbox";
+  type: CustomFieldType;
   placeholder?: string;
+  description?: string;
   required?: boolean;
   options?: string[];
+  accept?: string;
+  maxSizeMb?: number;
 }
 
 interface FormItem {
@@ -71,6 +97,24 @@ const DEFAULT_CONSENT_NOTICE =
 const DEFAULT_CONFIRMATION_MESSAGE =
   "Thank you for completing your registration. Your submission has been officially recorded in our enterprise registry.";
 
+const FIELD_TYPE_CONFIGS: Record<
+  CustomFieldType,
+  { label: string; icon: any; category: string; defaultPlaceholder: string }
+> = {
+  text: { label: "Short Text", icon: Sliders, category: "Text Inputs", defaultPlaceholder: "e.g. Project Codename or Full Legal Entity" },
+  textarea: { label: "Multi-line Paragraph", icon: FileText, category: "Text Inputs", defaultPlaceholder: "Provide comprehensive details, objectives, or scope..." },
+  file: { label: "Document / Brief (PDF, Docs)", icon: FileSpreadsheet, category: "File Uploads", defaultPlaceholder: "Drag and drop or browse documents..." },
+  image: { label: "Photo / Image (PNG, JPG)", icon: ImageIcon, category: "File Uploads", defaultPlaceholder: "Upload high-res corporate logo, photo, or CAC certificate..." },
+  select: { label: "Dropdown Menu", icon: Layers, category: "Choice & Select", defaultPlaceholder: "Select from options" },
+  radio: { label: "Radio Choice Cards", icon: CircleDot, category: "Choice & Select", defaultPlaceholder: "Choose one option" },
+  checkbox: { label: "Multi-Select Checkboxes", icon: CheckSquare, category: "Choice & Select", defaultPlaceholder: "Select all that apply" },
+  date: { label: "Calendar Date", icon: CalendarDays, category: "Specialized Inputs", defaultPlaceholder: "Select date" },
+  phone: { label: "Phone / WhatsApp", icon: Phone, category: "Specialized Inputs", defaultPlaceholder: "+234 800 000 0000" },
+  email: { label: "Email Address", icon: Mail, category: "Specialized Inputs", defaultPlaceholder: "name@company.com" },
+  number: { label: "Numeric / Currency ($)", icon: Hash, category: "Specialized Inputs", defaultPlaceholder: "e.g. 250000" },
+  url: { label: "Website / Portfolio URL", icon: Globe, category: "Specialized Inputs", defaultPlaceholder: "https://yourorganization.com" },
+};
+
 export default function FormsManagementPage() {
   const { success: toastSuccess, error: toastError } = useToast();
 
@@ -78,13 +122,13 @@ export default function FormsManagementPage() {
   const [loading, setLoading] = React.useState(true);
   const [copiedSlug, setCopiedSlug] = React.useState<string | null>(null);
 
-  // Studio Modal State (Supports Create & Edit)
+  // Studio Modal State
   const [isStudioOpen, setIsStudioOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
-  const [studioTab, setStudioTab] = React.useState<"details" | "fields" | "email" | "consent">("details");
+  const [studioTab, setStudioTab] = React.useState<"details" | "fields" | "email" | "consent" | "preview">("details");
 
   // Form Details
-  const [formType, setFormType] = React.useState<"event" | "onboarding" | "partner">("event");
+  const [formType, setFormType] = React.useState<"event" | "onboarding" | "partner" | "survey">("event");
   const [title, setTitle] = React.useState("");
   const [slug, setSlug] = React.useState("");
   const [description, setDescription] = React.useState("");
@@ -184,16 +228,20 @@ export default function FormsManagementPage() {
     setIsStudioOpen(true);
   };
 
-  // Add a new custom field to the builder
-  const handleAddField = () => {
+  // Add field with selected type
+  const handleAddFieldOfType = (type: CustomFieldType) => {
     const id = `fld_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const config = FIELD_TYPE_CONFIGS[type];
     const newField: CustomFieldDef = {
       id,
       label: "",
-      type: "text",
-      placeholder: "",
+      type,
+      placeholder: config.defaultPlaceholder,
+      description: "",
       required: false,
-      options: [],
+      options: type === "select" || type === "radio" || type === "checkbox" ? ["Option 1", "Option 2"] : [],
+      accept: type === "file" ? ".pdf,.doc,.docx,.xlsx" : type === "image" ? "image/png,image/jpeg,image/webp" : undefined,
+      maxSizeMb: type === "file" || type === "image" ? 25 : undefined,
     };
     setCustomFields([...customFields, newField]);
   };
@@ -208,10 +256,19 @@ export default function FormsManagementPage() {
     setCustomFields(customFields.filter((fld) => fld.id !== id));
   };
 
+  const handleMoveField = (index: number, direction: "up" | "down") => {
+    const targetIdx = direction === "up" ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= customFields.length) return;
+    const reordered = [...customFields];
+    const [moved] = reordered.splice(index, 1);
+    reordered.splice(targetIdx, 0, moved);
+    setCustomFields(reordered);
+  };
+
   const handleSaveForm = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !slug.trim()) {
-      toastError("Title and link name are required");
+      toastError("Title and link identifier are required");
       setStudioTab("details");
       return;
     }
@@ -219,7 +276,7 @@ export default function FormsManagementPage() {
     // Validate custom fields
     for (const fld of customFields) {
       if (!fld.label.trim()) {
-        toastError("Please provide a label for all custom input fields or remove empty fields.");
+        toastError("Please provide a question/label for all added fields.");
         setStudioTab("fields");
         return;
       }
@@ -295,7 +352,7 @@ export default function FormsManagementPage() {
             </span>
           </div>
           <p className="text-xs text-neutral-400 mt-1 max-w-2xl leading-relaxed">
-            Architect custom client onboarding forms, event registrations, and intake portals. Customize dynamic input fields, automate branded email responses, and mandate regulatory data protection acknowledgments.
+            Architect custom client onboarding forms, event registrations, and intake portals with support for document and photo uploads, automated confirmation emails, and regulatory data protection acknowledgments.
           </p>
         </div>
 
@@ -326,7 +383,7 @@ export default function FormsManagementPage() {
         {loading && forms.length === 0 ? (
           <div className="p-12 text-center rounded-2xl bg-[#0f1420] border border-neutral-800 text-neutral-400">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-red-500" />
-            <p className="text-xs font-mono">Loading Enterprise Registration Portals...</p>
+            <p className="text-xs font-mono">Loading Registration Portals...</p>
           </div>
         ) : forms.length === 0 ? (
           <div className="p-12 text-center rounded-2xl bg-[#0f1420] border border-dashed border-neutral-800 text-neutral-400 max-w-xl mx-auto">
@@ -335,7 +392,7 @@ export default function FormsManagementPage() {
             </div>
             <h3 className="text-sm font-semibold text-white mb-1">No Custom Forms Configured</h3>
             <p className="text-xs text-neutral-400 mb-4 max-w-sm mx-auto leading-relaxed">
-              Build your first registration link with custom fields, automated confirmation receipts, and legal consent checkboxes.
+              Build your first registration link with custom fields, file/image uploaders, automated confirmation receipts, and legal consent checkboxes.
             </p>
             <Button
               size="sm"
@@ -349,8 +406,8 @@ export default function FormsManagementPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {forms.map((item) => {
-              const fullUrl = `admin.dextaafrica.org/register/${item.slug}`;
               const hasCustomFields = Array.isArray(item.fields) && item.fields.length > 0;
+              const hasUploads = Array.isArray(item.fields) && item.fields.some((f) => f.type === "file" || f.type === "image");
               const hasEmailReceipt = item.sendConfirmationEmail !== false;
               const hasConsent = item.requireConsent !== false;
 
@@ -394,7 +451,7 @@ export default function FormsManagementPage() {
                     {/* Link Copy Box */}
                     <div className="flex items-center justify-between bg-[#141a29] border border-neutral-800 rounded-lg p-2 text-xs">
                       <span className="font-mono text-neutral-300 truncate max-w-[200px]">
-                        /{item.slug}
+                        /register/{item.slug}
                       </span>
                       <button
                         onClick={() => handleCopyLink(item.slug)}
@@ -428,10 +485,17 @@ export default function FormsManagementPage() {
                         </span>
                       )}
 
+                      {hasUploads && (
+                        <span className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded text-amber-400 font-semibold">
+                          <UploadCloud className="w-3 h-3" />
+                          <span>Uploads Active</span>
+                        </span>
+                      )}
+
                       {hasEmailReceipt && (
                         <span className="flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded text-emerald-400">
                           <Mail className="w-3 h-3" />
-                          <span>Email Receipt: Active</span>
+                          <span>Email Receipt</span>
                         </span>
                       )}
 
@@ -460,7 +524,7 @@ export default function FormsManagementPage() {
                         className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Preview</span>
+                        <span>Public Link</span>
                       </Link>
 
                       <button
@@ -469,7 +533,7 @@ export default function FormsManagementPage() {
                         title="Configure form fields, emails, and consent"
                       >
                         <Settings className="w-3.5 h-3.5 text-neutral-400" />
-                        <span>Edit Studio</span>
+                        <span>Studio</span>
                       </button>
 
                       <button
@@ -483,11 +547,10 @@ export default function FormsManagementPage() {
 
                     <Link
                       href={`/forms/${item.id}`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700/80 text-white text-xs font-medium transition-all"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-red-400 hover:text-red-300 transition-colors"
                     >
-                      <BarChart3 className="w-3 h-3 text-red-400" />
-                      <span>Roster</span>
-                      <ArrowRight className="w-3 h-3" />
+                      <span>Responses</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 </div>
@@ -497,21 +560,22 @@ export default function FormsManagementPage() {
         )}
       </div>
 
-      {/* Form Studio Modal (Create / Edit) */}
+      {/* Modern High-End Form Studio Workspace (5XL Modern Width) */}
       <Modal
         isOpen={isStudioOpen}
         onClose={() => setIsStudioOpen(false)}
-        title={editingId ? "Form Studio: Configure Portal & Fields" : "Form Studio: Build Registration Portal"}
-        maxWidth="2xl"
+        title={editingId ? "Form Studio: Configure Portal & Field Architecture" : "Form Studio: Architect Intake Portal"}
+        maxWidth="5xl"
       >
-        <form onSubmit={handleSaveForm} className="space-y-4 text-xs">
-          {/* Studio Navigation Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-[#141a29] border border-neutral-800 rounded-xl overflow-x-auto">
+        <form onSubmit={handleSaveForm} className="space-y-6 text-xs">
+          {/* Executive Studio Navigation Bar */}
+          <div className="flex items-center gap-1.5 p-1.5 bg-[#0d121c] border border-neutral-800 rounded-2xl overflow-x-auto shadow-inner">
             {[
-              { id: "details" as const, label: "1. Link & Basics", icon: Sliders },
-              { id: "fields" as const, label: `2. Custom Fields (${customFields.length})`, icon: Plus },
-              { id: "email" as const, label: "3. Email Response", icon: Mail },
-              { id: "consent" as const, label: "4. Legal Consent", icon: ShieldCheck },
+              { id: "details" as const, label: "1. Identity & URL", icon: Sliders, badge: null },
+              { id: "fields" as const, label: "2. Field Architecture", icon: Layers, badge: customFields.length },
+              { id: "email" as const, label: "3. Email Auto-Responder", icon: Mail, badge: sendConfirmationEmail ? "Active" : "Off" },
+              { id: "consent" as const, label: "4. Legal & NDPR", icon: ShieldCheck, badge: requireConsent ? "Enforced" : "Optional" },
+              { id: "preview" as const, label: "5. Live Form Preview", icon: Eye, badge: "Test" },
             ].map((tab) => {
               const Icon = tab.icon;
               const isActive = studioTab === tab.id;
@@ -520,255 +584,437 @@ export default function FormsManagementPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setStudioTab(tab.id)}
-                  className={`flex-1 min-w-[130px] flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg font-medium transition-all ${
+                  className={`flex-1 min-w-[150px] flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-medium transition-all text-xs ${
                     isActive
-                      ? "bg-red-600 text-white shadow-sm"
+                      ? "bg-red-600 text-white shadow-md shadow-red-600/30"
                       : "text-neutral-400 hover:text-neutral-200 hover:bg-white/[0.04]"
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="font-semibold tracking-tight">{tab.label}</span>
+                  {tab.badge !== null && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                        isActive
+                          ? "bg-black/30 text-white"
+                          : "bg-neutral-800 text-neutral-400"
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          {/* TAB 1: DETAILS & BASICS */}
+          {/* TAB 1: PORTAL IDENTITY & CLEAN URL */}
           {studioTab === "details" && (
-            <div className="space-y-3.5 animate-fadeIn">
+            <div className="space-y-5 animate-fadeIn">
+              {/* Purpose Selector Cards */}
               <div>
-                <label className="block font-medium text-neutral-300 mb-1.5">Portal Purpose *</label>
-                <div className="grid grid-cols-3 gap-2">
+                <label className="block text-xs font-semibold text-neutral-300 mb-2">
+                  Portal Purpose & Classification *
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {[
-                    { type: "event" as const, label: "Event Registration" },
-                    { type: "onboarding" as const, label: "Client Onboarding" },
-                    { type: "partner" as const, label: "Partner Intake" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.type}
-                      type="button"
-                      onClick={() => setFormType(opt.type)}
-                      className={`p-2.5 rounded-lg text-center font-medium border transition-all ${
-                        formType === opt.type
-                          ? "bg-red-500/10 border-red-500/60 text-white"
-                          : "bg-[#141a29] border-neutral-800 text-neutral-400 hover:border-neutral-700"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
+                    {
+                      type: "event" as const,
+                      title: "Event Registration",
+                      desc: "Symposiums, live conferences, & attendee management",
+                      icon: Calendar,
+                    },
+                    {
+                      type: "onboarding" as const,
+                      title: "Client Onboarding",
+                      desc: "Corporate partner intake, briefs, & kickoff documents",
+                      icon: Building2,
+                    },
+                    {
+                      type: "partner" as const,
+                      title: "Partner Intake",
+                      desc: "Concession partners, vendors, & compliance records",
+                      icon: Users,
+                    },
+                    {
+                      type: "survey" as const,
+                      title: "Intake & Briefs",
+                      desc: "Applications, questionnaires, & document collections",
+                      icon: FileText,
+                    },
+                  ].map((opt) => {
+                    const Icon = opt.icon;
+                    const isSelected = formType === opt.type;
+                    return (
+                      <button
+                        key={opt.type}
+                        type="button"
+                        onClick={() => setFormType(opt.type)}
+                        className={`p-3.5 rounded-xl text-left border transition-all ${
+                          isSelected
+                            ? "bg-red-500/10 border-red-500/70 text-white shadow-lg shadow-red-500/10"
+                            : "bg-[#111624] border-neutral-800 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Icon className={`w-4 h-4 ${isSelected ? "text-red-400" : "text-neutral-500"}`} />
+                          <div className="font-semibold text-xs text-white">{opt.title}</div>
+                        </div>
+                        <div className="text-[11px] text-neutral-400 leading-snug">{opt.desc}</div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
-              <div>
-                <label className="block font-medium text-neutral-300 mb-1">
-                  Portal Title / Event Name *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. West Africa Infrastructure Summit 2026"
-                  value={title}
-                  onChange={(e) => handleTitleChange(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#121724] border border-neutral-800 rounded-lg text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-medium text-neutral-300 mb-1">
-                  Short Link Slug * (clean URL identifier)
-                </label>
-                <div className="flex items-center bg-[#121724] border border-neutral-800 rounded-lg px-3 py-2">
-                  <span className="text-neutral-500 font-mono">/register/</span>
+              {/* Title & Live Clean URL */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-neutral-300 mb-1.5">
+                    Portal Title / Name *
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="summit2026"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, "-"))}
-                    className="w-full bg-transparent text-neutral-100 font-mono focus:outline-none pl-1"
+                    placeholder="e.g. Corporate Client Project Scope & Intake"
+                    value={title}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-[#111624] border border-neutral-800 rounded-xl text-sm text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
                   />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-neutral-300 mb-1.5">
+                    Live URL Identifier (Slug) *
+                  </label>
+                  <div className="flex items-center bg-[#111624] border border-neutral-800 rounded-xl px-3 py-2 text-sm focus-within:border-red-500 transition-colors">
+                    <span className="text-neutral-500 font-mono text-xs select-none">/register/</span>
+                    <input
+                      type="text"
+                      required
+                      placeholder="client-onboard"
+                      value={slug}
+                      onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, "-"))}
+                      className="w-full bg-transparent text-neutral-100 font-mono text-sm focus:outline-none pl-1"
+                    />
+                  </div>
+                  <p className="text-[10px] text-neutral-500 mt-1 font-mono">
+                    Public Endpoint: https://dextaafrica.com/register/{slug || "slug-id"}
+                  </p>
                 </div>
               </div>
 
+              {/* Description */}
               <div>
-                <label className="block font-medium text-neutral-300 mb-1">Description / Brief Overview</label>
+                <label className="block font-semibold text-neutral-300 mb-1.5">
+                  Brief Overview & Respondent Instructions
+                </label>
                 <textarea
                   rows={2}
-                  placeholder="Brief welcome message or event context displayed to respondents..."
+                  placeholder="Provide context or instructions shown at the top of the intake portal..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#121724] border border-neutral-800 rounded-lg text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500 resize-none"
+                  className="w-full px-3.5 py-2.5 bg-[#111624] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500 resize-none text-xs leading-relaxed"
                 />
               </div>
 
-              {formType === "event" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block font-medium text-neutral-300 mb-1">Event Date</label>
-                    <input
-                      type="date"
-                      value={eventDate}
-                      onChange={(e) => setEventDate(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#121724] border border-neutral-800 rounded-lg text-neutral-100 focus:outline-none focus:border-red-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-medium text-neutral-300 mb-1">Venue / Location</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Eko Convention Center, Lagos"
-                      value={eventLocation}
-                      onChange={(e) => setEventLocation(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#121724] border border-neutral-800 rounded-lg text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
-                    />
-                  </div>
+              {/* Event / Optional Metadata & Status */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-semibold text-neutral-300 mb-1.5">Event / Kickoff Date</label>
+                  <input
+                    type="date"
+                    value={eventDate}
+                    onChange={(e) => setEventDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-neutral-100 focus:outline-none focus:border-red-500"
+                  />
                 </div>
-              )}
 
-              <div>
-                <label className="block font-medium text-neutral-300 mb-1">Portal Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value as any)}
-                  className="w-full px-3 py-2 bg-[#121724] border border-neutral-800 rounded-lg text-neutral-100 focus:outline-none focus:border-red-500"
-                >
-                  <option value="active">Active (Open to Public Submissions)</option>
-                  <option value="closed">Closed (Submissions Suspended)</option>
-                  <option value="draft">Draft (Admin Access Only)</option>
-                </select>
+                <div>
+                  <label className="block font-semibold text-neutral-300 mb-1.5">Venue / Physical Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dexta HQ, Lagos or Virtual Room"
+                    value={eventLocation}
+                    onChange={(e) => setEventLocation(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-neutral-300 mb-1.5">Portal Status</label>
+                  <select
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-neutral-100 focus:outline-none focus:border-red-500"
+                  >
+                    <option value="active">Active (Open to Public Submissions)</option>
+                    <option value="closed">Closed (Submissions Suspended)</option>
+                    <option value="draft">Draft (Admin Access Only)</option>
+                  </select>
+                </div>
               </div>
             </div>
           )}
 
-          {/* TAB 2: CUSTOM INPUT FIELDS BUILDER */}
+          {/* TAB 2: FIELD ARCHITECTURE & FILE UPLOADS */}
           {studioTab === "fields" && (
-            <div className="space-y-4 animate-fadeIn">
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-neutral-800 flex items-start justify-between gap-3">
-                <div className="space-y-0.5">
-                  <h4 className="font-semibold text-white">Dynamic Form Questions</h4>
-                  <p className="text-[11px] text-neutral-400">
-                    Standard fields (Full Name, Email, Phone, Company, Designation) are automatically captured. Add any custom fields needed for this intake.
-                  </p>
+            <div className="space-y-5 animate-fadeIn">
+              {/* Quick Add Toolset */}
+              <div className="p-4 rounded-2xl bg-[#0f1420] border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div>
+                    <h4 className="font-bold text-white text-xs">Add Dynamic Fields & File Uploaders</h4>
+                    <p className="text-[11px] text-neutral-400">
+                      Standard contact inputs (Full Name, Email, Phone, Company, Designation) are automatically included. Add custom questions, documents, or photos below.
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-mono text-neutral-500">
+                    {customFields.length} Custom Field{customFields.length === 1 ? "" : "s"}
+                  </span>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleAddField}
-                  className="bg-neutral-800 hover:bg-neutral-700 text-white shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  Add Field
-                </Button>
+
+                {/* Field Type Quick-Add Buttons */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {(Object.keys(FIELD_TYPE_CONFIGS) as CustomFieldType[]).map((type) => {
+                    const cfg = FIELD_TYPE_CONFIGS[type];
+                    const Icon = cfg.icon;
+                    const isUpload = type === "file" || type === "image";
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => handleAddFieldOfType(type)}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                          isUpload
+                            ? "bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30"
+                            : "bg-[#141a29] hover:bg-neutral-800 text-neutral-300 border-neutral-800 hover:border-neutral-700"
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{cfg.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
+              {/* Field Cards List */}
               {customFields.length === 0 ? (
-                <div className="p-6 text-center rounded-xl bg-[#121724] border border-dashed border-neutral-800 text-neutral-400">
-                  <p className="text-xs">No custom questions added yet. The form will capture standard enterprise contact fields.</p>
-                  <button
-                    type="button"
-                    onClick={handleAddField}
-                    className="mt-2 text-red-400 hover:text-red-300 font-medium text-xs underline"
-                  >
-                    + Add your first custom question
-                  </button>
+                <div className="p-10 text-center rounded-2xl bg-[#0d121c] border border-dashed border-neutral-800 text-neutral-400">
+                  <div className="w-12 h-12 rounded-2xl bg-neutral-800/60 text-neutral-400 flex items-center justify-center mx-auto mb-3">
+                    <Layers className="w-6 h-6" />
+                  </div>
+                  <h4 className="font-semibold text-white text-sm mb-1">No Custom Fields Added Yet</h4>
+                  <p className="text-xs text-neutral-400 max-w-sm mx-auto mb-4 leading-relaxed">
+                    Choose an input type above to accept PDF briefs, image uploads, dropdown choices, or custom questions.
+                  </p>
+                  <div className="flex justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleAddFieldOfType("file")}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium text-xs hover:bg-amber-500/20 transition-all flex items-center gap-1.5"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                      <span>+ Accept Documents (PDF/Docs)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddFieldOfType("image")}
+                      className="px-3.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 font-medium text-xs hover:bg-amber-500/20 transition-all flex items-center gap-1.5"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>+ Accept Photos / Logos</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
-                  {customFields.map((fld, idx) => (
-                    <div
-                      key={fld.id}
-                      className="p-3 rounded-xl bg-[#121724] border border-neutral-800 space-y-2.5 relative group"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-[10px] text-neutral-400 font-bold uppercase">
-                          Question #{idx + 1}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <label className="flex items-center gap-1.5 cursor-pointer text-[11px] text-neutral-300">
+                <div className="space-y-3.5 max-h-[460px] overflow-y-auto pr-1">
+                  {customFields.map((fld, idx) => {
+                    const cfg = FIELD_TYPE_CONFIGS[fld.type] || FIELD_TYPE_CONFIGS.text;
+                    const FieldIcon = cfg.icon;
+                    const isUpload = fld.type === "file" || fld.type === "image";
+
+                    return (
+                      <div
+                        key={fld.id}
+                        className={`p-4 rounded-2xl border transition-all ${
+                          isUpload
+                            ? "bg-[#111726] border-amber-500/25 shadow-lg shadow-amber-950/10"
+                            : "bg-[#101522] border-neutral-800"
+                        }`}
+                      >
+                        {/* Header bar */}
+                        <div className="flex items-center justify-between gap-3 mb-3 pb-2.5 border-b border-neutral-800/80">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-[11px] font-bold text-neutral-400">
+                              #{idx + 1}
+                            </span>
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-semibold border ${
+                                isUpload
+                                  ? "bg-amber-500/15 border-amber-500/30 text-amber-300"
+                                  : "bg-neutral-800 border-neutral-700 text-neutral-300"
+                              }`}
+                            >
+                              <FieldIcon className="w-3.5 h-3.5" />
+                              <span>{cfg.label}</span>
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {/* Move Up / Down */}
+                            <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-lg p-0.5">
+                              <button
+                                type="button"
+                                disabled={idx === 0}
+                                onClick={() => handleMoveField(idx, "up")}
+                                className="p-1 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
+                                title="Move Up"
+                              >
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={idx === customFields.length - 1}
+                                onClick={() => handleMoveField(idx, "down")}
+                                className="p-1 text-neutral-400 hover:text-white disabled:opacity-30 disabled:hover:text-neutral-400"
+                                title="Move Down"
+                              >
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+
+                            {/* Required toggle */}
+                            <label className="flex items-center gap-1.5 cursor-pointer text-xs text-neutral-300 ml-1">
+                              <input
+                                type="checkbox"
+                                checked={fld.required || false}
+                                onChange={(e) => handleUpdateField(fld.id, { required: e.target.checked })}
+                                className="w-3.5 h-3.5 rounded border-neutral-700 bg-neutral-900 text-red-600 focus:ring-red-500 accent-red-600"
+                              />
+                              <span className="font-medium">Required</span>
+                            </label>
+
+                            {/* Delete */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveField(fld.id)}
+                              className="p-1.5 text-neutral-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors ml-1"
+                              title="Delete Question"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Field Configuration Inputs */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                              Question / Field Label *
+                            </label>
                             <input
-                              type="checkbox"
-                              checked={fld.required || false}
-                              onChange={(e) => handleUpdateField(fld.id, { required: e.target.checked })}
-                              className="w-3.5 h-3.5 rounded border-neutral-700 bg-neutral-900 text-red-600 focus:ring-red-500 accent-red-600"
+                              type="text"
+                              required
+                              placeholder="e.g. Upload Project Brief or CAC Registration Document"
+                              value={fld.label}
+                              onChange={(e) => handleUpdateField(fld.id, { label: e.target.value })}
+                              className="w-full px-3 py-2 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
                             />
-                            <span>Required</span>
-                          </label>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveField(fld.id)}
-                            className="text-neutral-500 hover:text-red-400 p-1"
-                            title="Remove field"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                              Field Type Selector
+                            </label>
+                            <select
+                              value={fld.type}
+                              onChange={(e) => handleUpdateField(fld.id, { type: e.target.value as any })}
+                              className="w-full px-3 py-2 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 focus:outline-none focus:border-red-500"
+                            >
+                              {(Object.keys(FIELD_TYPE_CONFIGS) as CustomFieldType[]).map((t) => (
+                                <option key={t} value={t}>
+                                  {FIELD_TYPE_CONFIGS[t].label} ({FIELD_TYPE_CONFIGS[t].category})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="sm:col-span-2">
+                            <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                              Help Subtitle / Guidance Note (optional)
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. Please provide PDF or DOCX file, maximum 25MB."
+                              value={fld.description || ""}
+                              onChange={(e) => handleUpdateField(fld.id, { description: e.target.value })}
+                              className="w-full px-3 py-2 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
+                            />
+                          </div>
+
+                          {/* Upload specific settings */}
+                          {isUpload && (
+                            <>
+                              <div>
+                                <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                                  Allowed File Extensions
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder={fld.type === "file" ? ".pdf,.doc,.docx,.xlsx" : "image/png,image/jpeg,image/webp"}
+                                  value={fld.accept || ""}
+                                  onChange={(e) => handleUpdateField(fld.id, { accept: e.target.value })}
+                                  className="w-full px-3 py-2 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 font-mono text-[11px] focus:outline-none focus:border-red-500"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                                  Max File Size Limit (MB)
+                                </label>
+                                <select
+                                  value={fld.maxSizeMb || 25}
+                                  onChange={(e) => handleUpdateField(fld.id, { maxSizeMb: Number(e.target.value) })}
+                                  className="w-full px-3 py-2 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 focus:outline-none focus:border-red-500"
+                                >
+                                  <option value={5}>5 MB (Light documents & receipts)</option>
+                                  <option value={15}>15 MB (Standard presentations & PDFs)</option>
+                                  <option value={25}>25 MB (Full enterprise decks & media)</option>
+                                  <option value={50}>50 MB (High-res CAD & video archives)</option>
+                                </select>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Dropdown / Radio / Checkbox options editor */}
+                          {(fld.type === "select" || fld.type === "radio" || fld.type === "checkbox") && (
+                            <div className="sm:col-span-2">
+                              <label className="block text-[11px] font-semibold text-neutral-300 mb-1">
+                                Available Options (comma-separated list)
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Under $100k, $100k - $500k, $500k - $2M, $2M+"
+                                value={Array.isArray(fld.options) ? fld.options.join(", ") : ""}
+                                onChange={(e) =>
+                                  handleUpdateField(fld.id, {
+                                    options: e.target.value
+                                      .split(",")
+                                      .map((s) => s.trim())
+                                      .filter(Boolean),
+                                  })
+                                }
+                                className="w-full px-3 py-2 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
+                              />
+                            </div>
+                          )}
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[11px] text-neutral-400 mb-1">Field Question / Label *</label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="e.g. Estimated Project Budget"
-                            value={fld.label}
-                            onChange={(e) => handleUpdateField(fld.id, { label: e.target.value })}
-                            className="w-full px-2.5 py-1.5 bg-[#0f1420] border border-neutral-800 rounded-lg text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-[11px] text-neutral-400 mb-1">Input Field Type</label>
-                          <select
-                            value={fld.type}
-                            onChange={(e) => handleUpdateField(fld.id, { type: e.target.value as any })}
-                            className="w-full px-2.5 py-1.5 bg-[#0f1420] border border-neutral-800 rounded-lg text-neutral-100 focus:outline-none focus:border-red-500"
-                          >
-                            <option value="text">Single Line Text</option>
-                            <option value="number">Numeric / Quantity</option>
-                            <option value="select">Dropdown Selection</option>
-                            <option value="textarea">Paragraph / Long Text</option>
-                            <option value="phone">Phone / WhatsApp</option>
-                            <option value="email">Email Address</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {fld.type === "select" ? (
-                        <div>
-                          <label className="block text-[11px] text-neutral-400 mb-1">
-                            Dropdown Options (comma-separated)
-                          </label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Under $50k, $50k - $250k, $250k - $1M, $1M+"
-                            value={Array.isArray(fld.options) ? fld.options.join(", ") : ""}
-                            onChange={(e) =>
-                              handleUpdateField(fld.id, {
-                                options: e.target.value
-                                  .split(",")
-                                  .map((s) => s.trim())
-                                  .filter(Boolean),
-                              })
-                            }
-                            className="w-full px-2.5 py-1.5 bg-[#0f1420] border border-neutral-800 rounded-lg text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                      ) : (
-                        <div>
-                          <label className="block text-[11px] text-neutral-400 mb-1">Placeholder Text (optional)</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Enter details or scope here..."
-                            value={fld.placeholder || ""}
-                            onChange={(e) => handleUpdateField(fld.id, { placeholder: e.target.value })}
-                            className="w-full px-2.5 py-1.5 bg-[#0f1420] border border-neutral-800 rounded-lg text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -777,49 +1023,49 @@ export default function FormsManagementPage() {
           {/* TAB 3: AUTOMATED EMAIL RESPONSE */}
           {studioTab === "email" && (
             <div className="space-y-4 animate-fadeIn">
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-neutral-800 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-red-400" />
-                    <div>
-                      <h4 className="font-semibold text-white">Instant Confirmation Email Response</h4>
-                      <p className="text-[11px] text-neutral-400">
-                        Automatically dispatch a branded registration receipt to the applicant&apos;s submitted email.
-                      </p>
-                    </div>
+              <div className="p-4 rounded-2xl bg-[#0f1420] border border-neutral-800 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center">
+                    <Mail className="w-5 h-5" />
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={sendConfirmationEmail}
-                      onChange={(e) => setSendConfirmationEmail(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600" />
-                  </label>
+                  <div>
+                    <h4 className="font-bold text-white text-xs">Instant Confirmation Email Auto-Responder</h4>
+                    <p className="text-[11px] text-neutral-400 leading-snug">
+                      Automatically dispatches a branded registration receipt and submission record to the registrant.
+                    </p>
+                  </div>
                 </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sendConfirmationEmail}
+                    onChange={(e) => setSendConfirmationEmail(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600" />
+                </label>
               </div>
 
               {sendConfirmationEmail && (
-                <div className="space-y-3 bg-[#121724] p-4 rounded-xl border border-neutral-800">
+                <div className="space-y-4 bg-[#111624] p-5 rounded-2xl border border-neutral-800">
                   <div>
-                    <label className="block font-medium text-neutral-300 mb-1">
+                    <label className="block font-semibold text-neutral-300 mb-1.5">
                       Email Subject Line
                     </label>
                     <input
                       type="text"
-                      placeholder={`Registration Confirmed: ${title || "Your Event"}`}
+                      placeholder={`Registration Confirmed: ${title || "Your Registration"}`}
                       value={confirmationSubject}
                       onChange={(e) => setConfirmationSubject(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#0f1420] border border-neutral-800 rounded-lg text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
+                      className="w-full px-3.5 py-2.5 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
                     />
-                    <p className="text-[10px] text-neutral-500 mt-1">
-                      Leave empty to use the default automated subject: &quot;Registration Confirmed: [Title]&quot;
+                    <p className="text-[10px] text-neutral-500 mt-1 font-mono">
+                      Dynamic tokens available: {"{{name}}"}, {"{{portalTitle}}"}, {"{{date}}"}, {"{{referenceId}}"}
                     </p>
                   </div>
 
                   <div>
-                    <label className="block font-medium text-neutral-300 mb-1">
+                    <label className="block font-semibold text-neutral-300 mb-1.5">
                       Custom Body Message & Instructions
                     </label>
                     <textarea
@@ -827,13 +1073,26 @@ export default function FormsManagementPage() {
                       placeholder={DEFAULT_CONFIRMATION_MESSAGE}
                       value={confirmationMessage}
                       onChange={(e) => setConfirmationMessage(e.target.value)}
-                      className="w-full px-3 py-2 bg-[#0f1420] border border-neutral-800 rounded-lg text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500"
+                      className="w-full px-3.5 py-2.5 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500 text-xs leading-relaxed"
                     />
                   </div>
 
-                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] leading-relaxed">
-                    <CheckCircle2 className="w-3.5 h-3.5 inline mr-1" />
-                    Emails will automatically include the registrant&apos;s name, event details, venue, reference ID, and a verified NDPR/GDPR consent acknowledgment badge.
+                  {/* Visual Receipt Card Preview */}
+                  <div className="p-4 rounded-xl bg-[#090d15] border border-neutral-800/80 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-neutral-400 border-b border-neutral-800 pb-2">
+                      <span className="font-semibold text-white">Live Dispatched Receipt Preview</span>
+                      <span className="font-mono text-emerald-400">● Auto-Dispatched via Dexta Mail</span>
+                    </div>
+                    <div className="text-xs text-neutral-300 leading-relaxed pt-1">
+                      Dear <strong className="text-white">Applicant Name</strong>,
+                      <p className="text-neutral-400 mt-1">
+                        {confirmationMessage || DEFAULT_CONFIRMATION_MESSAGE}
+                      </p>
+                    </div>
+                    <div className="pt-2 text-[10px] font-mono text-neutral-500 flex items-center justify-between">
+                      <span>Audit: NDPR Verified</span>
+                      <span>Ref: DEX-REG-2026-XXXX</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -843,57 +1102,153 @@ export default function FormsManagementPage() {
           {/* TAB 4: DATA PROTECTION & LEGAL CONSENT */}
           {studioTab === "consent" && (
             <div className="space-y-4 animate-fadeIn">
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-neutral-800 space-y-3">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <div>
-                      <h4 className="font-semibold text-white">Mandatory Data Protection Acknowledgment</h4>
-                      <p className="text-[11px] text-neutral-400">
-                        Requires applicants to explicitly check a consent box acknowledging data usage to protect against privacy disputes and regulatory non-compliance.
-                      </p>
-                    </div>
+              <div className="p-4 rounded-2xl bg-[#0f1420] border border-neutral-800 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={requireConsent}
-                      onChange={(e) => setRequireConsent(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600" />
-                  </label>
+                  <div>
+                    <h4 className="font-bold text-white text-xs">Mandatory Data Protection Acknowledgment</h4>
+                    <p className="text-[11px] text-neutral-400 leading-snug">
+                      Requires applicants to explicitly acknowledge regulatory data usage (NDPR & GDPR) to protect Dexta against misuse claims.
+                    </p>
+                  </div>
                 </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={requireConsent}
+                    onChange={(e) => setRequireConsent(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600" />
+                </label>
               </div>
 
-              <div className="space-y-3 bg-[#121724] p-4 rounded-xl border border-neutral-800">
+              <div className="space-y-3 bg-[#111624] p-5 rounded-2xl border border-neutral-800">
                 <div>
-                  <label className="block font-medium text-neutral-300 mb-1">
+                  <label className="block font-semibold text-neutral-300 mb-1.5">
                     Regulatory Legal Notice Text (NDPR / GDPR)
                   </label>
                   <textarea
                     rows={4}
                     value={consentNotice}
                     onChange={(e) => setConsentNotice(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0f1420] border border-neutral-800 rounded-lg text-neutral-100 focus:outline-none focus:border-red-500 leading-relaxed text-[11px]"
+                    className="w-full px-3.5 py-2.5 bg-[#0c101a] border border-neutral-800 rounded-xl text-neutral-100 focus:outline-none focus:border-red-500 leading-relaxed text-xs"
                   />
                   <p className="text-[10px] text-neutral-500 mt-1">
-                    This exact legal disclaimer will be displayed next to a mandatory agreement checkbox on the public submission portal.
+                    This exact legal disclaimer is displayed next to the interactive acknowledgment button and checkbox.
                   </p>
                 </div>
 
-                <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] leading-relaxed">
-                  <AlertCircle className="w-3.5 h-3.5 inline mr-1 text-blue-400" />
-                  Every submission logs the applicant&apos;s IP address, timestamp, and user-agent string alongside their explicit consent acknowledgment.
+                <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs leading-relaxed flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Submissions record the applicant&apos;s verified consent timestamp, IP address, and browser signature for compliance audits.</span>
                 </div>
               </div>
             </div>
           )}
 
+          {/* TAB 5: LIVE FORM PREVIEW */}
+          {studioTab === "preview" && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="p-4 rounded-2xl bg-[#0f1420] border border-neutral-800 flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-white text-xs">Live Form Interactive Simulation</h4>
+                  <p className="text-[11px] text-neutral-400">
+                    Preview how your customized inputs, file upload dropzones, and legal consent appear to public applicants.
+                  </p>
+                </div>
+                <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                  Preview Mode
+                </span>
+              </div>
+
+              {/* Mock Public Form View */}
+              <div className="p-6 rounded-2xl bg-[#0a0e17] border border-neutral-800 space-y-5 max-w-2xl mx-auto shadow-2xl">
+                <div>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 uppercase">
+                    {formType}
+                  </span>
+                  <h3 className="text-lg font-bold text-white mt-1.5">{title || "Untitled Intake Portal"}</h3>
+                  <p className="text-xs text-neutral-400 mt-1">{description || "No overview provided."}</p>
+                </div>
+
+                {/* Simulated Core Contact Fields */}
+                <div className="grid grid-cols-2 gap-3 text-neutral-400 text-xs">
+                  <div className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800">
+                    Full Name *
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-neutral-900 border border-neutral-800">
+                    Email Address *
+                  </div>
+                </div>
+
+                {/* Simulated Custom Fields */}
+                {customFields.map((fld) => (
+                  <div key={fld.id} className="space-y-1 text-xs">
+                    <label className="font-medium text-neutral-200">
+                      {fld.label || "Untitled Field"} {fld.required && <span className="text-red-400">*</span>}
+                    </label>
+                    {fld.description && (
+                      <p className="text-[11px] text-neutral-400">{fld.description}</p>
+                    )}
+
+                    {fld.type === "file" ? (
+                      <div className="p-4 rounded-xl border border-dashed border-neutral-700 bg-neutral-900/60 text-center text-neutral-400">
+                        <FileSpreadsheet className="w-6 h-6 mx-auto mb-1 text-amber-400" />
+                        <div className="font-medium text-neutral-200">Drag & Drop Document or Click to Browse</div>
+                        <div className="text-[10px] text-neutral-400 mt-0.5">
+                          {fld.accept || "PDF, DOCX, XLSX"} up to {fld.maxSizeMb || 25} MB
+                        </div>
+                      </div>
+                    ) : fld.type === "image" ? (
+                      <div className="p-4 rounded-xl border border-dashed border-neutral-700 bg-neutral-900/60 text-center text-neutral-400">
+                        <ImageIcon className="w-6 h-6 mx-auto mb-1 text-amber-400" />
+                        <div className="font-medium text-neutral-200">Drag & Drop Image or Click to Browse</div>
+                        <div className="text-[10px] text-neutral-400 mt-0.5">
+                          PNG, JPG, WEBP up to {fld.maxSizeMb || 25} MB
+                        </div>
+                      </div>
+                    ) : fld.type === "textarea" ? (
+                      <textarea
+                        rows={2}
+                        disabled
+                        placeholder={fld.placeholder}
+                        className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-neutral-400 resize-none"
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        disabled
+                        placeholder={fld.placeholder}
+                        className="w-full px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-xl text-neutral-400"
+                      />
+                    )}
+                  </div>
+                ))}
+
+                {/* Simulated Consent */}
+                {requireConsent && (
+                  <div className="p-3.5 rounded-xl bg-purple-950/20 border border-purple-500/30 text-[11px] text-neutral-300 flex items-center justify-between gap-3">
+                    <span>{consentNotice}</span>
+                    <button
+                      type="button"
+                      disabled
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600/30 border border-emerald-500/50 text-emerald-300 font-semibold shrink-0"
+                    >
+                      Acknowledge Terms
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Modal Footer */}
-          <div className="pt-3 flex items-center justify-between border-t border-neutral-800">
+          <div className="pt-4 flex items-center justify-between border-t border-neutral-800">
             <div className="text-[11px] text-neutral-400">
-              {editingId ? "Updating existing portal configuration" : "Creating new custom intake portal"}
+              {editingId ? "Updating portal configuration" : "Ready to publish portal configuration"}
             </div>
             <div className="flex gap-2">
               <Button
@@ -909,7 +1264,7 @@ export default function FormsManagementPage() {
                 type="submit"
                 size="sm"
                 disabled={isSubmitting}
-                className="bg-red-600 hover:bg-red-500 text-white font-semibold"
+                className="bg-red-600 hover:bg-red-500 text-white font-semibold shadow-lg shadow-red-600/20"
               >
                 {isSubmitting ? "Saving Form..." : editingId ? "Save Changes" : "Create & Launch Portal"}
               </Button>

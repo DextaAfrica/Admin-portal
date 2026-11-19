@@ -488,6 +488,7 @@ export default function FormDemographicsPage({
                 <th className="py-3 px-4">Phone Number</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Attendance</th>
+                <th className="py-3 px-4">Files & Custom Answers</th>
                 <th className="py-3 px-4">Data Consent</th>
                 <th className="py-3 px-4">Registered Date</th>
               </tr>
@@ -495,7 +496,7 @@ export default function FormDemographicsPage({
             <tbody className="divide-y divide-neutral-800/60 print:divide-gray-200">
               {filteredSubmissions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-10 text-neutral-400">
+                  <td colSpan={8} className="text-center py-10 text-neutral-400">
                     No submissions matching your filter criteria.
                   </td>
                 </tr>
@@ -544,6 +545,48 @@ export default function FormDemographicsPage({
                       >
                         {sub.attendanceMode}
                       </span>
+                    </td>
+
+                    <td className="py-3.5 px-4">
+                      {sub.answers && Object.keys(sub.answers).length > 0 ? (
+                        <div className="flex flex-col gap-1 max-w-[200px]">
+                          {Object.entries(sub.answers).map(([key, val]: [string, any]) => {
+                            let fileObj: any = null;
+                            if (typeof val === "object" && val?.url) {
+                              fileObj = val;
+                            } else if (typeof val === "string" && val.startsWith('{"url":')) {
+                              try {
+                                fileObj = JSON.parse(val);
+                              } catch {}
+                            }
+
+                            if (fileObj?.url) {
+                              return (
+                                <a
+                                  key={key}
+                                  href={fileObj.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 hover:bg-amber-500/20 text-[10px] font-medium truncate"
+                                  title={fileObj.fileName}
+                                >
+                                  <FileSpreadsheet className="w-3 h-3 shrink-0" />
+                                  <span className="truncate">{fileObj.fileName || "View Attachment"}</span>
+                                  <ExternalLink className="w-2.5 h-2.5 shrink-0" />
+                                </a>
+                              );
+                            }
+
+                            return (
+                              <div key={key} className="text-[10px] text-neutral-400 truncate">
+                                <span className="text-neutral-500">{key}:</span> {Array.isArray(val) ? val.join(", ") : String(val)}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-neutral-500 text-[11px]">—</span>
+                      )}
                     </td>
 
                     <td className="py-3.5 px-4">
