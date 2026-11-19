@@ -52,10 +52,13 @@
     "source-map-js": "^1.2.2"
   },
   "browserslist": [
-    "defaults",
+    "last 2 Chrome versions",
+    "last 2 Firefox versions",
+    "last 2 Safari versions",
+    "last 2 Edge versions",
+    "> 0.5%",
     "not dead",
-    "not op_mini all",
-    "not kaios > 0"
+    "not IE 11"
   ]
 }
 

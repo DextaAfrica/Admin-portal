@@ -165,8 +165,25 @@ export default function FormsManagementPage() {
   }, [toastError]);
 
   React.useEffect(() => {
-    fetchForms();
-  }, [fetchForms]);
+    let mounted = true;
+    async function loadInitial() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/forms");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch forms");
+        if (mounted) setForms(data.forms || []);
+      } catch (err: any) {
+        if (mounted) toastError(err.message || "Failed to load forms");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+    loadInitial();
+    return () => {
+      mounted = false;
+    };
+  }, [toastError]);
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
