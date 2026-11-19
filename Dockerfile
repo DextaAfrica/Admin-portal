@@ -19,10 +19,11 @@ FROM base AS deps
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-COPY prisma ./prisma/
 
-# Install exact dependencies with clean npm ci
-RUN npm ci
+# Install exact dependencies with clean npm ci using BuildKit cache and bounded concurrency
+# maxsockets=4 prevents QEMU threadpool exhaustion and deadlocks during multi-arch emulation
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --prefer-offline --maxsockets=4
 
 # ------------------------------------------------------------------------------
 # Stage 3: Builder - Compile Prisma Client & Standalone Next.js Bundle
