@@ -129,6 +129,7 @@ export default async function DashboardPage() {
   let automationRulesList: any[] = [];
   let totalInflow = 0;
   let totalDisbursed = 0;
+  let subscribersCount = 0;
 
   try {
     const [
@@ -152,6 +153,7 @@ export default async function DashboardPage() {
       autms,
       infAgg,
       disbAgg,
+      subCount,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { twoFactorEnabled: true } }),
@@ -222,6 +224,7 @@ export default async function DashboardPage() {
         },
         _sum: { amount: true },
       }),
+      db.audienceSubscriber.count(),
     ]);
 
     totalUsers = tu;
@@ -238,6 +241,7 @@ export default async function DashboardPage() {
     pendingLeavesCount = plc;
     openAlertsCount = oac;
     staffCount = sc;
+    subscribersCount = subCount || 0;
 
     financialTransactionsList = txns || [];
     approvalsList = apprs || [];
@@ -437,6 +441,7 @@ export default async function DashboardPage() {
           totalEndpoints,
           totalStorageBytes,
           storagePercent,
+          subscribersCount,
           backendHealthy,
           backendLatency,
         }}

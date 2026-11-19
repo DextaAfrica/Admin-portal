@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Mail,
   Plus,
@@ -48,6 +49,8 @@ export default function CampaignsPage() {
   const { success: toastSuccess, error: toastError } = useToast();
   const [campaigns, setCampaigns] = React.useState<EmailCampaign[]>([]);
   const [subscribersCount, setSubscribersCount] = React.useState<number>(0);
+  const [categoryCounts, setCategoryCounts] = React.useState<Record<string, number>>({});
+  const [targetAudienceCategory, setTargetAudienceCategory] = React.useState<string>("ALL");
   const [isLoading, setIsLoading] = React.useState(true);
 
   // Views: "scheduled" | "drafts" | "sent" | "compose"
@@ -82,6 +85,9 @@ export default function CampaignsPage() {
       if (audRes.ok) {
         const audData = await audRes.json();
         setSubscribersCount((audData.subscribers || []).filter((s: any) => s.status === "SUBSCRIBED").length);
+        if (audData.categoryCounts) {
+          setCategoryCounts(audData.categoryCounts);
+        }
       }
     } catch {
       toastError("Unable to Load", "Could not load your email campaigns.");
@@ -199,10 +205,12 @@ export default function CampaignsPage() {
     try {
       const res = await fetch(`/api/marketing/campaigns/${campaignId}/dispatch`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetCategory: targetAudienceCategory }),
       });
 
       if (res.ok) {
-        toastSuccess("Email Broadcast Dispatched", "Delivered to active subscribers via corporate SMTP.");
+        toastSuccess("Email Broadcast Dispatched", "Delivered to target audience contacts via corporate SMTP.");
         setSendConfirmCampaign(null);
         await fetchCampaigns();
         setActiveTab("sent");
@@ -269,6 +277,17 @@ export default function CampaignsPage() {
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            <Link href="/marketing/audience">
+              <Button
+                size="sm"
+                variant="outline"
+                leftIcon={<Users className="h-3.5 w-3.5 text-slate-500" />}
+                className="text-xs"
+              >
+                Audience &amp; Contacts ({subscribersCount})
+              </Button>
+            </Link>
+
             <Button
               size="sm"
               variant="outline"
@@ -840,13 +859,44 @@ export default function CampaignsPage() {
         }
       >
         {sendConfirmCampaign && (
-          <div className="space-y-3 pt-1 text-xs text-slate-600 dark:text-slate-400">
+          <div className="space-y-4 pt-1 text-xs text-slate-600 dark:text-slate-400">
             <p>
               Are you sure you want to send <strong>{sendConfirmCampaign.title}</strong> right now?
             </p>
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
-              <span>Delivers to: </span>
-              <strong className="text-slate-900 dark:text-white">{subscribersCount} Subscribed Contacts</strong>
+
+            {/* Recipient Target Group Selector */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                Recipient Target Group
+              </label>
+              <select
+                value={targetAudienceCategory}
+                onChange={(e) => setTargetAudienceCategory(e.target.value)}
+                className="w-full h-9 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#ED2618]"
+              >
+                <option value="ALL">All Active Contacts ({subscribersCount})</option>
+                <option value="CLIENT">Clients Only ({categoryCounts.CLIENT ?? 0})</option>
+                <option value="LEAD">Prospective Leads Only ({categoryCounts.LEAD ?? 0})</option>
+                <option value="INVESTOR">Investors &amp; Capital Partners ({categoryCounts.INVESTOR ?? 0})</option>
+                <option value="PARTNER">Strategic Partners ({categoryCounts.PARTNER ?? 0})</option>
+                <option value="CONTRACTOR">Contractors &amp; Engineers ({categoryCounts.CONTRACTOR ?? 0})</option>
+                <option value="NEWSLETTER">Newsletter Subscribers ({categoryCounts.NEWSLETTER ?? 0})</option>
+              </select>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] flex items-center justify-between">
+              <span>Recipients in selected group: </span>
+              <strong className="text-slate-900 dark:text-white font-mono text-sm">
+                {targetAudienceCategory === "ALL" ? subscribersCount : (categoryCounts[targetAudienceCategory] ?? 0)} Contacts
+              </strong>
+            </div>
+
+            <div className="flex justify-between items-center text-[11px] pt-1 text-slate-400">
+              <span>Need to collect more contacts first?</span>
+              <Link href="/marketing/audience" className="text-[#ED2618] hover:underline font-semibold flex items-center gap-1">
+                <span>Audience Directory</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
             </div>
           </div>
         )}

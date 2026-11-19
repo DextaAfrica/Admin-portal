@@ -40,6 +40,7 @@ import {
   Calendar,
   AlertCircle,
   UserCheck,
+  UserPlus,
   Award,
   Landmark,
   Plus,
@@ -96,6 +97,7 @@ export interface DepartmentDashboardViewProps {
     totalEndpoints: number;
     totalStorageBytes: number;
     storagePercent: number;
+    subscribersCount?: number;
     backendHealthy: boolean;
     backendLatency: number;
   };
@@ -676,11 +678,27 @@ export function DepartmentDashboardView({
             ) : platform === "systems" ? (
               <>
                 <Link
-                  href="/it"
+                  href="/marketing/audience"
                   className="inline-flex items-center gap-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white px-3.5 py-2 text-xs font-bold transition-all shadow-sm"
                 >
-                  <ShieldCheck className="h-4 w-4" />
-                  <span>Security Policies</span>
+                  <UserPlus className="h-4 w-4" />
+                  <span>+ Collect Contact</span>
+                </Link>
+
+                <Link
+                  href="/marketing/campaigns"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all"
+                >
+                  <Send className="h-4 w-4 text-[#ED2618]" />
+                  <span>Email Campaigns</span>
+                </Link>
+
+                <Link
+                  href="/content"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all"
+                >
+                  <Globe className="h-4 w-4 text-purple-500" />
+                  <span>Website Content</span>
                 </Link>
 
                 <Link
@@ -690,16 +708,6 @@ export function DepartmentDashboardView({
                   <Users className="h-4 w-4" />
                   <span>Team Accounts</span>
                 </Link>
-
-                <a
-                  href="/api/reports/executive?format=csv"
-                  download
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/[0.04] px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] hover:text-[#ED2618] transition-all cursor-pointer"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Activity Logs (CSV)</span>
-                  <span className="inline sm:hidden">CSV</span>
-                </a>
               </>
             ) : platform === "finance" ? (
               <>
@@ -1210,10 +1218,10 @@ export function DepartmentDashboardView({
       {/* ===================================================================== */}
       {activeTab === "systems" && (
         <div className="space-y-6">
-          {/* Top 3 High-Impact Operational Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          {/* Top 4 High-Impact Operational Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* 1. Team Members */}
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm flex flex-col justify-between space-y-4 hover:border-red-500/30 transition-all">
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm flex flex-col justify-between space-y-4 hover:border-red-500/30 transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Team Members
@@ -1235,7 +1243,7 @@ export function DepartmentDashboardView({
                   href="/users"
                   className="text-xs font-bold text-[#ED2618] hover:underline flex items-center gap-1 group"
                 >
-                  <span>Manage Team Accounts</span>
+                  <span>Manage Team</span>
                   <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
@@ -1244,8 +1252,40 @@ export function DepartmentDashboardView({
               </div>
             </div>
 
-            {/* 2. Clearances & Approvals */}
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm flex flex-col justify-between space-y-4 hover:border-emerald-500/30 transition-all">
+            {/* 2. Audience & Contacts */}
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm flex flex-col justify-between space-y-4 hover:border-purple-500/30 transition-all">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Audience Contacts
+                </span>
+                <div className="h-9 w-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <UserPlus className="h-4 w-4" />
+                </div>
+              </div>
+              <div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white font-mono">
+                  {itMetrics.subscribersCount ?? 0}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Collected client leads, partners &amp; investors
+                </p>
+              </div>
+              <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
+                <Link
+                  href="/marketing/audience"
+                  className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 group"
+                >
+                  <span>Audience Directory</span>
+                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </Link>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 font-bold">
+                  Targeted
+                </span>
+              </div>
+            </div>
+
+            {/* 3. Clearances & Approvals */}
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm flex flex-col justify-between space-y-4 hover:border-emerald-500/30 transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Pending Clearances
@@ -1260,7 +1300,7 @@ export function DepartmentDashboardView({
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                   {pendingApprovalsCount > 0
-                    ? "Requests awaiting department management decision"
+                    ? "Requests awaiting department management review"
                     : "All department requests reviewed and cleared"}
                 </p>
               </div>
@@ -1279,8 +1319,8 @@ export function DepartmentDashboardView({
               </div>
             </div>
 
-            {/* 3. Company File Storage */}
-            <div className="p-6 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm flex flex-col justify-between space-y-4 hover:border-blue-500/30 transition-all">
+            {/* 4. Company File Storage */}
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm flex flex-col justify-between space-y-4 hover:border-blue-500/30 transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Document Storage
@@ -1302,27 +1342,27 @@ export function DepartmentDashboardView({
                   href="/storage"
                   className="text-xs font-bold text-[#ED2618] hover:underline flex items-center gap-1 group"
                 >
-                  <span>Open Document Vault</span>
+                  <span>Open Vault</span>
                   <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
                 </Link>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold">
-                  Cloud Secured
+                  Secured
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Two-Column Core Layout: Primary Actions on Left + Live Team Activity on Right */}
+          {/* Two-Column Core Layout: Primary Workspaces on Left + Live Team Activity on Right */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Column (7 cols): 4 Focused Administrative Modules */}
+            {/* Left Column (7 cols): 6 Clear Administrative & Editorial Workspaces */}
             <div className="lg:col-span-7 rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 sm:p-7 shadow-sm space-y-5">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/[0.06]">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Administrative Workspaces
+                    Administrative &amp; Content Workspaces
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Select a workspace to manage people, documents, or company requests.
+                    Manage team accounts, web editorial, document storage, and marketing broadcasts.
                   </p>
                 </div>
                 <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
@@ -1396,27 +1436,68 @@ export function DepartmentDashboardView({
                   </div>
                 </button>
 
-                {/* 4. Company Announcements */}
-                <button
-                  type="button"
-                  onClick={() => setActiveTab("communications")}
-                  className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-amber-500/50 hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-md hover:-translate-y-0.5 transition-all space-y-3 group cursor-pointer text-left w-full"
+                {/* 4. Website Content & Editorial */}
+                <Link
+                  href="/content"
+                  className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-purple-500/50 hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-md hover:-translate-y-0.5 transition-all space-y-3 group cursor-pointer"
                 >
                   <div className="flex items-center justify-between">
-                    <div className="h-10 w-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Mail className="h-5 w-5" />
+                    <div className="h-10 w-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Globe className="h-5 w-5" />
                     </div>
-                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-purple-500 group-hover:translate-x-1 transition-all" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-500 transition-colors">
-                      Company Announcements
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 transition-colors">
+                      Website &amp; Editorial Content
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
-                      Dispatch official email notices and updates directly to staff.
+                      Manage public website copy, news journal updates, and career openings.
                     </p>
                   </div>
-                </button>
+                </Link>
+
+                {/* 5. Email Campaigns & Broadcasts */}
+                <Link
+                  href="/marketing/campaigns"
+                  className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-[#ED2618]/50 hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-md hover:-translate-y-0.5 transition-all space-y-3 group cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="h-10 w-10 rounded-xl bg-red-500/10 text-[#ED2618] flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Send className="h-5 w-5" />
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-[#ED2618] group-hover:translate-x-1 transition-all" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
+                      Email Campaigns &amp; Broadcasts
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                      Compose, schedule, and send announcements and project reports.
+                    </p>
+                  </div>
+                </Link>
+
+                {/* 6. Audience & Contact Collection */}
+                <Link
+                  href="/marketing/audience"
+                  className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-emerald-500/50 hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-md hover:-translate-y-0.5 transition-all space-y-3 group cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <UserPlus className="h-5 w-5" />
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-1 transition-all" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
+                      Audience &amp; Contact Collection
+                    </h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                      Capture client leads, partners, and investors to build delivery lists.
+                    </p>
+                  </div>
+                </Link>
               </div>
             </div>
 

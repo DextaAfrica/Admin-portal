@@ -379,6 +379,12 @@ export const MarketingAudienceSubscriberSchema = z.object({
   email: standardEmailValidator,
   firstName: optionalTrimString(100, "First Name"),
   lastName: optionalTrimString(100, "Last Name"),
+  phone: optionalTrimString(50, "Phone Number"),
+  company: optionalTrimString(150, "Company / Organization"),
+  category: z
+    .enum(["CLIENT", "INVESTOR", "PARTNER", "CONTRACTOR", "LEAD", "NEWSLETTER"])
+    .default("NEWSLETTER"),
+  notes: optionalTrimString(1000, "Notes"),
   tags: z.array(z.string().max(50)).default([]),
 });
 

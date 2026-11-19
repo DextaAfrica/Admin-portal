@@ -137,12 +137,17 @@ model AudienceSubscriber {
   email     String   @unique
   firstName String?
   lastName  String?
+  phone     String?
+  company   String?
+  category  String   @default("NEWSLETTER") // CLIENT, INVESTOR, PARTNER, CONTRACTOR, LEAD, NEWSLETTER
+  notes     String?
   status    String   @default("SUBSCRIBED") // SUBSCRIBED, UNSUBSCRIBED, BOUNCED
   tags      String   @default("[]") // JSON string of tags
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([status])
+  @@index([category])
 }
 
 model ApiEndpoint {
