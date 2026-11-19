@@ -42,6 +42,11 @@ interface FormDataState {
   eventLocation: string;
   fields: CustomFormField[];
   metadata: Record<string, any>;
+  sendConfirmationEmail?: boolean;
+  confirmationSubject?: string;
+  confirmationMessage?: string;
+  consentNotice?: string;
+  requireConsent?: boolean;
 }
 
 export default function PublicRegistrationPage({
@@ -68,6 +73,7 @@ export default function PublicRegistrationPage({
   const [attendanceMode, setAttendanceMode] = React.useState("in-person");
   const [customAnswers, setCustomAnswers] = React.useState<Record<string, string>>({});
   const [notes, setNotes] = React.useState("");
+  const [consentAcknowledged, setConsentAcknowledged] = React.useState(false);
 
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
@@ -75,13 +81,19 @@ export default function PublicRegistrationPage({
 
   React.useEffect(() => {
     async function loadForm() {
+      if (!slug) {
+        setLoading(false);
+        setError("Invalid or missing registration link.");
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/forms/public/${slug}`);
+        const res = await fetch(`/api/forms/public/${encodeURIComponent(slug)}`);
         const data = await res.json();
         if (!res.ok) {
-          setError(data.error || "Portal not found");
+          setError(data.error || "Registration portal not found");
         } else {
           setForm(data.form);
           if (data.form.formType === "onboarding") {
@@ -103,6 +115,11 @@ export default function PublicRegistrationPage({
     e.preventDefault();
     if (!fullName.trim() || !email.trim()) return;
 
+    if (form?.requireConsent !== false && !consentAcknowledged) {
+      alert("Please acknowledge and agree to the Data Protection & Legal Consent terms before submitting.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const res = await fetch(`/api/forms/public/${slug}`, {
@@ -118,6 +135,7 @@ export default function PublicRegistrationPage({
           attendanceMode,
           answers: customAnswers,
           notes,
+          consentAcknowledged,
         }),
       });
 
@@ -206,8 +224,10 @@ export default function PublicRegistrationPage({
             </h2>
             <p className="text-sm text-neutral-400 leading-relaxed mb-6">
               Your registration for <strong className="text-neutral-200">{form.title}</strong> has
-              been received. We have sent a confirmation notice to{" "}
-              <span className="text-red-400 font-mono">{email}</span>.
+              been received. {form.sendConfirmationEmail !== false && (
+                <>An official confirmation receipt has been dispatched to{" "}
+                <span className="text-red-400 font-mono">{email}</span>.</>
+              )}
             </p>
 
             {/* Registration Summary Box */}
@@ -223,6 +243,10 @@ export default function PublicRegistrationPage({
               <div className="flex justify-between items-center py-1 border-b border-neutral-800/60">
                 <span className="text-neutral-400">Attendance</span>
                 <span className="capitalize text-neutral-200 font-medium">{attendanceMode}</span>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-neutral-800/60">
+                <span className="text-neutral-400">Legal Consent</span>
+                <span className="text-emerald-400 font-medium">Acknowledged (NDPR Compliant)</span>
               </div>
               {submissionId && (
                 <div className="flex justify-between items-center py-1">
@@ -511,6 +535,30 @@ export default function PublicRegistrationPage({
                   onChange={(e) => setNotes(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-[#121724] border border-neutral-800 rounded-xl text-sm text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500 resize-none"
                 />
+              </div>
+
+              {/* Mandatory Data Protection & Legal Consent Section */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-[#0f1420] border border-neutral-800 space-y-3 shadow-inner">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-300">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Data Protection & Privacy Acknowledgment</span>
+                </div>
+                <p className="text-xs text-neutral-400 leading-relaxed">
+                  {form.consentNotice ||
+                    "I hereby consent to Dexta Africa collecting, storing, and processing my personal data strictly in accordance with NDPR & GDPR regulatory standards. I acknowledge this information will only be used for official enterprise communications and event coordination."}
+                </p>
+                <label className="flex items-start gap-3 cursor-pointer pt-2 group border-t border-neutral-800/80">
+                  <input
+                    type="checkbox"
+                    required={form.requireConsent !== false}
+                    checked={consentAcknowledged}
+                    onChange={(e) => setConsentAcknowledged(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded border-neutral-700 bg-neutral-900 text-red-600 focus:ring-red-500 focus:ring-offset-neutral-950 accent-red-600 shrink-0"
+                  />
+                  <span className="text-xs text-neutral-300 group-hover:text-white transition-colors leading-snug">
+                    I have read, understood, and accept the Data Protection terms and authorize Dexta Africa to process my information. <span className="text-red-400 font-bold">*</span>
+                  </span>
+                </label>
               </div>
 
               {/* Submit Button */}

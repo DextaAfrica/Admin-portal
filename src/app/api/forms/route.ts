@@ -35,6 +35,13 @@ export async function GET(req: NextRequest) {
       coverImageUrl: f.coverImageUrl || "",
       eventDate: f.eventDate ? f.eventDate.toISOString() : null,
       eventLocation: f.eventLocation || "",
+      fields: JSON.parse(f.fields || "[]"),
+      metadata: JSON.parse(f.metadata || "{}"),
+      sendConfirmationEmail: f.sendConfirmationEmail,
+      confirmationSubject: f.confirmationSubject || "",
+      confirmationMessage: f.confirmationMessage || "",
+      consentNotice: f.consentNotice || "",
+      requireConsent: f.requireConsent,
       submissionsCount: f._count.submissions,
       createdAt: f.createdAt.toISOString(),
       updatedAt: f.updatedAt.toISOString(),
@@ -86,6 +93,13 @@ export async function POST(req: NextRequest) {
         eventLocation: body.eventLocation?.trim() || "",
         fields: typeof body.fields === "string" ? body.fields : JSON.stringify(body.fields || []),
         metadata: typeof body.metadata === "string" ? body.metadata : JSON.stringify(body.metadata || {}),
+        sendConfirmationEmail: body.sendConfirmationEmail !== undefined ? Boolean(body.sendConfirmationEmail) : true,
+        confirmationSubject: body.confirmationSubject?.trim() || "",
+        confirmationMessage: body.confirmationMessage?.trim() || "",
+        consentNotice:
+          body.consentNotice?.trim() ||
+          "I hereby consent to Dexta Africa collecting, storing, and processing my personal data strictly in accordance with NDPR & GDPR regulatory standards. I acknowledge this information will only be used for official enterprise communications and event coordination.",
+        requireConsent: body.requireConsent !== undefined ? Boolean(body.requireConsent) : true,
       },
     });
 

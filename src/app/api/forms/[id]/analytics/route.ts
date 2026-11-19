@@ -90,6 +90,10 @@ export async function GET(
         status: form.status,
         eventDate: form.eventDate ? form.eventDate.toISOString() : null,
         eventLocation: form.eventLocation,
+        fields: JSON.parse(form.fields || "[]"),
+        sendConfirmationEmail: form.sendConfirmationEmail,
+        requireConsent: form.requireConsent,
+        consentNotice: form.consentNotice,
       },
       demographics: {
         totalCount,
@@ -110,6 +114,9 @@ export async function GET(
         answers: JSON.parse(s.answers || "{}"),
         notes: s.notes || "",
         status: s.status || "registered",
+        consentAcknowledged: s.consentAcknowledged,
+        consentTimestamp: s.consentTimestamp ? s.consentTimestamp.toISOString() : null,
+        ipAddress: s.ipAddress || "",
         createdAt: s.createdAt.toISOString(),
       })),
     });

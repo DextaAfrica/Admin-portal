@@ -612,20 +612,25 @@ model CareerInquiry {
 // =============================================================================
 
 model CustomForm {
-  id            String           @id @default(uuid())
-  slug          String           @unique
-  title         String
-  description   String?          @default("")
-  formType      String           @default("event") // "event", "onboarding", "partner", "survey"
-  status        String           @default("active") // "active", "closed", "draft"
-  coverImageUrl String?          @default("")
-  eventDate     DateTime?
-  eventLocation String?          @default("")
-  fields        String           @default("[]") // JSON stringified form fields
-  metadata      String           @default("{}") // JSON stringified metadata/styling
-  submissions   FormSubmission[]
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  id                      String           @id @default(uuid())
+  slug                    String           @unique
+  title                   String
+  description             String?          @default("")
+  formType                String           @default("event") // "event", "onboarding", "partner", "survey"
+  status                  String           @default("active") // "active", "closed", "draft"
+  coverImageUrl           String?          @default("")
+  eventDate               DateTime?
+  eventLocation           String?          @default("")
+  fields                  String           @default("[]") // JSON stringified form fields
+  metadata                String           @default("{}") // JSON stringified metadata/styling
+  sendConfirmationEmail   Boolean          @default(true)
+  confirmationSubject     String?          @default("")
+  confirmationMessage     String?          @default("")
+  consentNotice           String?          @default("I hereby consent to Dexta Africa collecting, storing, and processing my personal data strictly in accordance with NDPR & GDPR regulatory standards. I acknowledge this information will only be used for official enterprise communications and event coordination.")
+  requireConsent          Boolean          @default(true)
+  submissions             FormSubmission[]
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
 
   @@index([slug])
   @@index([formType])
@@ -634,20 +639,24 @@ model CustomForm {
 }
 
 model FormSubmission {
-  id             String     @id @default(uuid())
-  formId         String
-  form           CustomForm @relation(fields: [formId], references: [id], onDelete: Cascade)
-  fullName       String
-  email          String
-  phone          String?    @default("")
-  company        String?    @default("")
-  jobTitle       String?    @default("")
-  category       String     @default("Attendee") // "Client", "Lead", "Investor", "Partner", "Attendee", "Contractor"
-  attendanceMode String     @default("in-person") // "in-person", "virtual"
-  answers        String     @default("{}") // JSON stringified answers
-  notes          String?    @default("")
-  status         String     @default("registered") // "registered", "confirmed", "attended", "cancelled"
-  createdAt      DateTime   @default(now())
+  id                  String     @id @default(uuid())
+  formId              String
+  form                CustomForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  fullName            String
+  email               String
+  phone               String?    @default("")
+  company             String?    @default("")
+  jobTitle            String?    @default("")
+  category            String     @default("Attendee") // "Client", "Lead", "Investor", "Partner", "Attendee", "Contractor"
+  attendanceMode      String     @default("in-person") // "in-person", "virtual"
+  answers             String     @default("{}") // JSON stringified answers
+  notes               String?    @default("")
+  status              String     @default("registered") // "registered", "confirmed", "attended", "cancelled"
+  consentAcknowledged Boolean    @default(true)
+  consentTimestamp    DateTime?  @default(now())
+  ipAddress           String?    @default("")
+  userAgent           String?    @default("")
+  createdAt           DateTime   @default(now())
 
   @@index([formId])
   @@index([email])

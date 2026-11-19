@@ -27,6 +27,7 @@ import {
   Phone,
   Mail,
   Printer,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -45,6 +46,9 @@ interface Submission {
   answers: Record<string, any>;
   notes: string;
   status: string;
+  consentAcknowledged?: boolean;
+  consentTimestamp?: string | null;
+  ipAddress?: string;
   createdAt: string;
 }
 
@@ -58,6 +62,10 @@ interface AnalyticsData {
     status: string;
     eventDate: string | null;
     eventLocation: string;
+    fields?: { id: string; label: string; type: string }[];
+    sendConfirmationEmail?: boolean;
+    requireConsent?: boolean;
+    consentNotice?: string;
   };
   demographics: {
     totalCount: number;
@@ -117,7 +125,21 @@ export default function FormDemographicsPage({
   const handleExportCSV = () => {
     if (!data) return;
     const rows = [
-      ["Full Name", "Email", "Phone", "Organization", "Job Title", "Category", "Attendance Mode", "Status", "Notes", "Date Registered"],
+      [
+        "Full Name",
+        "Email",
+        "Phone",
+        "Organization",
+        "Job Title",
+        "Category",
+        "Attendance Mode",
+        "Status",
+        "Legal Consent Verified",
+        "Consent Timestamp",
+        "IP Address",
+        "Notes",
+        "Date Registered",
+      ],
       ...data.submissions.map((s) => [
         `"${s.fullName.replace(/"/g, '""')}"`,
         `"${s.email.replace(/"/g, '""')}"`,
@@ -127,8 +149,11 @@ export default function FormDemographicsPage({
         `"${s.category}"`,
         `"${s.attendanceMode}"`,
         `"${s.status}"`,
+        `"${s.consentAcknowledged !== false ? "YES (NDPR & GDPR Compliant)" : "NO"}"`,
+        `"${s.consentTimestamp || s.createdAt}"`,
+        `"${s.ipAddress || ""}"`,
         `"${(s.notes || "").replace(/"/g, '""')}"`,
-        `"${new Date(s.createdAt).toLocaleDateString()}"`,
+        `"${s.createdAt.split("T")[0]}"`,
       ]),
     ];
 
@@ -463,13 +488,14 @@ export default function FormDemographicsPage({
                 <th className="py-3 px-4">Phone Number</th>
                 <th className="py-3 px-4">Category</th>
                 <th className="py-3 px-4">Attendance</th>
+                <th className="py-3 px-4">Data Consent</th>
                 <th className="py-3 px-4">Registered Date</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-800/60 print:divide-gray-200">
               {filteredSubmissions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-10 text-neutral-400">
+                  <td colSpan={7} className="text-center py-10 text-neutral-400">
                     No submissions matching your filter criteria.
                   </td>
                 </tr>
@@ -520,12 +546,21 @@ export default function FormDemographicsPage({
                       </span>
                     </td>
 
+                    <td className="py-3.5 px-4">
+                      {sub.consentAcknowledged !== false ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <ShieldCheck className="w-3 h-3" />
+                          <span>NDPR Verified</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono text-neutral-500 bg-neutral-800">
+                          Pending
+                        </span>
+                      )}
+                    </td>
+
                     <td className="py-3.5 px-4 text-neutral-400 font-mono text-[11px]">
-                      {new Date(sub.createdAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
+                      {sub.createdAt.split("T")[0]}
                     </td>
                   </tr>
                 ))

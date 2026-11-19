@@ -85,6 +85,11 @@ export async function PUT(
         eventLocation: body.eventLocation !== undefined ? body.eventLocation : existing.eventLocation,
         fields: body.fields !== undefined ? (typeof body.fields === "string" ? body.fields : JSON.stringify(body.fields)) : existing.fields,
         metadata: body.metadata !== undefined ? (typeof body.metadata === "string" ? body.metadata : JSON.stringify(body.metadata)) : existing.metadata,
+        sendConfirmationEmail: body.sendConfirmationEmail !== undefined ? Boolean(body.sendConfirmationEmail) : existing.sendConfirmationEmail,
+        confirmationSubject: body.confirmationSubject !== undefined ? body.confirmationSubject : existing.confirmationSubject,
+        confirmationMessage: body.confirmationMessage !== undefined ? body.confirmationMessage : existing.confirmationMessage,
+        consentNotice: body.consentNotice !== undefined ? body.consentNotice : existing.consentNotice,
+        requireConsent: body.requireConsent !== undefined ? Boolean(body.requireConsent) : existing.requireConsent,
       },
     });
 
