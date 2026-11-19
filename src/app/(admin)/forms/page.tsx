@@ -743,14 +743,14 @@ export default function FormsManagementPage() {
                     Live URL Identifier (Slug) *
                   </label>
                   <div className="flex items-center bg-[#111624] border border-neutral-800 rounded-xl px-3 py-2 text-sm focus-within:border-red-500 transition-colors">
-                    <span className="text-neutral-500 font-mono text-xs select-none">/register/</span>
+                    <span className="text-neutral-500 font-mono text-xs select-none shrink-0 whitespace-nowrap pr-1.5">/register/</span>
                     <input
                       type="text"
                       required
                       placeholder="client-onboard"
                       value={slug}
                       onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, "-"))}
-                      className="w-full bg-transparent text-neutral-100 font-mono text-sm focus:outline-none pl-1"
+                      className="w-full bg-transparent text-neutral-100 font-mono text-sm focus:outline-none pl-1 min-w-0"
                     />
                   </div>
                   <p className="text-[10px] text-neutral-500 mt-1 font-mono">

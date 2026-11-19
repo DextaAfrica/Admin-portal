@@ -666,4 +666,38 @@ model FormSubmission {
   @@index([createdAt])
 }
 
+// =============================================================================
+// TWO-LEVEL PRODUCTION APPROVAL & GOVERNANCE PIPELINE
+// =============================================================================
+
+model ProductionReleaseRequest {
+  id                String    @id @default(uuid())
+  ticketNumber      String    @unique // e.g. "PRD-2026-9041"
+  title             String
+  description       String
+  category          String    // "PROD_DEPLOYMENT", "POLICY_CHANGE", "ROLE_ELEVATION", "CONFIG_UPDATE", "CREDENTIAL_ISSUANCE"
+  targetSystem      String    @default("PORTAL_CORE") // "PORTAL_CORE", "STORAGE_S3", "PAYMENT_GATEWAY", "API_ROUTER"
+  adminId           String
+  adminName         String
+  adminEmail        String
+  superAdminId      String?
+  superAdminName    String?
+  superAdminEmail   String?
+  status            String    @default("PENDING_SUPER_ADMIN") // "PENDING_SUPER_ADMIN", "APPROVED_LIVE", "REJECTED", "CANCELLED"
+  stage             Int       @default(1) // 1: Submitted by Admin, 2: Approved by Super Admin (Live)
+  justification     String
+  payloadDiff       String?   // JSON representation of change or config
+  rejectionReason   String?
+  scheduledFor      DateTime?
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([status])
+  @@index([adminId])
+  @@index([superAdminId])
+  @@index([createdAt])
+}
+
 

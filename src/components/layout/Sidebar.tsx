@@ -33,6 +33,9 @@ import {
   DollarSign,
   BarChart3,
   Link2,
+  Crown,
+  Compass,
+  Cpu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
@@ -68,6 +71,7 @@ const OPERATIONS_NAV: NavSection[] = [
   {
     label: "Operations Desk",
     items: [
+      { title: "GM Operational Command", href: "/dashboard/gm", icon: Compass, badge: "GM" },
       { title: "Operations Dashboard", href: "/dashboard", tabId: "operations", icon: LayoutDashboard },
       { title: "Projects & Milestones", href: "/projects", icon: Building2 },
       { title: "Reports & Dossiers", href: "/reports", icon: FileText },
@@ -108,6 +112,7 @@ const SYSTEMS_NAV: NavSection[] = [
     label: "Settings & Records",
     items: [
       { title: "Security Policies", href: "/it", icon: ShieldCheck },
+      { title: "2-Stage Production Approvals", href: "/it?tab=production", icon: Cpu, badge: "2-Level" },
       { title: "Activity Logs", href: "/audit-logs", icon: FileText },
     ],
   },
@@ -116,8 +121,10 @@ const SYSTEMS_NAV: NavSection[] = [
 // 3. MD / CEO Executive Command Navigation
 const EXECUTIVE_NAV: NavSection[] = [
   {
-    label: "Executive Leadership",
+    label: "Executive Strategic Cockpits",
     items: [
+      { title: "MD / CEO Strategic Cockpit", href: "/dashboard/md", icon: Crown, badge: "Fortune 500" },
+      { title: "GM Operational Command", href: "/dashboard/gm", icon: Compass, badge: "GM Suite" },
       { title: "MD / CEO Command Suite", href: "/dashboard?tab=overview", tabId: "overview", icon: LayoutDashboard, badge: "CEO" },
       { title: "Executive Reports & Charts", href: "/reports", icon: BarChart3, badge: "BI" },
     ],

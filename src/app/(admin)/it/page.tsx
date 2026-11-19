@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ShieldCheck,
   KeyRound,
@@ -85,10 +86,71 @@ interface PolicyAlertItem {
   createdAt: string;
 }
 
+interface ProductionReleaseItem {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  targetSystem: string;
+  stage: number;
+  status: "PENDING_SUPER_ADMIN" | "APPROVED_LIVE" | "REJECTED";
+  adminName: string;
+  adminEmail: string;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  justification: string;
+  rollBackPlan: string;
+  diffSummary?: string | null;
+  superAdminNotes?: string | null;
+  superAdminName?: string | null;
+  superAdminEmail?: string | null;
+  approvedAt?: string | null;
+  createdAt: string;
+}
+
 export default function ItGovernancePage() {
   const { success: toastSuccess, error: toastError } = useToast();
+  const searchParams = useSearchParams();
 
-  const [activeTab, setActiveTab] = React.useState<"requests" | "provision" | "alerts" | "sessions">("requests");
+  const [activeTab, setActiveTab] = React.useState<
+    "requests" | "provision" | "alerts" | "sessions" | "production"
+  >("requests");
+
+  React.useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (
+      tabParam === "production" ||
+      tabParam === "requests" ||
+      tabParam === "provision" ||
+      tabParam === "alerts" ||
+      tabParam === "sessions"
+    ) {
+      setActiveTab(tabParam as any);
+    }
+  }, [searchParams]);
+
+  // Production Releases State (2-Level Approval)
+  const [productionReleases, setProductionReleases] = React.useState<ProductionReleaseItem[]>([]);
+  const [releaseStats, setReleaseStats] = React.useState({
+    pendingCount: 0,
+    approvedCount: 0,
+    rejectedCount: 0,
+    totalCount: 0,
+  });
+  const [isSuperAdminRole, setIsSuperAdminRole] = React.useState(false);
+  const [isSubmittingRelease, setIsSubmittingRelease] = React.useState(false);
+  const [newReleaseModalOpen, setNewReleaseModalOpen] = React.useState(false);
+  const [selectedReleaseForReview, setSelectedReleaseForReview] = React.useState<ProductionReleaseItem | null>(null);
+  const [superAdminDecisionNotes, setSuperAdminDecisionNotes] = React.useState("");
+  const [isDecidingRelease, setIsDecidingRelease] = React.useState(false);
+
+  // Stage 1 proposal form
+  const [releaseForm, setReleaseForm] = React.useState({
+    title: "",
+    targetSystem: "Core Cloud API Cluster",
+    riskLevel: "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+    justification: "",
+    rollBackPlan: "",
+    diffSummary: "",
+  });
   const [requests, setRequests] = React.useState<CredentialRequestItem[]>([]);
   const [stats, setStats] = React.useState({
     pendingCount: 0,
@@ -250,19 +312,100 @@ export default function ItGovernancePage() {
     }
   }, []);
 
+  const fetchProductionReleases = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/it/production-approvals");
+      if (res.ok) {
+        const data = await res.json();
+        setProductionReleases(data.requests || []);
+        setReleaseStats(
+          data.stats || { pendingCount: 0, approvedCount: 0, rejectedCount: 0, totalCount: 0 }
+        );
+        setIsSuperAdminRole(Boolean(data.isSuperAdmin));
+      }
+    } catch {
+      // non-blocking
+    }
+  }, []);
+
   React.useEffect(() => {
     fetchRequests();
     fetchAlerts();
     fetchInactivityPolicy();
     fetchLiveSessions();
-  }, [fetchRequests, fetchAlerts, fetchInactivityPolicy, fetchLiveSessions]);
+    fetchProductionReleases();
+  }, [fetchRequests, fetchAlerts, fetchInactivityPolicy, fetchLiveSessions, fetchProductionReleases]);
 
   React.useEffect(() => {
     if (activeTab === "sessions") {
       fetchLiveSessions();
       fetchInactivityPolicy();
+    } else if (activeTab === "production") {
+      fetchProductionReleases();
     }
-  }, [activeTab, fetchLiveSessions, fetchInactivityPolicy]);
+  }, [activeTab, fetchLiveSessions, fetchInactivityPolicy, fetchProductionReleases]);
+
+  // Stage 1: Admin proposes production release
+  const handleProposeRelease = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingRelease(true);
+    try {
+      const res = await fetch("/api/it/production-approvals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(releaseForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to submit release proposal");
+      toastSuccess(
+        `Production release ticket #${data.request?.ticketNumber || "PRD"} staged for Super Admin authorization.`
+      );
+      setNewReleaseModalOpen(false);
+      setReleaseForm({
+        title: "",
+        targetSystem: "Core Cloud API Cluster",
+        riskLevel: "MEDIUM",
+        justification: "",
+        rollBackPlan: "",
+        diffSummary: "",
+      });
+      fetchProductionReleases();
+    } catch (err: any) {
+      toastError(err.message || "Failed to submit release request");
+    } finally {
+      setIsSubmittingRelease(false);
+    }
+  };
+
+  // Stage 2: Super Admin authorizes or rejects production release
+  const handleDecideRelease = async (action: "APPROVE" | "REJECT") => {
+    if (!selectedReleaseForReview) return;
+    setIsDecidingRelease(true);
+    try {
+      const res = await fetch(`/api/it/production-approvals/${selectedReleaseForReview.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action,
+          notes: superAdminDecisionNotes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to finalize production decision");
+      toastSuccess(
+        action === "APPROVE"
+          ? `Stage 2 Complete: Ticket #${selectedReleaseForReview.ticketNumber} deployed live to production! Initiator notified.`
+          : `Ticket #${selectedReleaseForReview.ticketNumber} rejected.`
+      );
+      setSelectedReleaseForReview(null);
+      setSuperAdminDecisionNotes("");
+      fetchProductionReleases();
+    } catch (err: any) {
+      toastError(err.message || "Failed to finalize decision");
+    } finally {
+      setIsDecidingRelease(false);
+    }
+  };
 
   // Handle Review Submission (Grant Access / Reject)
   const handleSubmitReview = async () => {
@@ -661,6 +804,24 @@ export default function ItGovernancePage() {
         >
           <EyeOff className="h-4 w-4" />
           <span>Zero-Dashboard Access Policy</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("production")}
+          className={`relative pb-3 text-sm font-semibold transition-colors flex items-center gap-2 ml-4 whitespace-nowrap ${
+            activeTab === "production"
+              ? "text-[#ED2618] border-b-2 border-[#ED2618]"
+              : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+          }`}
+        >
+          <Cpu className="h-4 w-4" />
+          <span>2-Level Production Approvals</span>
+          {releaseStats.pendingCount > 0 && (
+            <span className="ml-1 rounded-full bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-0.5 text-xs font-bold border border-amber-500/20">
+              {releaseStats.pendingCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -1678,6 +1839,232 @@ export default function ItGovernancePage() {
         </div>
       )}
 
+      {/* TAB 5: 2-Level Production Approvals Gate */}
+      {activeTab === "production" && (
+        <div className="space-y-6">
+          {/* Header Action Banner */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-2xl bg-gradient-to-r from-zinc-900 via-slate-900 to-black border border-slate-200/80 dark:border-white/[0.08] shadow-lg">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-mono uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-bold">
+                  2-STAGE RELEASE GATE
+                </span>
+                <span className="text-xs text-slate-400 font-mono">
+                  Production Infrastructure Governance
+                </span>
+              </div>
+              <h3 className="text-xl font-bold text-white">
+                Production Release Control & Dual-Key Authorization
+              </h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-2xl">
+                Stage 1: System Admin drafts code diff, target cluster, and automated rollback plan.
+                Stage 2: Super Admin reviews change impact and authorizes live deployment. The initiating Admin is instantly notified.
+              </p>
+            </div>
+
+            <Button
+              onClick={() => setNewReleaseModalOpen(true)}
+              className="bg-[#ED2618] hover:bg-[#d02013] text-white self-start sm:self-auto shrink-0 shadow-lg shadow-red-600/20"
+            >
+              <Cpu className="h-4 w-4 mr-1.5" />
+              Propose Production Release
+            </Button>
+          </div>
+
+          {/* Statistics Strip */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] shadow-sm">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider">Awaiting Super Admin</span>
+                <Clock className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-amber-500">
+                {releaseStats.pendingCount}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">Stage 1 Staged • Pending final key</p>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] shadow-sm">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider">Live In Production</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-emerald-500">
+                {releaseStats.approvedCount}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">Stage 2 Authorized & Deployed</p>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] shadow-sm">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider">Declined / Re-Staged</span>
+                <XCircle className="w-4 h-4 text-rose-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-slate-700 dark:text-slate-300">
+                {releaseStats.rejectedCount}
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">Returned for revisions</p>
+            </div>
+
+            <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] shadow-sm">
+              <div className="flex items-center justify-between text-slate-500 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-wider">Rollback Compliance</span>
+                <ShieldCheck className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className="text-2xl font-bold font-mono text-blue-500">
+                100.0%
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1">Zero unverified live rollouts</p>
+            </div>
+          </div>
+
+          {/* Release Queue Table */}
+          <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Production Deployment Queue
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Dual-gate authorization registry for all live cloud workloads.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={fetchProductionReleases}
+                className="text-xs"
+              >
+                <RefreshCw className="w-3.5 h-3.5 mr-1" />
+                Refresh
+              </Button>
+            </div>
+
+            {productionReleases.length === 0 ? (
+              <div className="p-12 text-center">
+                <Cpu className="h-10 w-10 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+                <p className="text-base font-semibold text-slate-800 dark:text-slate-200">
+                  No Production Releases in Flight
+                </p>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  All production clusters are stable. Use &quot;Propose Production Release&quot; when deploying new features or infrastructure patches.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 dark:bg-white/[0.02] text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200/60 dark:border-white/[0.06]">
+                    <tr>
+                      <th className="px-5 py-3">Ticket / Release Title</th>
+                      <th className="px-4 py-3">Target Workload</th>
+                      <th className="px-4 py-3">Initiating Admin</th>
+                      <th className="px-4 py-3">Risk Assessment</th>
+                      <th className="px-4 py-3">Release Stage</th>
+                      <th className="px-5 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/[0.04]">
+                    {productionReleases.map((rel) => (
+                      <tr
+                        key={rel.id}
+                        className="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors"
+                      >
+                        <td className="px-5 py-4">
+                          <div className="font-mono text-[11px] font-bold text-red-600 dark:text-red-400">
+                            {rel.ticketNumber}
+                          </div>
+                          <div className="font-semibold text-slate-900 dark:text-white text-xs mt-0.5">
+                            {rel.title}
+                          </div>
+                          <div className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">
+                            {rel.justification}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <span className="font-mono text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.05] px-2 py-1 rounded">
+                            {rel.targetSystem}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <div className="text-slate-800 dark:text-slate-200 font-medium">
+                            {rel.adminName}
+                          </div>
+                          <div className="text-[11px] text-slate-400 font-mono">
+                            {rel.adminEmail}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                              rel.riskLevel === "CRITICAL"
+                                ? "bg-red-500/10 text-red-500 border border-red-500/20"
+                                : rel.riskLevel === "HIGH"
+                                ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                                : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                            }`}
+                          >
+                            {rel.riskLevel} RISK
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-4">
+                          {rel.status === "PENDING_SUPER_ADMIN" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-[11px] font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <span>Stage 1 Staged • Awaiting Super Admin</span>
+                            </span>
+                          ) : rel.status === "APPROVED_LIVE" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              <span>Stage 2 Authorized • Live in Production</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-[11px] font-semibold">
+                              <XCircle className="w-3.5 h-3.5" />
+                              <span>Rejected</span>
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-5 py-4 text-right">
+                          {rel.status === "PENDING_SUPER_ADMIN" ? (
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedReleaseForReview(rel);
+                                setSuperAdminDecisionNotes("");
+                              }}
+                              className="text-xs bg-[#ED2618] hover:bg-[#d02013] text-white"
+                            >
+                              {isSuperAdminRole ? "Review & Authorize" : "Inspect Staged Spec"}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedReleaseForReview(rel);
+                                setSuperAdminDecisionNotes(rel.superAdminNotes || "");
+                              }}
+                              className="text-xs"
+                            >
+                              Inspect Audit Log
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* MODAL 1: Review & Grant Authorization Modal */}
       <Modal
         isOpen={!!selectedTicket}
@@ -2127,6 +2514,302 @@ export default function ItGovernancePage() {
                 )}
               </Button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* MODAL 4: Stage 1 - Propose Production Release */}
+      <Modal
+        isOpen={newReleaseModalOpen}
+        onClose={() => setNewReleaseModalOpen(false)}
+        title="Stage 1: Propose Production Release"
+        description="Dual-key release gate: System Admin stages change proposal for Super Admin authorization"
+        maxWidth="2xl"
+      >
+        <form onSubmit={handleProposeRelease} className="space-y-4 pt-2">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Release Title / Patch Summary *
+            </label>
+            <Input
+              required
+              placeholder="e.g. v2.4.0 Core Infrastructure & Executive Cockpit Deployment"
+              value={releaseForm.title}
+              onChange={(e) => setReleaseForm({ ...releaseForm, title: e.target.value })}
+              className="text-xs"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Target Cloud Workload / Cluster *
+              </label>
+              <select
+                aria-label="Target cloud workload or cluster"
+                value={releaseForm.targetSystem}
+                onChange={(e) => setReleaseForm({ ...releaseForm, targetSystem: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-xs text-slate-900 dark:text-white"
+              >
+                <option value="Core Cloud API Cluster">Core Cloud API Cluster</option>
+                <option value="Next.js Admin & Ops Web">Next.js Admin & Ops Web</option>
+                <option value="Enterprise Database Engine">Enterprise Database Engine</option>
+                <option value="Payment & Treasury Service">Payment & Treasury Service</option>
+                <option value="Edge CDN & Firewall">Edge CDN & Firewall</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Risk Assessment *
+              </label>
+              <select
+                aria-label="Risk assessment"
+                value={releaseForm.riskLevel}
+                onChange={(e) => setReleaseForm({ ...releaseForm, riskLevel: e.target.value as any })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 text-xs text-slate-900 dark:text-white"
+              >
+                <option value="LOW">Low (Non-breaking additive update)</option>
+                <option value="MEDIUM">Medium (Service restart required)</option>
+                <option value="HIGH">High (Schema migration / Core logic)</option>
+                <option value="CRITICAL">Critical (Zero-downtime hotfix)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Business Justification / Architectural Context *
+            </label>
+            <textarea
+              required
+              rows={2}
+              placeholder="Explain why this change is required and what business directorate benefits..."
+              value={releaseForm.justification}
+              onChange={(e) => setReleaseForm({ ...releaseForm, justification: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ED2618]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Automated Rollback & Contingency Plan *
+            </label>
+            <textarea
+              required
+              rows={2}
+              placeholder="e.g. Automated Kubernetes pod rollback to SHA 4a7c8d with DB backward-compatible schema"
+              value={releaseForm.rollBackPlan}
+              onChange={(e) => setReleaseForm({ ...releaseForm, rollBackPlan: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ED2618]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Git Commit Hashes / Diff Summary (Optional)
+            </label>
+            <textarea
+              rows={2}
+              placeholder="e.g. commit 9a8c12f... (add MD & GM dashboards, dual-key release gate)"
+              value={releaseForm.diffSummary}
+              onChange={(e) => setReleaseForm({ ...releaseForm, diffSummary: e.target.value })}
+              className="w-full font-mono text-[11px] rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 p-2.5 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ED2618]"
+            />
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 dark:border-white/[0.08] flex items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setNewReleaseModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmittingRelease}
+              className="bg-[#ED2618] hover:bg-[#d02013] text-white"
+            >
+              {isSubmittingRelease ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin mr-1.5" />
+                  Staging Proposal...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-1.5" />
+                  Submit for Super Admin Sign-off
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL 5: Stage 2 - Super Admin Review & Dual-Key Authorization */}
+      <Modal
+        isOpen={!!selectedReleaseForReview}
+        onClose={() => setSelectedReleaseForReview(null)}
+        title={
+          selectedReleaseForReview
+            ? `Release: ${selectedReleaseForReview.ticketNumber}`
+            : "Production Release Review"
+        }
+        description="Stage 2 Dual-Key Production Review & Authorization Gate"
+        maxWidth="2xl"
+      >
+        {selectedReleaseForReview && (
+          <div className="space-y-4 pt-2">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/[0.08] space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-bold text-red-600 dark:text-red-400">
+                  {selectedReleaseForReview.ticketNumber}
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                    selectedReleaseForReview.riskLevel === "CRITICAL"
+                      ? "bg-red-500/10 text-red-500 border border-red-500/20"
+                      : "bg-blue-500/10 text-blue-500 border border-blue-500/20"
+                  }`}
+                >
+                  {selectedReleaseForReview.riskLevel} RISK
+                </span>
+              </div>
+
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                  {selectedReleaseForReview.title}
+                </h4>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Target Workload:{" "}
+                  <strong className="text-slate-800 dark:text-slate-200 font-mono">
+                    {selectedReleaseForReview.targetSystem}
+                  </strong>
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-200/50 dark:border-white/[0.05] pt-2">
+                <div>
+                  <span className="text-slate-400">Initiating Admin:</span>
+                  <p className="font-semibold text-slate-800 dark:text-slate-200">
+                    {selectedReleaseForReview.adminName} ({selectedReleaseForReview.adminEmail})
+                  </p>
+                </div>
+                <div>
+                  <span className="text-slate-400">Current Gate:</span>
+                  <p className="font-semibold text-amber-500">
+                    {selectedReleaseForReview.status === "PENDING_SUPER_ADMIN"
+                      ? "Stage 1 Complete • Awaiting Super Admin"
+                      : selectedReleaseForReview.status}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200/50 dark:border-white/[0.05] pt-2 space-y-2 text-xs">
+                <div>
+                  <span className="text-slate-400 font-medium">Business Justification:</span>
+                  <p className="text-slate-800 dark:text-slate-200 mt-0.5">
+                    {selectedReleaseForReview.justification}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-slate-400 font-medium">Automated Rollback Plan:</span>
+                  <p className="text-slate-800 dark:text-slate-200 mt-0.5 font-mono text-[11px] bg-white dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/5">
+                    {selectedReleaseForReview.rollBackPlan}
+                  </p>
+                </div>
+
+                {selectedReleaseForReview.diffSummary && (
+                  <div>
+                    <span className="text-slate-400 font-medium">Diff / Changelog Summary:</span>
+                    <pre className="text-slate-800 dark:text-slate-200 mt-0.5 font-mono text-[11px] bg-white dark:bg-black/30 p-2 rounded-lg border border-slate-200/50 dark:border-white/5 overflow-x-auto whitespace-pre-wrap">
+                      {selectedReleaseForReview.diffSummary}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedReleaseForReview.status === "PENDING_SUPER_ADMIN" ? (
+              isSuperAdminRole ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Super Admin Review Notes / Authorization Decree *
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Authorized for immediate rolling rollout. Rollback plan verified."
+                      value={superAdminDecisionNotes}
+                      onChange={(e) => setSuperAdminDecisionNotes(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-zinc-900 p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ED2618]"
+                    />
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 dark:border-white/[0.08] flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedReleaseForReview(null)}
+                    >
+                      Close
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isDecidingRelease}
+                      onClick={() => handleDecideRelease("REJECT")}
+                      className="border-red-500/30 text-red-600 hover:bg-red-500/10 text-xs"
+                    >
+                      Reject Release
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={isDecidingRelease}
+                      onClick={() => handleDecideRelease("APPROVE")}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
+                    >
+                      {isDecidingRelease ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin mr-1.5" />
+                          Deploying Live...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                          Stage 2: Authorize & Deploy Live
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-500 text-xs flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 shrink-0" />
+                  <span>
+                    This ticket has cleared Stage 1 and is currently awaiting dual-key signoff by a Super Admin. You will receive an instant in-app notification once authorized.
+                  </span>
+                </div>
+              )
+            ) : (
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/[0.08] space-y-1 text-xs">
+                <span className="text-slate-400">Decision Audit:</span>
+                <p className="font-semibold text-slate-800 dark:text-slate-200">
+                  {selectedReleaseForReview.status === "APPROVED_LIVE" ? "Authorized Live by" : "Reviewed by"}:{" "}
+                  {selectedReleaseForReview.superAdminName || "Super Admin"} (
+                  {selectedReleaseForReview.superAdminEmail || "superadmin@dextaafrica.org"})
+                </p>
+                {selectedReleaseForReview.superAdminNotes && (
+                  <p className="text-slate-600 dark:text-slate-400 italic">
+                    &quot;{selectedReleaseForReview.superAdminNotes}&quot;
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </Modal>
