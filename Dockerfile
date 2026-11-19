@@ -78,7 +78,7 @@ RUN mkdir -p /app/prisma /app/data && \
     chown -R nextjs:nodejs /app/prisma /app/data
 
 # Copy Next.js public assets and static build artifacts
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 # Copy Next.js standalone application build

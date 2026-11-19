@@ -7,17 +7,19 @@ const smtpUser = process.env.SMTP_USER || "";
 const smtpPass = process.env.SMTP_PASS || "";
 const emailFrom = process.env.EMAIL_FROM || "Dexta Operations <operations@dextaafrica.com>";
 
-// Local Mailpit/MailHog on 127.0.0.1/localhost/mailpit or port 1025 does NOT require authentication credentials
-const isLocalSmtp =
+// Internal relays (Postfix, Mailpit, local daemon) do NOT require authentication credentials
+const isInternalRelay =
   smtpHost === "127.0.0.1" ||
   smtpHost === "localhost" ||
   smtpHost === "mailpit" ||
-  smtpPort === 1025;
+  smtpHost === "postfix" ||
+  smtpPort === 1025 ||
+  (!smtpUser && !smtpPass);
 
-export const isEmailConfigured = isLocalSmtp || Boolean(smtpHost && smtpUser && smtpPass);
+export const isEmailConfigured = Boolean(smtpHost && (isInternalRelay || (smtpUser && smtpPass)));
 
 export const emailTransporter = isEmailConfigured
-  ? isLocalSmtp
+  ? isInternalRelay
     ? nodemailer.createTransport({
         host: smtpHost,
         port: smtpPort,

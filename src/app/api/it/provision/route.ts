@@ -5,6 +5,7 @@ import { logAuditEvent } from "@/lib/auth/audit";
 import { sendEmail } from "@/lib/email/dispatcher";
 import { backendApi } from "@/lib/backend-api";
 import { ItProvisionUserSchema } from "@/lib/validation/schemas";
+import { getSubdomainUrl } from "@/lib/routing";
 import bcrypt from "bcryptjs";
 
 export const dynamic = "force-dynamic";
@@ -169,24 +170,9 @@ export async function POST(req: NextRequest) {
 
     // 9. Construct Subdomain Activation URL
     const host = req.headers.get("host") || "";
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
-    const port = host.split(":")[1] || "3000";
-    const protocol = req.nextUrl.protocol || "http:";
-
-    let activationUrl: string;
-    if (targetDomain === "ops.dextaafrica.org") {
-      activationUrl = isLocal
-        ? `${protocol}//ops.localhost:${port}/register?action=activate&email=${encodeURIComponent(normalizedEmail)}&key=${encodeURIComponent(activationKey)}`
-        : `https://ops.dextaafrica.org/register?action=activate&email=${encodeURIComponent(normalizedEmail)}&key=${encodeURIComponent(activationKey)}`;
-    } else if (targetDomain === "admin.dextafrica.org") {
-      activationUrl = isLocal
-        ? `${protocol}//admin.localhost:${port}/register?action=activate&email=${encodeURIComponent(normalizedEmail)}&key=${encodeURIComponent(activationKey)}`
-        : `https://admin.dextafrica.org/register?action=activate&email=${encodeURIComponent(normalizedEmail)}&key=${encodeURIComponent(activationKey)}`;
-    } else {
-      activationUrl = isLocal
-        ? `${protocol}//localhost:${port}/register?action=activate&email=${encodeURIComponent(normalizedEmail)}&key=${encodeURIComponent(activationKey)}`
-        : `https://dextafrica.org/register?action=activate&email=${encodeURIComponent(normalizedEmail)}&key=${encodeURIComponent(activationKey)}`;
-    }
+    const targetSub = targetDomain.startsWith("ops") ? "ops" : targetDomain.startsWith("admin") ? "admin" : "root";
+    const activationPath = `/register?action=activate&email=${encodeURIComponent(normalizedEmail)}&key=${encodeURIComponent(activationKey)}`;
+    const activationUrl = getSubdomainUrl(targetSub, activationPath, host);
 
     // 10. Dispatch Welcome Email with Activation Credentials via Mailpit / SMTP
     if (sendWelcomeEmail) {

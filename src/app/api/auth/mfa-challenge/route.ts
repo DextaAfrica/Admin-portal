@@ -10,6 +10,7 @@ import {
   SESSION_DURATION_DAYS,
   getCookieDomain,
 } from "@/lib/auth/session";
+import { getSubdomainUrl } from "@/lib/routing";
 import { logAuditEvent } from "@/lib/auth/audit";
 
 export async function POST(req: NextRequest) {
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
     const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
 
     if (isAdminHost && !isSuperAdmin && dept !== "IT") {
-      const targetUrl = isLocal ? `http://ops.localhost${port}/login` : "https://ops.dextaafrica.org/login";
+      const targetUrl = getSubdomainUrl("ops", "/login", host);
       return NextResponse.json(
         {
           error: "This account belongs to the Operations workspace. Please sign in through the Operations Desk.",
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (isOpsHost && !isSuperAdmin && dept === "IT") {
-      const targetUrl = isLocal ? `http://admin.localhost${port}/login` : "https://admin.dextaafrica.org/login";
+      const targetUrl = getSubdomainUrl("admin", "/login", host);
       return NextResponse.json(
         {
           error: "This account belongs to the Systems IT workspace. Please sign in through the Systems Portal.",

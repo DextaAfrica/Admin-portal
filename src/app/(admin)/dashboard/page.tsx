@@ -15,6 +15,7 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { getCurrentSession, createSsoTicket } from "@/lib/auth/session";
+import { getSubdomainUrl } from "@/lib/routing";
 import { backendApi } from "@/lib/backend-api";
 import { DepartmentDashboardView } from "@/components/dashboard/DepartmentDashboardView";
 
@@ -42,9 +43,7 @@ export default async function DashboardPage() {
   // STRICT DOMAIN ISOLATION ARCHITECTURE:
   // Non-IT, non-executive users (Operations, Finance, HR) accessing admin.* must be routed to ops.* via SSO ticket
   if (isAdminHost && !isSuperAdmin && userDept !== "IT") {
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
-    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
-    const opsBase = isLocal ? `http://ops.localhost${port}` : `https://ops.dextaafrica.org`;
+    const opsBase = getSubdomainUrl("ops", "", host);
     if (sessionToken) {
       const ticket = await createSsoTicket(sessionToken);
       redirect(`${opsBase}/api/auth/sso?ticket=${ticket}&next=/dashboard`);
@@ -55,9 +54,7 @@ export default async function DashboardPage() {
 
   // IT personnel accessing ops.* must be routed to admin.* via SSO ticket
   if (isOpsHost && !isSuperAdmin && userDept === "IT") {
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
-    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
-    const adminBase = isLocal ? `http://admin.localhost${port}` : `https://admin.dextaafrica.org`;
+    const adminBase = getSubdomainUrl("admin", "", host);
     if (sessionToken) {
       const ticket = await createSsoTicket(sessionToken);
       redirect(`${adminBase}/api/auth/sso?ticket=${ticket}&next=/dashboard`);
