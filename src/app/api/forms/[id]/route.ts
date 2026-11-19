@@ -83,6 +83,8 @@ export async function PUT(
         coverImageUrl: body.coverImageUrl !== undefined ? body.coverImageUrl : existing.coverImageUrl,
         eventDate: body.eventDate ? new Date(body.eventDate) : body.eventDate === null ? null : existing.eventDate,
         eventLocation: body.eventLocation !== undefined ? body.eventLocation : existing.eventLocation,
+        activeFrom: body.activeFrom ? new Date(body.activeFrom) : body.activeFrom === null ? null : existing.activeFrom,
+        activeUntil: body.activeUntil ? new Date(body.activeUntil) : body.activeUntil === null ? null : existing.activeUntil,
         fields: body.fields !== undefined ? (typeof body.fields === "string" ? body.fields : JSON.stringify(body.fields)) : existing.fields,
         metadata: body.metadata !== undefined ? (typeof body.metadata === "string" ? body.metadata : JSON.stringify(body.metadata)) : existing.metadata,
         sendConfirmationEmail: body.sendConfirmationEmail !== undefined ? Boolean(body.sendConfirmationEmail) : existing.sendConfirmationEmail,

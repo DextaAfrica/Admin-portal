@@ -621,6 +621,8 @@ model CustomForm {
   coverImageUrl           String?          @default("")
   eventDate               DateTime?
   eventLocation           String?          @default("")
+  activeFrom              DateTime?        // Scheduled start date/time when form opens
+  activeUntil             DateTime?        // Scheduled expiry date/time when form automatically closes
   fields                  String           @default("[]") // JSON stringified form fields
   metadata                String           @default("{}") // JSON stringified metadata/styling
   sendConfirmationEmail   Boolean          @default(true)

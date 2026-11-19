@@ -55,6 +55,8 @@ export async function GET(
         coverImageUrl: form.coverImageUrl || "",
         eventDate: form.eventDate ? form.eventDate.toISOString() : null,
         eventLocation: form.eventLocation || "",
+        activeFrom: form.activeFrom ? form.activeFrom.toISOString() : null,
+        activeUntil: form.activeUntil ? form.activeUntil.toISOString() : null,
         fields: parsedFields,
         metadata: parsedMetadata,
         sendConfirmationEmail: form.sendConfirmationEmail,
@@ -100,6 +102,29 @@ export async function POST(
     if (form.status !== "active") {
       return NextResponse.json(
         { error: "This registration link is currently closed or inactive." },
+        { status: 400 }
+      );
+    }
+
+    const now = new Date();
+    if (form.activeFrom && now < new Date(form.activeFrom)) {
+      return NextResponse.json(
+        {
+          error: `Registration has not opened yet. Submissions open on ${new Date(
+            form.activeFrom
+          ).toLocaleDateString(undefined, { dateStyle: "full" })}.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    if (form.activeUntil && now > new Date(form.activeUntil)) {
+      return NextResponse.json(
+        {
+          error: `Registration has closed for this portal as of ${new Date(
+            form.activeUntil
+          ).toLocaleDateString(undefined, { dateStyle: "full" })}.`,
+        },
         { status: 400 }
       );
     }
