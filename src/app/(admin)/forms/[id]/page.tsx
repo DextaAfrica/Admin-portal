@@ -28,10 +28,15 @@ import {
   Mail,
   Printer,
   ShieldCheck,
+  Send,
+  Sparkles,
+  X,
+  CheckSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useToast } from "@/components/ui/Toast";
+import { Modal } from "@/components/ui/Modal";
 import { formatDate } from "@/lib/utils";
 
 interface Submission {
@@ -93,6 +98,13 @@ export default function FormDemographicsPage({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState("ALL");
   const [isCopied, setIsCopied] = React.useState(false);
+
+  // Batch Email Dispatcher States
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [isBatchModalOpen, setIsBatchModalOpen] = React.useState(false);
+  const [batchSubject, setBatchSubject] = React.useState("");
+  const [batchMessage, setBatchMessage] = React.useState("");
+  const [isSendingBatch, setIsSendingBatch] = React.useState(false);
 
   const fetchAnalytics = React.useCallback(async () => {
     setLoading(true);
@@ -206,6 +218,67 @@ export default function FormDemographicsPage({
       (s.jobTitle && s.jobTitle.toLowerCase().includes(q));
     return matchesCat && matchesSearch;
   });
+
+  const handleSelectAll = () => {
+    if (selectedIds.length === filteredSubmissions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredSubmissions.map((s) => s.id));
+    }
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleOpenBatchModal = () => {
+    if (selectedIds.length === 0) {
+      toastError("Please select at least one registrant to message.");
+      return;
+    }
+    setBatchSubject(`Update: ${data?.form.title || "Registration Portal"}`);
+    setBatchMessage(
+      `Dear {{firstName}},\n\nThank you for registering for ${data?.form.title || "our portal"}.\n\nWe are pleased to reach out regarding your registration details.\n\nWarm regards,\nDexta Africa Executive Office`
+    );
+    setIsBatchModalOpen(true);
+  };
+
+  const insertToken = (token: string) => {
+    setBatchMessage((prev) => prev + " " + token);
+  };
+
+  const handleSendBatchEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!batchSubject.trim() || !batchMessage.trim()) {
+      toastError("Subject and message body are required.");
+      return;
+    }
+    setIsSendingBatch(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/batch-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          submissionIds: selectedIds,
+          subject: batchSubject.trim(),
+          message: batchMessage.trim(),
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Failed to dispatch batch email.");
+      toastSuccess(
+        `Dispatched batch emails to ${result.dispatchedCount} recipient(s).`
+      );
+      setIsBatchModalOpen(false);
+      setSelectedIds([]);
+    } catch (err: any) {
+      toastError(err.message || "Failed to dispatch batch emails.");
+    } finally {
+      setIsSendingBatch(false);
+    }
+  };
 
   return (
     <div className="space-y-6 print:bg-white print:text-black">
@@ -466,23 +539,82 @@ export default function FormDemographicsPage({
             ))}
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search leads, name, org..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-[#121724] border border-neutral-800 rounded-lg text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-red-500"
-            />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              size="sm"
+              onClick={handleOpenBatchModal}
+              disabled={selectedIds.length === 0}
+              className={`text-xs h-8 ${
+                selectedIds.length > 0
+                  ? "bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/30"
+                  : "bg-neutral-800 text-neutral-500 border border-neutral-700 cursor-not-allowed"
+              }`}
+            >
+              <Send className="w-3.5 h-3.5 mr-1.5" />
+              <span>
+                Send Batch Email {selectedIds.length > 0 ? `(${selectedIds.length})` : ""}
+              </span>
+            </Button>
+
+            <div className="relative flex-1 sm:w-64">
+              <Search className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search leads, name, org..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-[#121724] border border-neutral-800 rounded-lg text-xs text-neutral-200 placeholder:text-neutral-500 focus:outline-none focus:border-red-500"
+              />
+            </div>
           </div>
         </div>
+
+        {/* Dynamic Selection Alert Strip */}
+        {selectedIds.length > 0 && (
+          <div className="px-5 py-2.5 bg-red-600/10 border-b border-red-500/20 flex flex-wrap items-center justify-between gap-3 animate-fadeIn">
+            <div className="flex items-center gap-2 text-xs">
+              <CheckSquare className="w-4 h-4 text-red-400" />
+              <span className="text-white">
+                <strong className="text-red-400 font-semibold">{selectedIds.length}</strong> of{" "}
+                {filteredSubmissions.length} submission{filteredSubmissions.length > 1 ? "s" : ""} selected
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleOpenBatchModal}
+                className="bg-red-600 hover:bg-red-500 text-white shadow-sm text-xs h-7 px-3"
+              >
+                <Send className="w-3 h-3 mr-1.5" />
+                <span>Compose Batch Email</span>
+              </Button>
+              <button
+                onClick={() => setSelectedIds([])}
+                className="text-xs text-neutral-400 hover:text-white px-2.5 py-1 rounded hover:bg-neutral-800 transition-colors"
+              >
+                Clear Selection
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-[#141a29]/80 border-b border-neutral-800 text-neutral-400 uppercase tracking-wider text-[11px] font-semibold print:bg-gray-100 print:text-black">
               <tr>
+                <th className="py-3 px-4 w-10 text-center">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filteredSubmissions.length > 0 &&
+                      selectedIds.length === filteredSubmissions.length
+                    }
+                    onChange={handleSelectAll}
+                    className="rounded border-neutral-700 bg-neutral-800 text-red-600 focus:ring-red-500 cursor-pointer w-3.5 h-3.5"
+                    aria-label="Select all submissions"
+                  />
+                </th>
                 <th className="py-3 px-4">Registrant Name & Email</th>
                 <th className="py-3 px-4">Organization & Title</th>
                 <th className="py-3 px-4">Phone Number</th>
@@ -496,20 +628,36 @@ export default function FormDemographicsPage({
             <tbody className="divide-y divide-neutral-800/60 print:divide-gray-200">
               {filteredSubmissions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-10 text-neutral-400">
+                  <td colSpan={9} className="text-center py-10 text-neutral-400">
                     No submissions matching your filter criteria.
                   </td>
                 </tr>
               ) : (
-                filteredSubmissions.map((sub) => (
-                  <tr key={sub.id} className="hover:bg-[#141a29]/40 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-neutral-100 print:text-black">{sub.fullName}</div>
-                      <div className="text-[11px] text-neutral-400 font-mono flex items-center gap-1 mt-0.5">
-                        <Mail className="w-3 h-3 text-neutral-500" />
-                        <span>{sub.email}</span>
-                      </div>
-                    </td>
+                filteredSubmissions.map((sub) => {
+                  const isSelected = selectedIds.includes(sub.id);
+                  return (
+                    <tr
+                      key={sub.id}
+                      className={`hover:bg-[#141a29]/40 transition-colors ${
+                        isSelected ? "bg-red-500/[0.04]" : ""
+                      }`}
+                    >
+                      <td className="py-3.5 px-4 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => handleToggleSelect(sub.id)}
+                          className="rounded border-neutral-700 bg-neutral-800 text-red-600 focus:ring-red-500 cursor-pointer w-3.5 h-3.5"
+                          aria-label={`Select ${sub.fullName}`}
+                        />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-neutral-100 print:text-black">{sub.fullName}</div>
+                        <div className="text-[11px] text-neutral-400 font-mono flex items-center gap-1 mt-0.5">
+                          <Mail className="w-3 h-3 text-neutral-500" />
+                          <span>{sub.email}</span>
+                        </div>
+                      </td>
 
                     <td className="py-3.5 px-4 text-neutral-300 print:text-black">
                       <div className="font-medium">{sub.company || "—"}</div>
@@ -606,12 +754,123 @@ export default function FormDemographicsPage({
                       {sub.createdAt.split("T")[0]}
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              }))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Batch Email Dispatcher Studio Modal */}
+      <Modal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        title="Batch Email Dispatcher Studio"
+        maxWidth="2xl"
+      >
+        <form onSubmit={handleSendBatchEmail} className="space-y-5 text-xs">
+          {/* Target Summary Banner */}
+          <div className="p-4 rounded-xl bg-[#0f1422] border border-neutral-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-white text-xs flex items-center gap-2">
+                <Send className="w-3.5 h-3.5 text-red-400" />
+                Target Recipients
+              </span>
+              <span className="font-mono text-[11px] bg-red-600/10 text-red-400 border border-red-500/20 px-2.5 py-0.5 rounded-full font-bold">
+                {selectedIds.length} Selected Registrant{selectedIds.length > 1 ? "s" : ""}
+              </span>
+            </div>
+            <p className="text-[11px] text-neutral-400">
+              Each selected respondent will receive a personalized individual email dispatched directly via enterprise SMTP.
+            </p>
+          </div>
+
+          {/* Email Subject */}
+          <div>
+            <label className="block text-xs font-semibold text-neutral-200 mb-1.5">
+              Email Subject Line *
+            </label>
+            <input
+              type="text"
+              required
+              value={batchSubject}
+              onChange={(e) => setBatchSubject(e.target.value)}
+              placeholder="e.g. Important Update: West Africa Infrastructure Summit 2026"
+              className="w-full px-3.5 py-2.5 bg-[#111624] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500 text-xs"
+            />
+          </div>
+
+          {/* Personalization Variable Chips */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-neutral-200">
+                Message Body *
+              </label>
+              <span className="text-[10px] text-neutral-500 font-mono">
+                Click chips to insert dynamic tokens
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {[
+                { token: "{{firstName}}", label: "First Name" },
+                { token: "{{fullName}}", label: "Full Name" },
+                { token: "{{company}}", label: "Company" },
+                { token: "{{category}}", label: "Category" },
+                { token: "{{portalTitle}}", label: "Portal Title" },
+              ].map((item) => (
+                <button
+                  key={item.token}
+                  type="button"
+                  onClick={() => insertToken(item.token)}
+                  className="px-2 py-1 rounded bg-[#141a29] border border-neutral-800 hover:border-red-500/50 hover:text-white text-neutral-400 font-mono text-[10px] transition-colors flex items-center gap-1"
+                >
+                  <Sparkles className="w-2.5 h-2.5 text-red-400" />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </div>
+            <textarea
+              required
+              rows={8}
+              value={batchMessage}
+              onChange={(e) => setBatchMessage(e.target.value)}
+              placeholder="Write your email announcement or update. Use the tokens above to personalize each email..."
+              className="w-full px-3.5 py-2.5 bg-[#111624] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500 resize-none font-mono text-xs leading-relaxed"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBatchModalOpen(false)}
+              className="border-neutral-800 text-neutral-300 hover:bg-neutral-800 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSendingBatch || selectedIds.length === 0}
+              className="bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/30 text-xs px-4"
+            >
+              {isSendingBatch ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  <span>Dispatching Emails...</span>
+                </>
+              ) : (
+                <>
+                  <Send className="w-3.5 h-3.5 mr-1.5" />
+                  <span>Send to {selectedIds.length} Recipient{selectedIds.length > 1 ? "s" : ""}</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

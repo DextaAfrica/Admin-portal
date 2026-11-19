@@ -56,6 +56,8 @@ interface FormDataState {
   coverImageUrl: string;
   eventDate: string | null;
   eventLocation: string;
+  activeFrom?: string | null;
+  activeUntil?: string | null;
   fields: CustomFormField[];
   metadata: Record<string, any>;
   sendConfirmationEmail?: boolean;
@@ -291,6 +293,119 @@ export default function PublicRegistrationPage({
     );
   }
 
+  // Active Timeline Validation
+  const now = Date.now();
+  const isUpcoming = form.activeFrom ? new Date(form.activeFrom).getTime() > now : false;
+  const isExpired = form.activeUntil ? new Date(form.activeUntil).getTime() < now : false;
+
+  if (isUpcoming) {
+    return (
+      <div className="min-h-screen bg-[#07090e] text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#0d111a] border border-neutral-800 rounded-2xl p-8 text-center shadow-2xl relative">
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-white rounded-lg bg-neutral-900 border border-neutral-800 transition-colors"
+            title="Close"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="w-14 h-14 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <Calendar className="w-7 h-7" />
+          </div>
+          <span className="text-[11px] font-mono uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+            Registration Opens Soon
+          </span>
+          <h1 className="text-xl font-bold text-neutral-100 mt-3 mb-2">{form.title}</h1>
+          <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
+            Submissions for this portal will officially open on{" "}
+            <span className="text-white font-medium">
+              {new Date(form.activeFrom!).toLocaleString(undefined, {
+                dateStyle: "medium",
+                timeStyle: "short",
+              })}
+            </span>
+            . Please check back at the scheduled opening time.
+          </p>
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <button
+              onClick={handleBack}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
+            <button
+              onClick={handleClose}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-medium text-white transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Exit Portal</span>
+            </button>
+          </div>
+          <div className="text-xs text-neutral-500 font-mono">Dexta Africa Enterprise Systems</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isExpired || form.status === "closed") {
+    return (
+      <div className="min-h-screen bg-[#07090e] text-white flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#0d111a] border border-neutral-800 rounded-2xl p-8 text-center shadow-2xl relative">
+          <button
+            onClick={handleClose}
+            className="absolute top-4 right-4 p-2 text-neutral-400 hover:text-white rounded-lg bg-neutral-900 border border-neutral-800 transition-colors"
+            title="Close"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="w-14 h-14 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-7 h-7" />
+          </div>
+          <span className="text-[11px] font-mono uppercase tracking-wider text-red-400 bg-red-500/10 px-2.5 py-1 rounded-full border border-red-500/20">
+            Registration Closed
+          </span>
+          <h1 className="text-xl font-bold text-neutral-100 mt-3 mb-2">{form.title}</h1>
+          <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
+            {form.activeUntil ? (
+              <>
+                Registration for this portal closed on{" "}
+                <span className="text-white font-medium">
+                  {new Date(form.activeUntil).toLocaleString(undefined, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                  })}
+                </span>
+                . No further submissions are being accepted.
+              </>
+            ) : (
+              "This registration portal is currently closed for submissions."
+            )}
+          </p>
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <button
+              onClick={handleBack}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-200 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back</span>
+            </button>
+            <button
+              onClick={handleClose}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-xs font-medium text-white transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Exit Portal</span>
+            </button>
+          </div>
+          <div className="text-xs text-neutral-500 font-mono">Dexta Africa Enterprise Systems</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#07090e] text-neutral-100 flex flex-col selection:bg-red-500/30 selection:text-white">
       {/* Background Ambience */}
@@ -326,7 +441,11 @@ export default function PublicRegistrationPage({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-xs text-neutral-400 bg-neutral-900/60 border border-neutral-800 px-3 py-1.5 rounded-full">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="hidden sm:inline">Secure Registration Open</span>
+              <span className="hidden sm:inline">
+                {form.activeUntil
+                  ? `Registration Open • Closes ${new Date(form.activeUntil).toLocaleDateString()}`
+                  : "Secure Registration Open"}
+              </span>
             </div>
 
             {/* X Close Button */}
