@@ -9,16 +9,22 @@ export function middleware(req: NextRequest) {
   const protocol = req.nextUrl.protocol || "http:";
 
   // 1. Subdomain Host Detection
-  const isOpsHost = host.startsWith("ops.") || host.includes("ops.dextaafrica");
-  const isAdminHost = host.startsWith("admin.") || host.includes("admin.dextafrica");
+  const hostname = host.split(":")[0].toLowerCase();
+  const isOpsHost = hostname.startsWith("ops.");
+  const isAdminHost = hostname.startsWith("admin.");
 
   const buildSubdomainRedirect = (subdomain: "ops" | "admin", subPath = "/") => {
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+    const isLocal = hostname.includes("localhost") || hostname === "127.0.0.1";
     if (isLocal) {
       const port = host.split(":")[1] || "3000";
       return new URL(`${protocol}//${subdomain}.localhost:${port}${subPath}`);
     }
-    const targetDomain = subdomain === "ops" ? "ops.dextaafrica.org" : "admin.dextafrica.org";
+    const baseDomain = process.env.NEXT_PUBLIC_BASE_DOMAIN || (
+      hostname.includes(".") ? hostname.split(".").slice(-2).join(".") : "dextaafrica.com"
+    );
+    const targetDomain = subdomain === "ops"
+      ? (process.env.NEXT_PUBLIC_OPS_DOMAIN || `ops.${baseDomain}`)
+      : (process.env.NEXT_PUBLIC_ADMIN_DOMAIN || `admin.${baseDomain}`);
     return new URL(`https://${targetDomain}${subPath}`);
   };
 

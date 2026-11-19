@@ -9,11 +9,16 @@ export const INACTIVITY_SETTING_KEY = "SESSION_INACTIVITY_TIMEOUT_MINUTES";
 
 /**
  * Returns the appropriate cookie domain for unified cross-subdomain SSO.
- * For production (*.dextaafrica.org), returns ".dextaafrica.org".
+ * For production (*.dextaafrica.com / *.dextaafrica.org), returns ".domain".
  * For local development (localhost / *.localhost), returns undefined
  * because RFC 6265 forbids setting Domain=localhost on subdomains in browsers.
  */
 export function getCookieDomain(host?: string | null): string | undefined {
+  if (process.env.COOKIE_DOMAIN) {
+    const cd = process.env.COOKIE_DOMAIN.trim();
+    return cd.startsWith(".") ? cd : `.${cd}`;
+  }
+
   if (!host) return undefined;
   const hostname = host.split(":")[0].toLowerCase();
 
@@ -28,14 +33,10 @@ export function getCookieDomain(host?: string | null): string | undefined {
     return undefined;
   }
 
-  if (hostname.endsWith("dextaafrica.org")) {
-    return ".dextaafrica.org";
-  }
-  if (hostname.endsWith("dextafrica.org")) {
-    return ".dextafrica.org";
-  }
-  if (hostname.endsWith("dextaafrica.com")) {
-    return ".dextaafrica.com";
+  // Extract root domain for multi-subdomain cookie sharing
+  const parts = hostname.split(".");
+  if (parts.length >= 2) {
+    return `.${parts.slice(-2).join(".")}`;
   }
 
   return undefined;

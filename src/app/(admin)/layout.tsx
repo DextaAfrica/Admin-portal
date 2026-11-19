@@ -1,4 +1,5 @@
 import { getCurrentSession, createSsoTicket } from "@/lib/auth/session";
+import { getSubdomainUrl } from "@/lib/routing";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -30,9 +31,7 @@ export default async function AdminLayout({
 
   // 1. Operations account on Systems IT subdomain -> automatically redirect to Operations Fleet Desk
   if (isAdminHost && !isSuperAdmin && dept !== "IT") {
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
-    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
-    const opsBase = isLocal ? `http://ops.localhost${port}` : `https://ops.dextaafrica.org`;
+    const opsBase = getSubdomainUrl("ops", "", host);
 
     if (sessionToken) {
       const ticket = await createSsoTicket(sessionToken);
@@ -44,9 +43,7 @@ export default async function AdminLayout({
 
   // 2. Systems IT account on Operations subdomain -> automatically redirect to Systems IT Console
   if (isOpsHost && !isSuperAdmin && dept === "IT") {
-    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
-    const port = host.split(":")[1] ? `:${host.split(":")[1]}` : "";
-    const adminBase = isLocal ? `http://admin.localhost${port}` : `https://admin.dextafrica.org`;
+    const adminBase = getSubdomainUrl("admin", "", host);
 
     if (sessionToken) {
       const ticket = await createSsoTicket(sessionToken);

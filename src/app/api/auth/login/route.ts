@@ -11,6 +11,7 @@ import {
   SESSION_DURATION_DAYS,
   getCookieDomain,
 } from "@/lib/auth/session";
+import { getSubdomainUrl } from "@/lib/routing";
 
 export async function POST(req: NextRequest) {
   try {
@@ -91,9 +92,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const targetUrl = isLocal
-        ? `http://ops.localhost${port}/login`
-        : `https://ops.dextaafrica.org/login`;
+      const targetUrl = getSubdomainUrl("ops", "/login", host);
 
       return NextResponse.json(
         {
@@ -123,9 +122,7 @@ export async function POST(req: NextRequest) {
         },
       });
 
-      const targetUrl = isLocal
-        ? `http://admin.localhost${port}/login`
-        : `https://admin.dextaafrica.org/login`;
+      const targetUrl = getSubdomainUrl("admin", "/login", host);
 
       return NextResponse.json(
         {
