@@ -12,7 +12,15 @@ export async function POST(
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const campaignId = params.id;
-    const updated = await dispatchCampaign(campaignId);
+    let targetCategory: string | undefined = undefined;
+    try {
+      const body = await req.json();
+      targetCategory = body?.targetCategory;
+    } catch {
+      // body optional
+    }
+
+    const updated = await dispatchCampaign(campaignId, targetCategory);
 
     await logAuditEvent({
       actorId: user.id,

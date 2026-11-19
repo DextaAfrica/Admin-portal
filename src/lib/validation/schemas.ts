@@ -170,10 +170,19 @@ export const SaveArticleSchema = z.object({
 export type SaveArticleInput = z.infer<typeof SaveArticleSchema>;
 
 // =============================================================================
-// 3. CAREERS & VACANCIES SCHEMA
+// 3. CAREERS & VACANCIES SCHEMA (HR <-> IT WORKFLOW LIFECYCLE)
 // =============================================================================
 
-export const CareerStatusEnum = z.enum(["open", "closed"]).default("open");
+export const CareerStatusEnum = z
+  .enum([
+    "PENDING_IT_APPROVAL",
+    "OPEN",
+    "FILLED_PENDING_TAKEDOWN",
+    "CLOSED",
+    "open",
+    "closed",
+  ])
+  .default("PENDING_IT_APPROVAL");
 
 export const SaveCareerListingSchema = z.object({
   title: safeTrimString(3, 200, "Job Title"),
@@ -189,10 +198,34 @@ export const SaveCareerListingSchema = z.object({
     .array(z.string().transform((s) => s.trim()))
     .default([]),
   status: CareerStatusEnum,
-  published: z.boolean().default(true),
+  published: z.boolean().default(false),
+  description: z.record(z.any()).optional().default({}),
 });
 
 export type SaveCareerListingInput = z.infer<typeof SaveCareerListingSchema>;
+
+export const CareerWorkflowActionSchema = z.object({
+  action: z.enum([
+    "IT_APPROVE",
+    "HR_REQUEST_TAKEDOWN",
+    "IT_TAKEDOWN",
+    "REOPEN",
+  ]),
+  notes: optionalTrimString(1000, "Notes"),
+});
+
+export type CareerWorkflowActionInput = z.infer<typeof CareerWorkflowActionSchema>;
+
+export const CareerInquirySchema = z.object({
+  applicantName: safeTrimString(2, 150, "Applicant Name"),
+  applicantEmail: standardEmailValidator,
+  applicantPhone: phoneValidator,
+  resumeUrl: optionalUrlValidator,
+  coverLetter: optionalTrimString(2000, "Cover Letter"),
+  source: z.enum(["WEBSITE_CLICK", "APPLICATION_FORM", "LINKEDIN"]).default("WEBSITE_CLICK"),
+});
+
+export type CareerInquiryInput = z.infer<typeof CareerInquirySchema>;
 
 // =============================================================================
 // 4. CONTENT CMS SCHEMA
@@ -379,6 +412,12 @@ export const MarketingAudienceSubscriberSchema = z.object({
   email: standardEmailValidator,
   firstName: optionalTrimString(100, "First Name"),
   lastName: optionalTrimString(100, "Last Name"),
+  phone: optionalTrimString(50, "Phone Number"),
+  company: optionalTrimString(150, "Company / Organization"),
+  category: z
+    .enum(["CLIENT", "INVESTOR", "PARTNER", "CONTRACTOR", "LEAD", "NEWSLETTER"])
+    .default("NEWSLETTER"),
+  notes: optionalTrimString(1000, "Notes"),
   tags: z.array(z.string().max(50)).default([]),
 });
 

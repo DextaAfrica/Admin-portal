@@ -32,6 +32,7 @@ import {
   Layers,
   DollarSign,
   BarChart3,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
@@ -75,7 +76,7 @@ const OPERATIONS_NAV: NavSection[] = [
   },
 ];
 
-// 2. Systems IT Command Navigation (Streamlined & Non-Technical)
+// 2. Systems IT Command Navigation (Streamlined, Professional & Comprehensive)
 const SYSTEMS_NAV: NavSection[] = [
   {
     label: "Main",
@@ -84,7 +85,23 @@ const SYSTEMS_NAV: NavSection[] = [
       { title: "Team Members", href: "/users", icon: Users },
       { title: "Document Storage", href: "/storage", icon: HardDrive },
       { title: "Clearances & Approvals", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2 },
-      { title: "Email Broadcasts", href: "/dashboard?tab=communications", tabId: "communications", icon: Mail },
+    ],
+  },
+  {
+    label: "Email & Broadcasts",
+    items: [
+      { title: "Registration & Forms", href: "/forms", icon: Link2 },
+      { title: "Email Campaigns", href: "/marketing/campaigns", icon: Send },
+      { title: "Audience & Contacts", href: "/marketing/audience", icon: Users },
+      { title: "Company Broadcasts", href: "/dashboard?tab=communications", tabId: "communications", icon: Mail },
+    ],
+  },
+  {
+    label: "Website & Editorial",
+    items: [
+      { title: "Website Content", href: "/content", icon: FileCode2 },
+      { title: "News & Articles", href: "/journal", icon: BookOpen },
+      { title: "Career Openings", href: "/careers", icon: Briefcase },
     ],
   },
   {

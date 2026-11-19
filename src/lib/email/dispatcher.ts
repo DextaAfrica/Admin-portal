@@ -77,15 +77,20 @@ export async function sendEmail({
   }
 }
 
-export async function dispatchCampaign(campaignId: string) {
+export async function dispatchCampaign(campaignId: string, targetCategory?: string) {
   const campaign = await prisma.emailCampaign.findUnique({
     where: { id: campaignId },
   });
 
   if (!campaign) throw new Error("Campaign not found");
 
+  const whereClause: any = { status: "SUBSCRIBED" };
+  if (targetCategory && targetCategory !== "ALL") {
+    whereClause.category = targetCategory;
+  }
+
   const subscribers = await prisma.audienceSubscriber.findMany({
-    where: { status: "SUBSCRIBED" },
+    where: whereClause,
   });
 
   await prisma.emailCampaign.update({
@@ -99,9 +104,13 @@ export async function dispatchCampaign(campaignId: string) {
   const portalUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   for (const sub of subscribers) {
+    const fullName = [sub.firstName, sub.lastName].filter(Boolean).join(" ") || sub.company || "Valued Partner";
     const personalizedHtml = compileTemplate(campaign.contentHtml, {
-      firstName: sub.firstName || "Customer",
+      firstName: sub.firstName || sub.company || "Valued Partner",
       lastName: sub.lastName || "",
+      fullName,
+      company: sub.company || "Partner",
+      category: sub.category || "General",
       portalUrl,
       unsubscribeLink: `${portalUrl}/unsubscribe?email=${encodeURIComponent(sub.email)}`,
     });

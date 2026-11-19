@@ -111,6 +111,40 @@ async function handleProxy(
             if (!parsed.success) {
               return NextResponse.json(formatZodError(parsed.error), { status: 400 });
             }
+            const empTypeRaw = jsonBody.employmentType || jsonBody.type || "full_time";
+            const cleanType = String(empTypeRaw).toLowerCase().replace(/[^a-z0-9]/g, "_");
+            const normalizedType = cleanType.includes("part")
+              ? "part_time"
+              : cleanType.includes("contract")
+              ? "contract"
+              : cleanType.includes("intern")
+              ? "internship"
+              : "full_time";
+
+            const normalizedDesc =
+              jsonBody.description && Object.keys(jsonBody.description).length > 0
+                ? jsonBody.description
+                : {
+                    summary: jsonBody.summary || "",
+                    requirements: jsonBody.requirements || [],
+                    benefits: jsonBody.benefits || [],
+                  };
+
+            const payloadToGo = {
+              title: parsed.data.title,
+              slug: parsed.data.slug,
+              department: parsed.data.department,
+              location: parsed.data.location,
+              employmentType: normalizedType,
+              type: normalizedType,
+              description: normalizedDesc,
+              summary: jsonBody.summary || "",
+              requirements: jsonBody.requirements || [],
+              benefits: jsonBody.benefits || [],
+              status: jsonBody.status || "open",
+              published: parsed.data.published ?? true,
+            };
+            body = JSON.stringify(payloadToGo);
           } else if (rootEntity === "content" && method === "PUT") {
             const parsed = SaveContentPageSchema.safeParse(jsonBody);
             if (!parsed.success) {
