@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   Calendar,
   MapPin,
@@ -46,10 +47,12 @@ interface FormDataState {
 export default function PublicRegistrationPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params?: { slug?: string } | Promise<{ slug?: string }>;
 }) {
-  const resolvedParams = React.use(params);
-  const slug = resolvedParams.slug;
+  const routeParams = useParams();
+  const slug =
+    (typeof routeParams?.slug === "string" ? routeParams.slug : "") ||
+    (params && "slug" in params && typeof params.slug === "string" ? params.slug : "");
 
   const [form, setForm] = React.useState<FormDataState | null>(null);
   const [loading, setLoading] = React.useState(true);

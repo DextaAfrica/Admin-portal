@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/Button";
 import { getCurrentSession, createSsoTicket } from "@/lib/auth/session";
 import { backendApi } from "@/lib/backend-api";
 import { DepartmentDashboardView } from "@/components/dashboard/DepartmentDashboardView";
-import { ensureDefaultAutomationRules, ensureInitialEnterpriseData } from "@/lib/automation/engine";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -98,8 +97,6 @@ export default async function DashboardPage() {
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
   const db = prisma as any;
-  await ensureDefaultAutomationRules();
-  await ensureInitialEnterpriseData();
 
   // 2. Query Local Database Records & Aggregations (Production Backed, 0 Mock Data)
   let totalUsers = 0;

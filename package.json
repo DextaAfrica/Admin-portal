@@ -50,6 +50,12 @@
   "overrides": {
     "minimatch": "^11.0.1",
     "source-map-js": "^1.2.2"
-  }
+  },
+  "browserslist": [
+    "defaults",
+    "not dead",
+    "not op_mini all",
+    "not kaios > 0"
+  ]
 }
 

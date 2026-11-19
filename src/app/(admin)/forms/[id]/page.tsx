@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import {
   ArrowLeft,
   Download,
@@ -71,10 +72,12 @@ interface AnalyticsData {
 export default function FormDemographicsPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params?: { id?: string } | Promise<{ id?: string }>;
 }) {
-  const resolvedParams = React.use(params);
-  const formId = resolvedParams.id;
+  const routeParams = useParams();
+  const formId =
+    (typeof routeParams?.id === "string" ? routeParams.id : "") ||
+    (params && "id" in params && typeof params.id === "string" ? params.id : "");
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [data, setData] = React.useState<AnalyticsData | null>(null);
