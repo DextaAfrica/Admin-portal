@@ -350,12 +350,18 @@ export function DepartmentDashboardView({
     recipientOrEntity: "",
   });
 
-  // Time of Day Greeting
-  const greeting = React.useMemo(() => {
+  // Time of Day Greeting (hydrated after mount to avoid server-client timezone mismatch)
+  const [greeting, setGreeting] = React.useState("Welcome back");
+
+  React.useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
+    if (hour < 12) {
+      setGreeting("Good morning");
+    } else if (hour < 17) {
+      setGreeting("Good afternoon");
+    } else {
+      setGreeting("Good evening");
+    }
   }, []);
 
   const formatCurrency = (val: number, currency = "USD") => {
@@ -623,7 +629,10 @@ export function DepartmentDashboardView({
               </div>
             )}
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1
+              suppressHydrationWarning
+              className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white"
+            >
               {greeting}, <span className="text-[#ED2618]">{userFirstName}</span>
             </h1>
 
