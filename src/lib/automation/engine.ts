@@ -6,132 +6,17 @@ import crypto from "crypto";
 const db = prisma as any;
 
 /**
- * Initializes default system automation rules if none exist.
+ * Production automation rules initialization (zero mock data, zero fabricated counts).
  */
 export async function ensureDefaultAutomationRules(): Promise<void> {
-  try {
-    const existingCount = await db.workflowAutomationRule.count();
-    if (existingCount > 0) return;
-
-    await db.workflowAutomationRule.createMany({
-      data: [
-        {
-          id: crypto.randomUUID(),
-          name: "Inter-Department Approval Auto-Dispatch & Routing",
-          triggerEvent: "APPROVAL_CREATED",
-          conditions: JSON.stringify({ priority: ["NORMAL", "HIGH", "URGENT"] }),
-          actionType: "MULTI_NOTIFY",
-          isEnabled: true,
-          executionCount: 14,
-          lastTriggeredAt: new Date(),
-        },
-        {
-          id: crypto.randomUUID(),
-          name: "HR to Operations Milestone Clearance Trigger",
-          triggerEvent: "APPROVAL_GRANTED",
-          conditions: JSON.stringify({ category: ["PROCUREMENT_LOGISTICS", "CONTRACTOR_CLEARANCE"] }),
-          actionType: "TREASURY_LEDGER_POST",
-          isEnabled: true,
-          executionCount: 8,
-          lastTriggeredAt: new Date(),
-        },
-        {
-          id: crypto.randomUUID(),
-          name: "CEO Executive Threshold Watchdog (Amount > $25,000)",
-          triggerEvent: "APPROVAL_CREATED",
-          conditions: JSON.stringify({ amountMin: 25000 }),
-          actionType: "EMAIL_NOTIFICATION",
-          isEnabled: true,
-          executionCount: 5,
-          lastTriggeredAt: new Date(),
-        },
-        {
-          id: crypto.randomUUID(),
-          name: "Automated Contractor & Disbursement Settlement",
-          triggerEvent: "APPROVAL_GRANTED",
-          conditions: JSON.stringify({ hasAmount: true }),
-          actionType: "TREASURY_LEDGER_POST",
-          isEnabled: true,
-          executionCount: 11,
-          lastTriggeredAt: new Date(),
-        },
-      ],
-    });
-  } catch (error) {
-    console.warn("[Automation Engine] Error ensuring automation rules:", error);
-  }
+  // Pure production: rules are managed directly via system administration
 }
 
 /**
- * Production hygiene: strictly zero mock data generation.
- * Purges all historical mock seeds across users, credentials, tickets, and alerts.
- * Real records are created exclusively through authorized user and workflow actions.
+ * Production enterprise data hygiene (zero mock generation).
  */
 export async function ensureInitialEnterpriseData(): Promise<void> {
-  try {
-    const mockEmails = [
-      "amina.arch@dextaafrica.com",
-      "chidi.eng@dextaafrica.com",
-      "olufemi@dextaafrica.com",
-      "tariq.it@dextaafrica.com",
-      "sadia@dextaafrica.com",
-      "esther.ade@dextaafrica.com",
-    ];
-
-    const mockCrmEmails = [
-      "investments@heritagecapital.ng",
-      "procurement@apexlogistics.africa",
-      "consortium@ekoatlantic.com",
-      "investors@africantrust.org",
-    ];
-
-    await (db.crmActivity?.deleteMany?.({
-      where: { client: { email: { in: mockCrmEmails } } },
-    }) ?? Promise.resolve());
-
-    await (db.crmDeal?.deleteMany?.({
-      where: { client: { email: { in: mockCrmEmails } } },
-    }) ?? Promise.resolve());
-
-    await (db.crmClient?.deleteMany?.({
-      where: { email: { in: mockCrmEmails } },
-    }) ?? Promise.resolve());
-
-    await (db.credentialRequest?.deleteMany?.({
-      where: {
-        OR: [
-          { ticketNumber: { in: ["SEC-2026-7820", "SEC-2026-8914"] } },
-          { requesterEmail: { in: mockEmails } },
-        ],
-      },
-    }) ?? Promise.resolve());
-
-    await (db.policyAlert?.deleteMany?.({
-      where: { actorEmail: { in: mockEmails } },
-    }) ?? Promise.resolve());
-
-    await (db.leaveRequest?.deleteMany?.({
-      where: { employee: { workEmail: { in: mockEmails } } },
-    }) ?? Promise.resolve());
-
-    await (db.employeeDocument?.deleteMany?.({
-      where: { employee: { workEmail: { in: mockEmails } } },
-    }) ?? Promise.resolve());
-
-    await (db.employeeProfile?.deleteMany?.({
-      where: { workEmail: { in: mockEmails } },
-    }) ?? Promise.resolve());
-
-    await (db.session?.deleteMany?.({
-      where: { user: { email: { in: mockEmails } } },
-    }) ?? Promise.resolve());
-
-    await (db.user?.deleteMany?.({
-      where: { email: { in: mockEmails } },
-    }) ?? Promise.resolve());
-  } catch (err) {
-    console.error("[Database Hygiene] Failed to purge mock seed data:", err);
-  }
+  // Pure production: all operational records originate from authenticated workflows
 }
 
 /**

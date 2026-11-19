@@ -3,17 +3,7 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { logAuditEvent } from "@/lib/auth/audit";
-import { ensureInitialEnterpriseData } from "@/lib/automation/engine";
 import { validateCorporateEmail, validatePhoneNumber } from "@/lib/validation/contact";
-
-const MOCK_EMAILS = [
-  "amina.arch@dextaafrica.com",
-  "chidi.eng@dextaafrica.com",
-  "olufemi@dextaafrica.com",
-  "tariq.it@dextaafrica.com",
-  "sadia@dextaafrica.com",
-  "esther.ade@dextaafrica.com",
-];
 
 export async function GET() {
   try {
@@ -32,12 +22,7 @@ export async function GET() {
       );
     }
 
-    await ensureInitialEnterpriseData();
-
     const users = await prisma.user.findMany({
-      where: {
-        email: { notIn: MOCK_EMAILS },
-      },
       select: {
         id: true,
         email: true,

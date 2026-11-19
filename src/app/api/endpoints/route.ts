@@ -9,44 +9,9 @@ export async function GET() {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    let endpoints = await prisma.apiEndpoint.findMany({
+    const endpoints = await prisma.apiEndpoint.findMany({
       orderBy: { createdAt: "desc" },
     });
-
-    if (endpoints.length === 0) {
-      await prisma.apiEndpoint.createMany({
-        data: [
-          {
-            name: "Dexta Core Go Enterprise API",
-            baseUrl: process.env.BACKEND_API_URL || "http://localhost:8080",
-            authType: "BEARER",
-            status: "ACTIVE",
-            healthStatus: "HEALTHY",
-            lastLatencyMs: 8,
-          },
-          {
-            name: "Dexta Africa Company Website",
-            baseUrl: "http://localhost:3001",
-            authType: "NONE",
-            status: "ACTIVE",
-            healthStatus: "HEALTHY",
-            lastLatencyMs: 15,
-          },
-          {
-            name: "Corporate Notification & Email Gateway",
-            baseUrl: "http://localhost:8025",
-            authType: "NONE",
-            status: "ACTIVE",
-            healthStatus: "HEALTHY",
-            lastLatencyMs: 4,
-          },
-        ],
-      });
-
-      endpoints = await prisma.apiEndpoint.findMany({
-        orderBy: { createdAt: "desc" },
-      });
-    }
 
     return NextResponse.json({ endpoints });
   } catch (err: unknown) {

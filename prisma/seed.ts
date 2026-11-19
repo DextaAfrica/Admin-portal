@@ -89,41 +89,7 @@ async function main() {
     }
   }
 
-  // 4. Seed Real API Endpoints for Monitoring
-  const endpoints = [
-    { name: "Auth & Identity Gateway", baseUrl: "https://auth.dextaafrica.com/health", authType: "BEARER", status: "ACTIVE", healthStatus: "HEALTHY", lastLatencyMs: 38 },
-    { name: "S3 Storage Proxy Edge", baseUrl: "https://storage-cdn.dextaafrica.com/status", authType: "NONE", status: "ACTIVE", healthStatus: "HEALTHY", lastLatencyMs: 44 },
-    { name: "Transaction Notification Webhooks", baseUrl: "https://api.dextaafrica.com/v1/webhook-status", authType: "HMAC", status: "ACTIVE", healthStatus: "HEALTHY", lastLatencyMs: 52 },
-  ];
-
-  for (const ep of endpoints) {
-    const existing = await prisma.apiEndpoint.findFirst({ where: { name: ep.name } });
-    if (!existing) {
-      await prisma.apiEndpoint.create({
-        data: {
-          ...ep,
-          lastPingAt: new Date(),
-        },
-      });
-    }
-  }
-
-  // 5. Seed Real Initial Audience Contacts
-  const audience = [
-    { email: "operations@dextaafrica.com", firstName: "Operations", lastName: "Team", status: "SUBSCRIBED", tags: JSON.stringify(["internal", "core-ops"]) },
-    { email: "tech@dextaafrica.com", firstName: "Engineering", lastName: "Lead", status: "SUBSCRIBED", tags: JSON.stringify(["tech", "admins"]) },
-    { email: "partnerships@dextaafrica.com", firstName: "Partner", lastName: "Relations", status: "SUBSCRIBED", tags: JSON.stringify(["partners", "vip"]) },
-  ];
-
-  for (const sub of audience) {
-    await prisma.audienceSubscriber.upsert({
-      where: { email: sub.email },
-      update: {},
-      create: sub,
-    });
-  }
-
-  // 6. Log Initial System Bootstrap Audit Event
+  // 4. Log Initial System Bootstrap Audit Event
   await prisma.auditLog.create({
     data: {
       actorId: admin.id,
@@ -133,11 +99,11 @@ async function main() {
       entityId: "init",
       ipAddress: "127.0.0.1",
       userAgent: "Dexta Seeder / CLI",
-      metadata: JSON.stringify({ message: "Initial Super Admin and core operational engines provisioned." }),
+      metadata: JSON.stringify({ message: "Initial Super Admin and core operational system settings provisioned." }),
     },
   });
 
-  console.log("✅ Database successfully seeded with real production entities.");
+  console.log("✅ Database initialized strictly with core administrative root.");
 }
 
 main()

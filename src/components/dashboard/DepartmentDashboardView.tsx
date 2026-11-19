@@ -300,7 +300,7 @@ export function DepartmentDashboardView({
       window.removeEventListener("dexta:switch-tab", handleSwitchTab);
       window.removeEventListener("popstate", syncFromUrl);
     };
-  }, [currentUser?.department, currentUser?.role]);
+  }, [currentUser?.department, currentUser?.role, platform]);
 
   // Dynamic Data State
   const [transactionsList, setTransactionsList] = React.useState<any[]>(financialTransactions);
@@ -350,12 +350,18 @@ export function DepartmentDashboardView({
     recipientOrEntity: "",
   });
 
-  // Time of Day Greeting
-  const greeting = React.useMemo(() => {
+  // Time of Day Greeting (hydrated after mount to avoid server-client timezone mismatch)
+  const [greeting, setGreeting] = React.useState("Welcome back");
+
+  React.useEffect(() => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 17) return "Good afternoon";
-    return "Good evening";
+    if (hour < 12) {
+      setGreeting("Good morning");
+    } else if (hour < 17) {
+      setGreeting("Good afternoon");
+    } else {
+      setGreeting("Good evening");
+    }
   }, []);
 
   const formatCurrency = (val: number, currency = "USD") => {
@@ -364,6 +370,17 @@ export function DepartmentDashboardView({
       currency,
       maximumFractionDigits: 0,
     }).format(val);
+  };
+
+  const formatDisplayDate = (d: string | Date | undefined | null) => {
+    if (!d) return "";
+    try {
+      const dt = new Date(d);
+      if (isNaN(dt.getTime())) return "";
+      return dt.toISOString().split("T")[0];
+    } catch {
+      return "";
+    }
   };
 
   // True live database metrics (zero fabricated mock values)
@@ -623,7 +640,10 @@ export function DepartmentDashboardView({
               </div>
             )}
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1
+              suppressHydrationWarning
+              className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white"
+            >
               {greeting}, <span className="text-[#ED2618]">{userFirstName}</span>
             </h1>
 
@@ -1753,7 +1773,7 @@ export function DepartmentDashboardView({
                           {r.title}
                         </h5>
                         <p className="text-[10px] text-slate-400">
-                          {r.cadence} &bull; {new Date(r.reportDate || r.createdAt).toLocaleDateString()}
+                          {r.cadence} &bull; {formatDisplayDate(r.reportDate || r.createdAt)}
                         </p>
                       </div>
                       <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
@@ -2063,7 +2083,7 @@ export function DepartmentDashboardView({
                           {txn.reference}
                         </td>
                         <td className="py-3 px-3 text-slate-500 font-mono text-[11px]">
-                          {new Date(txn.transactionDate).toLocaleDateString()}
+                          {formatDisplayDate(txn.transactionDate)}
                         </td>
                         <td className="py-3 px-3">
                           <span
