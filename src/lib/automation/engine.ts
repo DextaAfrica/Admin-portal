@@ -452,3 +452,176 @@ export async function triggerApprovalDecidedWorkflow(approval: {
   }
 }
 
+// =============================================================================
+// CAREERS & OPENINGS: HR <-> IT LIFECYCLE WORKFLOWS
+// =============================================================================
+
+/**
+ * 1. HR Initiates Opening -> IT Department is notified to review and approve for live website.
+ */
+export async function triggerCareerOpeningSubmittedWorkflow(opening: {
+  id: string;
+  title: string;
+  department: string;
+  location: string;
+  slug: string;
+  initiatedByName: string;
+  initiatedByEmail: string;
+}) {
+  try {
+    if (!db.dashboardNotification) return;
+
+    await db.dashboardNotification.create({
+      data: {
+        department: "IT",
+        title: `[Action Required] New Opening: ${opening.title} awaiting IT Clearance`,
+        message: `${opening.initiatedByName} (HR) initiated the "${opening.title}" opening for ${opening.department}. Please review and approve for live website publishing.`,
+        type: "APPROVAL_REQUEST",
+        link: "/careers",
+        isRead: false,
+        metadata: JSON.stringify({
+          openingId: opening.id,
+          slug: opening.slug,
+          action: "PENDING_IT_APPROVAL",
+        }),
+      },
+    });
+
+    // Notify Super Admin / Executive as well for visibility
+    await db.dashboardNotification.create({
+      data: {
+        department: "EXECUTIVE",
+        title: `[HR Vacancy] New Requisition Submitted: ${opening.title}`,
+        message: `HR initiated requisition for "${opening.title}" (${opening.department}). Awaiting IT web publishing clearance.`,
+        type: "APPROVAL_REQUEST",
+        link: "/careers",
+        isRead: false,
+        metadata: JSON.stringify({ openingId: opening.id, slug: opening.slug }),
+      },
+    });
+  } catch (err) {
+    console.error("[Automation Engine] Error in triggerCareerOpeningSubmittedWorkflow:", err);
+  }
+}
+
+/**
+ * 2. IT Clears Opening -> HR Department is notified that role is now live on the website.
+ */
+export async function triggerCareerOpeningApprovedWorkflow(opening: {
+  id: string;
+  title: string;
+  approvedByName: string;
+  slug: string;
+}) {
+  try {
+    if (!db.dashboardNotification) return;
+
+    await db.dashboardNotification.create({
+      data: {
+        department: "HR",
+        title: `[Published to Website] IT Approved: "${opening.title}" is now Live`,
+        message: `${opening.approvedByName} (IT) approved and published "${opening.title}" to the company website. Inbound applicants can now view and apply.`,
+        type: "APPROVAL_GRANTED",
+        link: "/careers",
+        isRead: false,
+        metadata: JSON.stringify({ openingId: opening.id, slug: opening.slug, status: "OPEN" }),
+      },
+    });
+  } catch (err) {
+    console.error("[Automation Engine] Error in triggerCareerOpeningApprovedWorkflow:", err);
+  }
+}
+
+/**
+ * 3. Candidate clicks or applies on website -> HR is notified in real time.
+ */
+export async function triggerCareerInquiryReceivedWorkflow(inquiry: {
+  openingId: string;
+  openingTitle: string;
+  applicantName: string;
+  applicantEmail: string;
+  source: string;
+}) {
+  try {
+    if (!db.dashboardNotification) return;
+
+    await db.dashboardNotification.create({
+      data: {
+        department: "HR",
+        title: `[New Applicant] Inbound submission for "${inquiry.openingTitle}"`,
+        message: `Candidate ${inquiry.applicantName} (${inquiry.applicantEmail}) interacted/applied for "${inquiry.openingTitle}" via ${inquiry.source}.`,
+        type: "SYSTEM_ALERT",
+        link: "/careers",
+        isRead: false,
+        metadata: JSON.stringify({
+          openingId: inquiry.openingId,
+          applicantEmail: inquiry.applicantEmail,
+          applicantName: inquiry.applicantName,
+        }),
+      },
+    });
+  } catch (err) {
+    console.error("[Automation Engine] Error in triggerCareerInquiryReceivedWorkflow:", err);
+  }
+}
+
+/**
+ * 4. HR marks role as filled -> IT is notified to take down the post from the website.
+ */
+export async function triggerCareerRoleFilledWorkflow(opening: {
+  id: string;
+  title: string;
+  hrName: string;
+  notes?: string | null;
+}) {
+  try {
+    if (!db.dashboardNotification) return;
+
+    await db.dashboardNotification.create({
+      data: {
+        department: "IT",
+        title: `[Takedown Request] Role Filled: "${opening.title}"`,
+        message: `${opening.hrName} (HR) marked "${opening.title}" as filled. Please unpublish/take down this post from the company website. Notes: ${opening.notes || "None provided"}`,
+        type: "SECURITY_ALERT",
+        link: "/careers",
+        isRead: false,
+        metadata: JSON.stringify({
+          openingId: opening.id,
+          action: "TAKEDOWN_REQUESTED",
+          notes: opening.notes,
+        }),
+      },
+    });
+  } catch (err) {
+    console.error("[Automation Engine] Error in triggerCareerRoleFilledWorkflow:", err);
+  }
+}
+
+/**
+ * 5. IT takes down post -> HR is notified that the listing has been removed from the website.
+ */
+export async function triggerCareerPostTakenDownWorkflow(opening: {
+  id: string;
+  title: string;
+  itName: string;
+}) {
+  try {
+    if (!db.dashboardNotification) return;
+
+    await db.dashboardNotification.create({
+      data: {
+        department: "HR",
+        title: `[Takedown Complete] "${opening.title}" Removed from Website`,
+        message: `${opening.itName} (IT) has unpublished and closed "${opening.title}" from the live company website.`,
+        type: "SYSTEM_ALERT",
+        link: "/careers",
+        isRead: false,
+        metadata: JSON.stringify({ openingId: opening.id, status: "CLOSED" }),
+      },
+    });
+  } catch (err) {
+    console.error("[Automation Engine] Error in triggerCareerPostTakenDownWorkflow:", err);
+  }
+}
+
+

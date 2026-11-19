@@ -32,6 +32,7 @@ import {
   Layers,
   DollarSign,
   BarChart3,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
@@ -89,6 +90,7 @@ const SYSTEMS_NAV: NavSection[] = [
   {
     label: "Email & Broadcasts",
     items: [
+      { title: "Registration & Forms", href: "/forms", icon: Link2 },
       { title: "Email Campaigns", href: "/marketing/campaigns", icon: Send },
       { title: "Audience & Contacts", href: "/marketing/audience", icon: Users },
       { title: "Company Broadcasts", href: "/dashboard?tab=communications", tabId: "communications", icon: Mail },
