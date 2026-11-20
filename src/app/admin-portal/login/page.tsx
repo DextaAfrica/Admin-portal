@@ -409,55 +409,6 @@ export default function AdminPortalLoginPage() {
                 </div>
               )}
 
-              {/* Local Dev Seed Credentials Quick Fill (Ultra-Modern & Clean) */}
-              {isLocalHost && (
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/90 dark:border-white/10 text-xs space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-[10px] uppercase text-emerald-600 dark:text-emerald-400 tracking-wider flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      Quick Test Accounts
-                    </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                      PW: AdminPassword2026!
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmail("it.admin@dextaafrica.com");
-                        setPassword("AdminPassword2026!");
-                      }}
-                      className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:border-[#ED2618] dark:hover:border-[#ED2618] hover:shadow-xs transition-all text-left group cursor-pointer"
-                    >
-                      <div className="font-bold text-slate-800 dark:text-white group-hover:text-[#ED2618] text-[11px] truncate flex items-center justify-between">
-                        <span>IT Admin</span>
-                        <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-[#ED2618]" />
-                      </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 font-mono">
-                        it.admin@dextaafrica.com
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmail("admin@dextaafrica.com");
-                        setPassword("AdminPassword2026!");
-                      }}
-                      className="p-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] hover:border-[#ED2618] dark:hover:border-[#ED2618] hover:shadow-xs transition-all text-left group cursor-pointer"
-                    >
-                      <div className="font-bold text-slate-800 dark:text-white group-hover:text-[#ED2618] text-[11px] truncate flex items-center justify-between">
-                        <span>Super Admin</span>
-                        <ArrowRight className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all text-[#ED2618]" />
-                      </div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5 font-mono">
-                        admin@dextaafrica.com
-                      </div>
-                    </button>
-                  </div>
-                </div>
-              )}
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="admin-email" className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">

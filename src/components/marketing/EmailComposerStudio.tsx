@@ -411,19 +411,19 @@ export function compileStudioEmailHtml(
   const headerLabelColor = state.brandHeaderBg === "dark" ? "#cbd5e1" : "#64748b";
 
   const brandHeader = state.showBrandHeader
-    ? `<div style="padding:20px 28px;border-bottom:1px solid #f1f5f9;background:${headerBgColor};display:flex;align-items:center;justify-content:${
+    ? `<div style="padding:22px 32px;border-bottom:1px solid #f1f5f9;background:${headerBgColor};display:flex;align-items:center;justify-content:${
         state.brandHeaderAlignment === "center"
           ? "center"
           : state.brandHeaderAlignment === "left"
           ? "flex-start"
           : "space-between"
-      };gap:14px;">
+      };gap:16px;">
          <img src="${state.brandLogoUrl || "/dexta.svg"}" alt="${
         state.senderName
       }" style="height:${state.brandLogoHeight || 32}px;width:auto;display:block;" />
          ${
            state.brandHeaderAlignment === "split" && state.brandRightLabel
-             ? `<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:${headerLabelColor};">${state.brandRightLabel}</span>`
+             ? `<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.16em;color:${headerLabelColor};">${state.brandRightLabel}</span>`
              : ""
          }
        </div>`
@@ -431,8 +431,8 @@ export function compileStudioEmailHtml(
 
   const categoryPill =
     state.showCategoryBadge && state.categoryBadge
-      ? `<div style="margin-bottom:16px;text-align:${textAlign};">
-           <span style="display:inline-block;padding:6px 14px;border-radius:9999px;background:${state.accentColor}18;color:${state.accentColor};font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;">
+      ? `<div style="margin-bottom:18px;text-align:${textAlign};">
+           <span style="display:inline-block;padding:5px 14px;border-radius:9999px;background:${state.accentColor}14;border:1px solid ${state.accentColor}28;color:${state.accentColor};font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;">
              ${state.categoryBadge}
            </span>
          </div>`
@@ -586,9 +586,9 @@ export function compileStudioEmailHtml(
   ${topOrderedHero}${belowHeaderOrderedHero}${noHeroHeader}
   <div style="padding:28px;">
     ${categoryPill}
-    <h1 style="margin:0 0 18px 0;font-size:${headlineFontSize};line-height:1.25;font-weight:800;color:${
+    <h1 style="margin:0 0 18px 0;font-size:${headlineFontSize};line-height:1.24;font-weight:800;color:${
     state.textColor || "#0f172a"
-  };letter-spacing:-0.02em;text-align:${textAlign};">
+  };letter-spacing:-0.03em;text-align:${textAlign};word-break:break-word;overflow-wrap:break-word;">
       ${replaceVars(state.headline)}
     </h1>
     ${
@@ -1107,11 +1107,12 @@ export function EmailComposerStudio({
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Main Headline
                   </label>
-                  <input
-                    type="text"
+                  <textarea
+                    rows={2}
                     value={state.headline}
                     onChange={(e) => updateField("headline", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#171821] px-3.5 py-2 text-sm font-bold text-slate-900 dark:text-white"
+                    placeholder="Enter high-impact email headline..."
+                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#171821] px-3.5 py-2 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/30 resize-none leading-snug"
                   />
                 </div>
               </div>
@@ -2259,16 +2260,23 @@ export function EmailComposerStudio({
                       />
                     </div>
                     {state.brandHeaderAlignment === "split" && (
-                      <input
-                        type="text"
-                        value={state.brandRightLabel}
-                        onChange={(e) => updateField("brandRightLabel", e.target.value)}
-                        className="text-[11px] font-bold uppercase tracking-widest text-right bg-transparent focus:outline-none focus:ring-1 focus:ring-red-500/40 rounded px-1 w-36"
-                        style={{
-                          color: state.brandHeaderBg === "dark" ? "#cbd5e1" : "#94a3b8",
-                        }}
-                        title="Click to edit header tagline"
-                      />
+                      <div className="flex items-center gap-1.5 pl-3">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: state.accentColor }}
+                        />
+                        <input
+                          type="text"
+                          value={state.brandRightLabel}
+                          onChange={(e) => updateField("brandRightLabel", e.target.value)}
+                          className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-right bg-transparent focus:outline-none focus:ring-1 focus:ring-red-500/40 rounded px-1.5 py-0.5 transition-all"
+                          style={{
+                            color: state.brandHeaderBg === "dark" ? "#cbd5e1" : "#64748b",
+                            width: `${Math.max(12, (state.brandRightLabel || "").length + 2)}ch`,
+                          }}
+                          title="Click to edit header tagline"
+                        />
+                      </div>
                     )}
                   </div>
                 )}
@@ -2311,38 +2319,60 @@ export function EmailComposerStudio({
                 >
                   {/* Editable Category Pill Badge */}
                   {state.showCategoryBadge && (
-                    <div>
-                      <input
-                        type="text"
-                        value={state.categoryBadge}
-                        onChange={(e) => updateField("categoryBadge", e.target.value)}
+                    <div className={state.contentAlignment === "center" ? "text-center" : "text-left"}>
+                      <span
+                        className="inline-flex items-center rounded-full px-3.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.14em] border shadow-xs transition-all"
                         style={{
-                          backgroundColor: `${state.accentColor}15`,
+                          backgroundColor: `${state.accentColor}14`,
+                          borderColor: `${state.accentColor}30`,
                           color: state.accentColor,
                         }}
-                        className={`inline-block rounded-full px-3.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.12em] focus:outline-none focus:ring-2 focus:ring-red-500/30 ${
-                          state.contentAlignment === "center" ? "text-center" : "text-left"
-                        }`}
-                        title="Click to edit Category Badge"
-                      />
+                      >
+                        <input
+                          type="text"
+                          value={state.categoryBadge}
+                          onChange={(e) => updateField("categoryBadge", e.target.value)}
+                          style={{
+                            color: state.accentColor,
+                            width: `${Math.max(4, (state.categoryBadge || "").length + 1)}ch`,
+                          }}
+                          className="bg-transparent focus:outline-none text-center font-extrabold tracking-[0.14em]"
+                          title="Click to edit Category Badge"
+                        />
+                      </span>
                     </div>
                   )}
 
-                  {/* Editable Large Bold Headline */}
-                  <input
-                    type="text"
-                    value={state.headline}
-                    onChange={(e) => updateField("headline", e.target.value)}
-                    style={{ color: state.textColor || "#0F172A" }}
-                    className={`w-full bg-transparent font-extrabold tracking-tight leading-tight focus:outline-none focus:ring-2 focus:ring-red-500/20 rounded px-1 -mx-1 ${
-                      state.headlineSize === "xl"
-                        ? "text-2xl sm:text-[32px]"
-                        : state.headlineSize === "md"
-                        ? "text-xl sm:text-[22px]"
-                        : "text-2xl sm:text-[27px]"
-                    } ${state.contentAlignment === "center" ? "text-center" : "text-left"}`}
-                    title="Click to edit Headline directly"
-                  />
+                  {/* Editable Large Bold Headline - Auto-resizing, Multi-line Wrapping */}
+                  <div className="relative group">
+                    <textarea
+                      rows={1}
+                      value={state.headline}
+                      onChange={(e) => {
+                        updateField("headline", e.target.value);
+                        e.currentTarget.style.height = "auto";
+                        e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                      }}
+                      ref={(el) => {
+                        if (el) {
+                          el.style.height = "auto";
+                          el.style.height = `${el.scrollHeight}px`;
+                        }
+                      }}
+                      style={{
+                        color: state.textColor || "#0F172A",
+                        fontFamily: getFontStack(state.fontFamily),
+                      }}
+                      className={`w-full bg-transparent font-extrabold tracking-[-0.03em] leading-[1.24] focus:outline-none focus:ring-2 focus:ring-red-500/20 rounded-lg px-2 -mx-2 py-1 -my-1 resize-none overflow-hidden block break-words whitespace-pre-wrap transition-colors ${
+                        state.headlineSize === "xl"
+                          ? "text-2xl sm:text-[32px]"
+                          : state.headlineSize === "md"
+                          ? "text-xl sm:text-[22px]"
+                          : "text-2xl sm:text-[27px]"
+                      } ${state.contentAlignment === "center" ? "text-center" : "text-left"}`}
+                      title="Click to edit Headline directly (multi-line supported)"
+                    />
+                  </div>
 
                   {/* Editable Personalized Salutation */}
                   {state.salutation && (
