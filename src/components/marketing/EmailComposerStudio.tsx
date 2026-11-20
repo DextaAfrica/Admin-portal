@@ -701,6 +701,14 @@ export function EmailComposerStudio({
   const heroInputRef = React.useRef<HTMLInputElement>(null);
   const logoInputRef = React.useRef<HTMLInputElement>(null);
   const attachmentInputRef = React.useRef<HTMLInputElement>(null);
+  const headlineCanvasRef = React.useRef<HTMLTextAreaElement>(null);
+
+  React.useEffect(() => {
+    if (headlineCanvasRef.current) {
+      headlineCanvasRef.current.style.height = "auto";
+      headlineCanvasRef.current.style.height = `${headlineCanvasRef.current.scrollHeight}px`;
+    }
+  }, [state.headline, state.headlineSize]);
 
   const selectOccasion = (preset: EmailPresetDefinition) => {
     setState((prev) => ({
@@ -2346,18 +2354,13 @@ export function EmailComposerStudio({
                   {/* Editable Large Bold Headline - Auto-resizing, Multi-line Wrapping */}
                   <div className="relative group">
                     <textarea
+                      ref={headlineCanvasRef}
                       rows={1}
                       value={state.headline}
                       onChange={(e) => {
                         updateField("headline", e.target.value);
                         e.currentTarget.style.height = "auto";
                         e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
-                      }}
-                      ref={(el) => {
-                        if (el) {
-                          el.style.height = "auto";
-                          el.style.height = `${el.scrollHeight}px`;
-                        }
                       }}
                       style={{
                         color: state.textColor || "#0F172A",

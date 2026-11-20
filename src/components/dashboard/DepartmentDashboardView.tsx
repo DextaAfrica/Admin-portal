@@ -44,6 +44,7 @@ import {
   Award,
   Landmark,
   Plus,
+  SlidersHorizontal,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -52,6 +53,7 @@ import { TelemetryChart } from "@/components/ui/TelemetryChart";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatBytes, timeAgo, formatDate, getInitials } from "@/lib/utils";
+import { RequestDashboardAccessModal } from "@/components/dashboard/RequestDashboardAccessModal";
 
 export interface DepartmentDashboardViewProps {
   currentUser: {
@@ -62,6 +64,8 @@ export interface DepartmentDashboardViewProps {
     department?: string;
     seniorityLevel?: string;
     jobTitle?: string | null;
+    assignedModules?: string | null;
+    signatureUrl?: string | null;
   };
   executiveMetrics: {
     grossPipelineValue: number;
@@ -160,12 +164,30 @@ export function DepartmentDashboardView({
   // Platform State: systems (admin.), operations (ops.), executive (root/CEO), finance, hr
   const [platform, setPlatform] = React.useState<"systems" | "operations" | "executive" | "finance" | "hr">(initialPlatform);
 
+  // Request Tailored Modules Modal State
+  const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
+
   // Seniority & Clearance Gating Evaluation
   const userSeniority = (currentUser.seniorityLevel || "SENIOR").toUpperCase();
   const isExec = currentUser.role === "SUPER_ADMIN" || userSeniority === "EXECUTIVE" || currentUser.department?.toUpperCase() === "EXECUTIVE";
   const isSenior = isExec || userSeniority === "SENIOR" || currentUser.role === "ADMIN";
   const isMid = !isSenior && (userSeniority === "MID" || currentUser.role === "OPERATIONS");
   const isJunior = !isSenior && !isMid;
+
+  // IT Dashboard Modules Provisioned Entitlements
+  const assignedModulesList: string[] = React.useMemo(() => {
+    try {
+      if (currentUser.assignedModules) {
+        return JSON.parse(currentUser.assignedModules);
+      }
+    } catch {}
+    return ["operations", "approvals", "personal"];
+  }, [currentUser.assignedModules]);
+
+  const hasModule = (mod: string) => {
+    if (isExec || currentUser.role === "SUPER_ADMIN") return true;
+    return assignedModulesList.includes(mod);
+  };
 
   const seniorityBadgeLabel = isExec
     ? "Executive Director"
@@ -864,8 +886,8 @@ export function DepartmentDashboardView({
             </button>
           )}
 
-          {/* Site Operations (Operations & Executive only - NOT shown to Finance/HR) */}
-          {(platform === "operations" || platform === "executive") && (
+          {/* Site Operations (Operations, Executive, or if provisioned by IT) */}
+          {(platform === "operations" || platform === "executive" || hasModule("operations") || hasModule("projects")) && (
             <button
               type="button"
               onClick={() => setActiveTab("operations")}
@@ -880,8 +902,8 @@ export function DepartmentDashboardView({
             </button>
           )}
 
-          {/* Treasury & Ledger (Finance & Executive only - NOT shown to non-exec Operations) */}
-          {(platform === "finance" || platform === "executive") && (
+          {/* Treasury & Ledger (Finance, Executive, or if provisioned by IT) */}
+          {(platform === "finance" || platform === "executive" || hasModule("treasury")) && (
             <button
               type="button"
               onClick={() => setActiveTab("treasury")}
@@ -915,8 +937,8 @@ export function DepartmentDashboardView({
             )}
           </button>
 
-          {/* Corporate Dispatch (Available across workspaces except Operations) */}
-          {platform !== "operations" && (
+          {/* Corporate Dispatch & Email Campaigns (If provisioned by IT or non-ops) */}
+          {(platform !== "operations" || hasModule("campaigns")) && (
             <button
               type="button"
               onClick={() => setActiveTab("communications")}
@@ -951,6 +973,17 @@ export function DepartmentDashboardView({
               )}
             </button>
           )}
+
+          {/* IT Tailored Modules Request & Verified Signature Button */}
+          <button
+            type="button"
+            onClick={() => setIsRequestModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all ml-auto whitespace-nowrap cursor-pointer border border-red-500/20 shadow-2xs"
+            title="Request specialized dashboard modules with verified digital signature"
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span>Request Custom Modules</span>
+          </button>
         </div>
       </div>
 
@@ -2922,6 +2955,16 @@ export function DepartmentDashboardView({
           </div>
         </form>
       </Modal>
+
+      {/* IT Custom Modules Request & Verified Signature Modal */}
+      <RequestDashboardAccessModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
+        currentUser={currentUser}
+        onRequestSubmitted={() => {
+          toastSuccess("Request Dispatched", "Your module access request and verified digital signature have been sent to IT.");
+        }}
+      />
     </div>
   );
 }
