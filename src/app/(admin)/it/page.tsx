@@ -33,6 +33,7 @@ import {
   ExternalLink,
   Mail,
   Link2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -40,6 +41,7 @@ import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
 import { formatDate } from "@/lib/utils";
+import { DashboardProvisioningStudio } from "@/components/it/DashboardProvisioningStudio";
 
 interface CredentialRequestItem {
   id: string;
@@ -111,7 +113,7 @@ export default function ItGovernancePage() {
   const searchParams = useSearchParams();
 
   const [activeTab, setActiveTab] = React.useState<
-    "requests" | "provision" | "alerts" | "sessions" | "production"
+    "requests" | "provision" | "alerts" | "sessions" | "production" | "dashboards"
   >("requests");
 
   React.useEffect(() => {
@@ -121,7 +123,8 @@ export default function ItGovernancePage() {
       tabParam === "requests" ||
       tabParam === "provision" ||
       tabParam === "alerts" ||
-      tabParam === "sessions"
+      tabParam === "sessions" ||
+      tabParam === "dashboards"
     ) {
       setActiveTab(tabParam as any);
     }
@@ -822,6 +825,19 @@ export default function ItGovernancePage() {
               {releaseStats.pendingCount}
             </span>
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("dashboards")}
+          className={`relative pb-3 text-sm font-semibold transition-colors flex items-center gap-2 ml-4 whitespace-nowrap ${
+            activeTab === "dashboards"
+              ? "text-[#ED2618] border-b-2 border-[#ED2618]"
+              : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+          }`}
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <span>Dashboard Provisioning & Signatures</span>
         </button>
       </div>
 
@@ -2062,6 +2078,13 @@ export default function ItGovernancePage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* TAB 6: Dashboard Feature Provisioning & Verified Digital Signatures */}
+      {activeTab === "dashboards" && (
+        <div className="space-y-6">
+          <DashboardProvisioningStudio />
         </div>
       )}
 

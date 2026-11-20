@@ -716,7 +716,7 @@ export default function HrDashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               label="Full Name"
-              placeholder="e.g. Babatunde Adeyemi"
+              placeholder="e.g. Employee Full Name"
               value={onboardForm.fullName}
               error={onboardFieldErrors.fullName}
               onChange={(e) => {
@@ -728,7 +728,7 @@ export default function HrDashboardPage() {
             <Input
               label="Official Work Email"
               type="email"
-              placeholder="babatunde@dextaafrica.com"
+              placeholder="staff@dextaafrica.com"
               value={onboardForm.workEmail}
               error={onboardFieldErrors.workEmail}
               onChange={(e) => {

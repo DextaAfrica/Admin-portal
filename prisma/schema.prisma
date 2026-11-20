@@ -25,6 +25,8 @@ model User {
   mustChangePassword  Boolean                  @default(false)
   activationKey       String?
   lastLoginAt         DateTime?
+  assignedModules     String                   @default("[\"operations\",\"approvals\",\"personal\"]")
+  signatureUrl        String?
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
   sessions            Session[]
@@ -38,6 +40,8 @@ model User {
   credentialRequests  CredentialRequest[]      @relation("UserCredentialRequests")
   reviewedCredentials CredentialRequest[]      @relation("ItProcessedRequests")
   crmActivities       CrmActivity[]
+  dashboardAccessRequests  DashboardAccessRequest[] @relation("UserDashboardAccessRequests")
+  reviewedDashboardRequests DashboardAccessRequest[] @relation("ReviewedDashboardRequests")
 }
 
 model TwoFactorRecoveryCode {
@@ -285,6 +289,34 @@ model CredentialRequest {
 
   @@index([status])
   @@index([requestType])
+}
+
+model DashboardAccessRequest {
+  id               String    @id @default(uuid())
+  ticketNumber     String    @unique // e.g. "DSH-2026-4819"
+  userId           String
+  user             User      @relation("UserDashboardAccessRequests", fields: [userId], references: [id], onDelete: Cascade)
+  requesterName    String
+  requesterEmail   String
+  department       String
+  jobTitle         String?
+  requestedModules String    // JSON array of strings e.g. ["campaigns", "treasury"]
+  justification    String
+  signatureData    String    // Base64 PNG/SVG signature data
+  signatureType    String    @default("DRAWN") // "DRAWN", "TYPED", "UPLOADED"
+  signedAt         DateTime  @default(now())
+  status           String    @default("PENDING_IT_APPROVAL") // "PENDING_IT_APPROVAL", "APPROVED", "REJECTED"
+  reviewedById     String?
+  reviewedBy       User?     @relation("ReviewedDashboardRequests", fields: [reviewedById], references: [id], onDelete: SetNull)
+  approvedModules  String?   // JSON array of IT authorized modules
+  itNotes          String?
+  resolvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([ticketNumber])
 }
 
 // =============================================================================

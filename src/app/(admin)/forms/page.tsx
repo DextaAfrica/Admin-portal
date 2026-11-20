@@ -1281,7 +1281,7 @@ export default function FormsManagementPage() {
                 </span>
               </div>
 
-              {/* Mock Public Form View */}
+              {/* Live Form Architecture Preview */}
               <div className="p-6 rounded-2xl bg-[#0a0e17] border border-neutral-800 space-y-5 max-w-2xl mx-auto shadow-2xl">
                 <div>
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-red-500/10 text-red-400 border border-red-500/20 uppercase">

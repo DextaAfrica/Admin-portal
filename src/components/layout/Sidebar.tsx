@@ -36,6 +36,7 @@ import {
   Crown,
   Compass,
   Cpu,
+  Sliders,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
@@ -113,6 +114,7 @@ const SYSTEMS_NAV: NavSection[] = [
     items: [
       { title: "Security Policies", href: "/it", icon: ShieldCheck },
       { title: "2-Stage Production Approvals", href: "/it?tab=production", icon: Cpu, badge: "2-Level" },
+      { title: "Dashboard Provisioning", href: "/it?tab=dashboards", icon: Sliders, badge: "Signatures" },
       { title: "Activity Logs", href: "/audit-logs", icon: FileText },
     ],
   },
@@ -150,6 +152,7 @@ const EXECUTIVE_NAV: NavSection[] = [
     label: "Infrastructure & Audit",
     items: [
       { title: "Systems & IT Security", href: "/it", icon: ShieldCheck },
+      { title: "Dashboard Provisioning", href: "/it?tab=dashboards", icon: Sliders, badge: "Signatures" },
       { title: "Executive Team Directory", href: "/users", icon: UserCheck },
       { title: "Global Compliance Logs", href: "/audit-logs", icon: FileText },
     ],

@@ -162,6 +162,8 @@ export interface SessionUser {
   jobTitle?: string | null;
   status: string;
   twoFactorEnabled: boolean;
+  assignedModules?: string | null;
+  signatureUrl?: string | null;
 }
 
 export async function createSession({
@@ -204,7 +206,7 @@ export async function getCurrentSession(): Promise<{
       return { user: null, sessionToken: null, sessionId: null };
     }
 
-    const session = await prisma.session.findUnique({
+    const session: any = await prisma.session.findUnique({
       where: { sessionToken: token },
       include: {
         user: {
@@ -213,7 +215,11 @@ export async function getCurrentSession(): Promise<{
             email: true,
             fullName: true,
             role: true,
+            department: true,
             jobTitle: true,
+            seniorityLevel: true,
+            assignedModules: true,
+            signatureUrl: true,
             status: true,
             twoFactorEnabled: true,
           },

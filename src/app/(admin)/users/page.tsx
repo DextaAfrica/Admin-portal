@@ -314,7 +314,7 @@ export default function UsersPage() {
             label="Colleague's Full Name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            placeholder="e.g., Chinedu Okafor"
+            placeholder="e.g. Legal Full Name"
             required
           />
 
@@ -323,7 +323,7 @@ export default function UsersPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="chinedu@dextaafrica.com"
+            placeholder="colleague@dextaafrica.com"
             required
           />
 
