@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "node --loader ts-node/esm prisma/seed.ts"
+    "prisma:seed": "node --loader ts-node/esm prisma/seed.ts",
+    "admin:setup": "node scripts/admin-setup.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.670.0",

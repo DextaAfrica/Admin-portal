@@ -136,7 +136,56 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Zero-trust authentication flow:
+    // Enterprise authentication flow:
+    // If user has not enabled 2FA, authenticate immediately and establish session
+    if (!user.twoFactorEnabled) {
+      const session = await createSession({
+        userId: user.id,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent") || "unknown",
+      });
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+      });
+
+      await logAuditEvent({
+        actorId: user.id,
+        actorEmail: user.email,
+        action: "AUTH_LOGIN_SUCCESS",
+        entity: "User",
+        entityId: user.id,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent"),
+        metadata: { method: "PASSWORD" },
+      });
+
+      const res = NextResponse.json({
+        requiresMfa: false,
+        redirectUrl: "/dashboard",
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+        },
+      });
+
+      const cookieDomain = getCookieDomain(req.headers.get("host"));
+      res.cookies.set(SESSION_COOKIE_NAME, session.sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: SESSION_DURATION_DAYS * 24 * 60 * 60,
+        path: "/",
+        ...(cookieDomain ? { domain: cookieDomain } : {}),
+      });
+
+      return res;
+    }
+
+    // Zero-trust MFA challenge flow (for users with 2FA enabled):
     // Generate an enterprise one-time verification token (valid for 5 minutes)
     const sessionOtp = String(crypto.randomInt(100000, 999999));
 
