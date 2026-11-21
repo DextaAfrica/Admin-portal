@@ -24,6 +24,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
 
+    // Authorization: Team members can only delete files they uploaded; Admins can manage all files
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN" && asset.uploadedById !== user.id) {
+      return NextResponse.json(
+        { error: "Forbidden: You are not authorized to delete files uploaded by other team members." },
+        { status: 403 }
+      );
+    }
+
     await deleteS3Asset(asset.key);
     await prisma.storageAsset.delete({ where: { id: assetId } });
 

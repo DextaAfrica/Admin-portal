@@ -1,20 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-async function saveFile(key: string, buffer: Buffer) {
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  const targetDir = path.dirname(path.join(uploadsDir, key));
-
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
-
-  const filePath = path.join(uploadsDir, key);
-  fs.writeFileSync(filePath, buffer);
-
-  return `/uploads/${key}`;
-}
+import { uploadBufferToStorage, resolvePublicAssetUrl } from "@/lib/storage/s3";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -25,13 +10,24 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: "Missing key" }, { status: 400 });
     }
 
+    const mimeType = req.headers.get("content-type") || "application/octet-stream";
     const buffer = Buffer.from(await req.arrayBuffer());
-    const publicPath = await saveFile(key, buffer);
 
-    return NextResponse.json({ success: true, path: publicPath });
+    const result = await uploadBufferToStorage({
+      buffer,
+      key,
+      mimeType,
+    });
+
+    return NextResponse.json({
+      success: true,
+      path: result.url,
+      url: result.url,
+      key: result.key,
+    });
   } catch (err: unknown) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Local upload failed" },
+      { error: err instanceof Error ? err.message : "Upload failed" },
       { status: 500 }
     );
   }
@@ -51,17 +47,22 @@ export async function POST(req: NextRequest) {
       }
 
       if (!key) {
-        const ext = path.extname(file.name) || ".bin";
-        const cleanName = path.basename(file.name, ext).replace(/[^a-zA-Z0-9_-]/g, "_");
-        key = `forms/${Date.now()}_${cleanName}${ext}`;
+        const ext = file.name.split(".").pop() || "bin";
+        const cleanName = file.name.replace(/[^a-zA-Z0-9_-]/g, "_");
+        key = `forms/${Date.now()}_${cleanName}.${ext}`;
       }
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      const publicPath = await saveFile(key, buffer);
+      const result = await uploadBufferToStorage({
+        buffer,
+        key,
+        mimeType: file.type || "application/octet-stream",
+      });
 
       return NextResponse.json({
         success: true,
-        path: publicPath,
+        path: result.url,
+        url: result.url,
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
@@ -74,15 +75,25 @@ export async function POST(req: NextRequest) {
     if (!key) {
       return NextResponse.json({ error: "Missing key" }, { status: 400 });
     }
+
+    const mimeType = req.headers.get("content-type") || "application/octet-stream";
     const buffer = Buffer.from(await req.arrayBuffer());
-    const publicPath = await saveFile(key, buffer);
-    return NextResponse.json({ success: true, path: publicPath });
+    const result = await uploadBufferToStorage({
+      buffer,
+      key,
+      mimeType,
+    });
+
+    return NextResponse.json({
+      success: true,
+      path: result.url,
+      url: result.url,
+      key: result.key,
+    });
   } catch (err: unknown) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Local upload failed" },
+      { error: err instanceof Error ? err.message : "Upload failed" },
       { status: 500 }
     );
   }
 }
-
-

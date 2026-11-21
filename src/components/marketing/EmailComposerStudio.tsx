@@ -34,6 +34,7 @@ import {
   Check,
   AlertCircle,
   Loader2,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -369,6 +370,14 @@ export function compileStudioEmailHtml(
   const replaceVars = (str: string) =>
     previewSampleName ? str.replace(/\{\{firstName\}\}/g, sampleName) : str;
 
+  const toEmailSafeUrl = (url: string | undefined): string => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    if (url.startsWith("data:")) return url;
+    const base = typeof window !== "undefined" ? window.location.origin : "https://admin.dextaafrica.org";
+    return `${base.replace(/\/$/, "")}/${url.replace(/^\/+/, "")}`;
+  };
+
   const displaySalutation = replaceVars(state.salutation);
   const textAlign = state.contentAlignment === "center" ? "center" : "left";
   const fontStack = getFontStack(state.fontFamily);
@@ -398,7 +407,7 @@ export function compileStudioEmailHtml(
             ? "padding:20px 28px 0 28px;"
             : "width:100%;overflow:hidden;background:#0f172a;"
         }">
-           <img src="${state.heroImageUrl}" alt="${state.headline}" style="${heroImgStyle}${
+           <img src="${toEmailSafeUrl(state.heroImageUrl)}" alt="${state.headline}" style="${heroImgStyle}${
           state.heroLayout === "inset_card" ? "border-radius:12px;" : ""
         }" />
          </div>`
@@ -425,7 +434,7 @@ export function compileStudioEmailHtml(
           ? "flex-start"
           : "space-between"
       };gap:16px;">
-         <img src="${state.brandLogoUrl || "/dexta.svg"}" alt="${
+         <img src="${toEmailSafeUrl(state.brandLogoUrl || "/dexta.svg")}" alt="${
         state.senderName
       }" style="height:${state.brandLogoHeight || 32}px;width:auto;display:block;" />
          ${
@@ -493,7 +502,7 @@ export function compileStudioEmailHtml(
       }
       if (block.type === "image" && block.imageUrl) {
         return `<div style="margin:22px 0;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc;">
-          <img src="${block.imageUrl}" alt="${block.imageCaption || "Email visual"}" style="width:100%;max-height:320px;object-fit:cover;display:block;" />
+          <img src="${toEmailSafeUrl(block.imageUrl)}" alt="${block.imageCaption || "Email visual"}" style="width:100%;max-height:320px;object-fit:cover;display:block;" />
           ${
             block.imageCaption
               ? `<div style="padding:10px 14px;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;text-align:${textAlign};">${replaceVars(
@@ -529,7 +538,7 @@ export function compileStudioEmailHtml(
 
   const secondaryAttachment = state.attachmentImageUrl
     ? `<div style="margin:24px 0;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0;background:#f8fafc;">
-         <img src="${state.attachmentImageUrl}" alt="Attached media" style="width:100%;max-height:280px;object-fit:cover;display:block;" />
+         <img src="${toEmailSafeUrl(state.attachmentImageUrl)}" alt="Attached media" style="width:100%;max-height:280px;object-fit:cover;display:block;" />
          ${
            state.attachmentCaption
              ? `<div style="padding:10px 14px;font-size:12px;color:#64748b;border-top:1px solid #e2e8f0;">${replaceVars(
@@ -860,25 +869,96 @@ export function EmailComposerStudio({
     setState((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleImageFileSelect = (
+  const [isUploadingImage, setIsUploadingImage] = React.useState<string | null>(null);
+  const [isAssetVaultOpen, setIsAssetVaultOpen] = React.useState(false);
+  const [assetVaultTarget, setAssetVaultTarget] = React.useState<string | null>(null);
+  const [vaultAssets, setVaultAssets] = React.useState<
+    Array<{ id: string; url: string; fileName: string; fileSize: number; folder: string }>
+  >([]);
+  const [isLoadingVault, setIsLoadingVault] = React.useState(false);
+
+  const fetchVaultAssets = async () => {
+    setIsLoadingVault(true);
+    try {
+      const res = await fetch("/api/storage/assets?folder=all");
+      const data = await res.json();
+      if (res.ok) {
+        setVaultAssets(data.assets || []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingVault(false);
+    }
+  };
+
+  const openAssetVault = (target: string) => {
+    setAssetVaultTarget(target);
+    setIsAssetVaultOpen(true);
+    fetchVaultAssets();
+  };
+
+  const selectVaultAsset = (url: string) => {
+    if (!assetVaultTarget) return;
+    if (
+      assetVaultTarget === "heroImageUrl" ||
+      assetVaultTarget === "attachmentImageUrl" ||
+      assetVaultTarget === "brandLogoUrl"
+    ) {
+      updateField(assetVaultTarget, url);
+      if (assetVaultTarget === "heroImageUrl" && state.heroLayout === "none") {
+        updateField("heroLayout", "top_full");
+      }
+    } else {
+      updateCustomBlock(assetVaultTarget, { imageUrl: url });
+    }
+    setIsAssetVaultOpen(false);
+    setAssetVaultTarget(null);
+  };
+
+  const uploadFileToStorage = async (file: File, folder = "campaigns"): Promise<string> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folder", folder);
+
+    const res = await fetch("/api/storage/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || "Failed to upload image to storage");
+    }
+
+    return data.url;
+  };
+
+  const handleImageFileSelect = async (
     e: React.ChangeEvent<HTMLInputElement>,
     targetKey: "heroImageUrl" | "attachmentImageUrl" | "brandLogoUrl"
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        setState((prev) => ({
-          ...prev,
-          [targetKey]: reader.result as string,
-          ...(targetKey === "heroImageUrl" && prev.heroLayout === "none"
-            ? { heroLayout: "top_full" }
-            : {}),
-        }));
-      }
-    };
-    reader.readAsDataURL(file);
+
+    setIsUploadingImage(targetKey);
+    try {
+      const folder = targetKey === "brandLogoUrl" ? "branding" : "campaigns";
+      const uploadedUrl = await uploadFileToStorage(file, folder);
+
+      setState((prev) => ({
+        ...prev,
+        [targetKey]: uploadedUrl,
+        ...(targetKey === "heroImageUrl" && prev.heroLayout === "none"
+          ? { heroLayout: "top_full" }
+          : {}),
+      }));
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to upload image to storage bucket");
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = "";
+    }
   };
 
   // Custom Blocks Management
@@ -924,19 +1004,23 @@ export function EmailComposerStudio({
     updateField("customBlocks", next);
   };
 
-  const handleCustomBlockImageUpload = (
+  const handleCustomBlockImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     blockId: string
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        updateCustomBlock(blockId, { imageUrl: reader.result });
-      }
-    };
-    reader.readAsDataURL(file);
+
+    setIsUploadingImage(blockId);
+    try {
+      const uploadedUrl = await uploadFileToStorage(file, "campaigns");
+      updateCustomBlock(blockId, { imageUrl: uploadedUrl });
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Failed to upload image to storage bucket");
+    } finally {
+      setIsUploadingImage(null);
+      e.target.value = "";
+    }
   };
 
   const insertPersonalization = (placeholder: string) => {
@@ -1161,10 +1245,26 @@ export function EmailComposerStudio({
                       type="button"
                       size="xs"
                       variant="secondary"
+                      disabled={isUploadingImage === "heroImageUrl"}
                       onClick={() => heroInputRef.current?.click()}
-                      leftIcon={<ImagePlus className="h-3.5 w-3.5 text-red-600" />}
+                      leftIcon={
+                        isUploadingImage === "heroImageUrl" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-red-600" />
+                        ) : (
+                          <ImagePlus className="h-3.5 w-3.5 text-red-600" />
+                        )
+                      }
                     >
-                      Upload Flyer
+                      {isUploadingImage === "heroImageUrl" ? "Uploading to Storage..." : "Upload Flyer"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="outline"
+                      onClick={() => openAssetVault("heroImageUrl")}
+                      leftIcon={<FolderOpen className="h-3.5 w-3.5 text-slate-500" />}
+                    >
+                      Browse Vault
                     </Button>
                     {state.heroImageUrl && (
                       <button
@@ -1452,15 +1552,35 @@ export function EmailComposerStudio({
                                 placeholder="Paste image URL or upload file ->"
                                 className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121318] px-3 py-1.5 text-xs"
                               />
-                              <label className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10 px-2.5 py-1.5 text-xs font-semibold cursor-pointer hover:bg-slate-200">
-                                Upload Photo
+                              <label className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10 px-2.5 py-1.5 text-xs font-semibold cursor-pointer hover:bg-slate-200 flex items-center gap-1.5">
+                                {isUploadingImage === block.id ? (
+                                  <>
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin text-red-600" />
+                                    <span>Uploading...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <ImagePlus className="h-3.5 w-3.5" />
+                                    <span>Upload Photo</span>
+                                  </>
+                                )}
                                 <input
                                   type="file"
                                   accept="image/*"
+                                  disabled={isUploadingImage === block.id}
                                   onChange={(e) => handleCustomBlockImageUpload(e, block.id)}
                                   className="hidden"
                                 />
                               </label>
+                              <button
+                                type="button"
+                                onClick={() => openAssetVault(block.id)}
+                                className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10 px-2 py-1.5 text-xs font-semibold hover:bg-slate-200 flex items-center gap-1 cursor-pointer"
+                                title="Browse corporate media vault"
+                              >
+                                <FolderOpen className="h-3.5 w-3.5 text-slate-500" />
+                                <span>Vault</span>
+                              </button>
                             </div>
                             <input
                               type="text"
@@ -1843,9 +1963,24 @@ export function EmailComposerStudio({
                           type="button"
                           size="xs"
                           variant="secondary"
+                          disabled={isUploadingImage === "brandLogoUrl"}
                           onClick={() => logoInputRef.current?.click()}
+                          leftIcon={
+                            isUploadingImage === "brandLogoUrl" ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-red-600" />
+                            ) : undefined
+                          }
                         >
-                          Upload Custom Logo
+                          {isUploadingImage === "brandLogoUrl" ? "Uploading to Storage..." : "Upload Custom Logo"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="outline"
+                          onClick={() => openAssetVault("brandLogoUrl")}
+                          leftIcon={<FolderOpen className="h-3.5 w-3.5 text-slate-500" />}
+                        >
+                          Browse Vault
                         </Button>
                         {state.brandLogoUrl !== "/dexta.svg" && (
                           <Button
@@ -2155,10 +2290,30 @@ export function EmailComposerStudio({
                 type="button"
                 size="xs"
                 variant="secondary"
+                disabled={isUploadingImage === "attachmentImageUrl"}
                 onClick={() => attachmentInputRef.current?.click()}
-                leftIcon={<Paperclip className="h-3.5 w-3.5" />}
+                leftIcon={
+                  isUploadingImage === "attachmentImageUrl" ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-red-600" />
+                  ) : (
+                    <Paperclip className="h-3.5 w-3.5" />
+                  )
+                }
               >
-                {state.attachmentImageUrl ? "Change Bottom Photo" : "Attach Bottom Photo"}
+                {isUploadingImage === "attachmentImageUrl"
+                  ? "Uploading to Storage..."
+                  : state.attachmentImageUrl
+                  ? "Change Bottom Photo"
+                  : "Attach Bottom Photo"}
+              </Button>
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                onClick={() => openAssetVault("attachmentImageUrl")}
+                leftIcon={<FolderOpen className="h-3.5 w-3.5 text-slate-500" />}
+              >
+                Browse Vault
               </Button>
               {state.attachmentImageUrl && (
                 <button
@@ -2860,6 +3015,64 @@ export function EmailComposerStudio({
               The broadcast record will be saved in your Sent Campaigns archive for analytics and delivery verification.
             </p>
           </div>
+        </div>
+      </Modal>
+
+      {/* Corporate Asset Vault Selector Modal */}
+      <Modal
+        isOpen={isAssetVaultOpen}
+        onClose={() => {
+          setIsAssetVaultOpen(false);
+          setAssetVaultTarget(null);
+        }}
+        title="Dexta Storage & Media Vault"
+        description="Select an approved corporate asset or photo from your Cloudflare R2 / S3 storage vault."
+        maxWidth="lg"
+      >
+        <div className="space-y-4">
+          {isLoadingVault ? (
+            <div className="flex flex-col items-center justify-center p-10 text-slate-400">
+              <Loader2 className="h-6 w-6 animate-spin text-red-600 mb-2" />
+              <p className="text-xs">Loading media vault assets...</p>
+            </div>
+          ) : vaultAssets.length === 0 ? (
+            <div className="text-center p-8 border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
+              <FolderOpen className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                No storage assets found yet
+              </p>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Upload files using the upload button to automatically archive them in your bucket.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[380px] overflow-y-auto pr-1">
+              {vaultAssets.map((asset) => (
+                <button
+                  key={asset.id}
+                  type="button"
+                  onClick={() => selectVaultAsset(asset.url)}
+                  className="group relative rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden bg-slate-50 dark:bg-white/[0.02] text-left hover:border-red-500 transition-all cursor-pointer"
+                >
+                  <div className="aspect-video bg-slate-900 overflow-hidden">
+                    <img
+                      src={asset.url}
+                      alt={asset.fileName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  </div>
+                  <div className="p-2">
+                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                      {asset.fileName}
+                    </p>
+                    <p className="text-[10px] text-slate-400 font-mono">
+                      {(asset.fileSize / 1024).toFixed(0)} KB • {asset.folder}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </Modal>
     </form>
