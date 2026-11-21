@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Mail,
   Plus,
@@ -45,8 +46,9 @@ interface EmailCampaign {
   creator?: { fullName: string; email: string };
 }
 
-export default function CampaignsPage() {
+function CampaignsPageContent() {
   const { success: toastSuccess, error: toastError } = useToast();
+  const searchParams = useSearchParams();
   const [campaigns, setCampaigns] = React.useState<EmailCampaign[]>([]);
   const [subscribersCount, setSubscribersCount] = React.useState<number>(0);
   const [categoryCounts, setCategoryCounts] = React.useState<Record<string, number>>({});
@@ -58,6 +60,30 @@ export default function CampaignsPage() {
   const [selectedPreset, setSelectedPreset] = React.useState<EmailOccasionId>("project_update");
   const [editingCampaign, setEditingCampaign] = React.useState<EmailCampaign | null>(null);
   const [previewCampaign, setPreviewCampaign] = React.useState<EmailCampaign | null>(null);
+
+  // Auto-load form parameters if accessed via "Design Studio Campaign" from custom forms
+  React.useEffect(() => {
+    const formSlug = searchParams?.get("formSlug");
+    const formTitle = searchParams?.get("formTitle");
+    if (formSlug) {
+      setActiveTab("compose");
+      setTargetAudienceCategory(`FORM:${formSlug}`);
+      setSelectedPreset("project_update");
+      if (formTitle) {
+        setEditingCampaign({
+          id: "",
+          title: `${decodeURIComponent(formTitle)} - Registrant Dispatch`,
+          subject: `Update regarding ${decodeURIComponent(formTitle)}`,
+          contentHtml: "",
+          status: "DRAFT",
+          recipientCount: 0,
+          openCount: 0,
+          clickCount: 0,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+  }, [searchParams]);
 
   // Scheduling Modal State
   const [schedulingCampaign, setSchedulingCampaign] = React.useState<EmailCampaign | null>(null);
@@ -127,7 +153,6 @@ export default function CampaignsPage() {
       });
 
       if (res.ok) {
-        const data = await res.json();
         toastSuccess(
           isUpdating ? "Campaign Updated" : "Campaign Saved to Drafts",
           "Your email design and subject are ready for scheduling or dispatch."
@@ -140,6 +165,68 @@ export default function CampaignsPage() {
       }
     } catch {
       toastError("Connection Error", "Please verify connection to email service.");
+    }
+  };
+
+  // Save and Dispatch Campaign Broadcast Immediately
+  const handleSaveAndDispatchCampaign = async (payload: {
+    id?: string;
+    title: string;
+    subject: string;
+    contentHtml: string;
+    occasion: EmailOccasionId;
+    targetAudience: string;
+  }) => {
+    try {
+      const isUpdating = Boolean(payload.id);
+      const saveRes = await fetch("/api/marketing/campaigns", {
+        method: isUpdating ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: payload.id,
+          title: payload.title,
+          subject: payload.subject,
+          contentHtml: payload.contentHtml,
+        }),
+      });
+
+      if (!saveRes.ok) {
+        const errData = await saveRes.json();
+        toastError("Save Issue", errData.error || "Could not save campaign before dispatch.");
+        return;
+      }
+
+      const savedData = await saveRes.json();
+      const campaignId = payload.id || savedData.campaign?.id;
+
+      if (!campaignId) {
+        toastError("Dispatch Error", "Campaign identifier missing.");
+        return;
+      }
+
+      setDispatchingId(campaignId);
+      const dispatchRes = await fetch(`/api/marketing/campaigns/${campaignId}/dispatch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetCategory: payload.targetAudience || targetAudienceCategory }),
+      });
+
+      const dispatchData = await dispatchRes.json();
+      if (dispatchRes.ok) {
+        toastSuccess(
+          "Broadcast Dispatched",
+          `Campaign transmitted to ${dispatchData.recipientCount ?? "all"} contact(s) via SMTP.`
+        );
+        setEditingCampaign(null);
+        await fetchCampaigns();
+        setActiveTab("sent");
+      } else {
+        toastError("Delivery Notice", dispatchData.error || "Could not complete email dispatch.");
+      }
+    } catch (err: unknown) {
+      toastError("Network Error", err instanceof Error ? err.message : "Error contacting email dispatcher.");
+    } finally {
+      setDispatchingId(null);
     }
   };
 
@@ -724,7 +811,10 @@ export default function CampaignsPage() {
                   }
                 : null
             }
+            targetAudience={targetAudienceCategory}
+            onTargetAudienceChange={setTargetAudienceCategory}
             onSaveDraft={handleSaveCampaign}
+            onDispatchNow={handleSaveAndDispatchCampaign}
             onCancel={() => setActiveTab("drafts")}
           />
         </div>
@@ -958,5 +1048,22 @@ export default function CampaignsPage() {
         </p>
       </Modal>
     </div>
+  );
+}
+
+export default function CampaignsPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[400px] text-slate-400 text-xs">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 animate-spin text-red-600" />
+            <span>Loading Campaigns Studio...</span>
+          </div>
+        </div>
+      }
+    >
+      <CampaignsPageContent />
+    </React.Suspense>
   );
 }

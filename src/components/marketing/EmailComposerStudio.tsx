@@ -28,8 +28,14 @@ import {
   RotateCcw,
   Layers,
   Wand2,
+  Users,
+  Radio,
+  Check,
+  AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
 
 export type EmailOccasionId =
   | "birthday"
@@ -659,12 +665,22 @@ interface EmailComposerStudioProps {
     subject: string;
     contentHtml: string;
   } | null;
+  targetAudience?: string;
+  onTargetAudienceChange?: (audience: string) => void;
   onSaveDraft: (payload: {
     id?: string;
     title: string;
     subject: string;
     contentHtml: string;
     occasion: EmailOccasionId;
+  }) => Promise<void>;
+  onDispatchNow?: (payload: {
+    id?: string;
+    title: string;
+    subject: string;
+    contentHtml: string;
+    occasion: EmailOccasionId;
+    targetAudience: string;
   }) => Promise<void>;
   onCancel?: () => void;
   isSubmitting?: boolean;
@@ -674,7 +690,10 @@ export function EmailComposerStudio({
   mode,
   initialPreset = "birthday",
   initialData = null,
+  targetAudience = "ALL",
+  onTargetAudienceChange,
   onSaveDraft,
+  onDispatchNow,
   onCancel,
   isSubmitting = false,
 }: EmailComposerStudioProps) {
@@ -709,6 +728,120 @@ export function EmailComposerStudio({
       headlineCanvasRef.current.style.height = `${headlineCanvasRef.current.scrollHeight}px`;
     }
   }, [state.headline, state.headlineSize]);
+
+  const [selectedAudience, setSelectedAudience] = React.useState<string>(targetAudience);
+  const [availableForms, setAvailableForms] = React.useState<
+    Array<{ id: string; title: string; slug: string; submissionsCount: number }>
+  >([]);
+  const [testEmailAddress, setTestEmailAddress] = React.useState<string>("");
+  const [isSendingTest, setIsSendingTest] = React.useState<boolean>(false);
+  const [testSendResult, setTestSendResult] = React.useState<{ success: boolean; message: string } | null>(null);
+  const [isDispatchModalOpen, setIsDispatchModalOpen] = React.useState<boolean>(false);
+  const [isDispatching, setIsDispatching] = React.useState<boolean>(false);
+  const [audienceCounts, setAudienceCounts] = React.useState<{ total: number; categories: Record<string, number> }>({
+    total: 0,
+    categories: {},
+  });
+
+  React.useEffect(() => {
+    setSelectedAudience(targetAudience);
+  }, [targetAudience]);
+
+  React.useEffect(() => {
+    fetch("/api/forms")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.forms && Array.isArray(data.forms)) {
+          setAvailableForms(
+            data.forms.map((f: any) => ({
+              id: f.id,
+              title: f.title,
+              slug: f.slug,
+              submissionsCount: f.submissionsCount || 0,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/marketing/audience")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.subscribers) {
+          const active = data.subscribers.filter((s: any) => s.status === "SUBSCRIBED");
+          setAudienceCounts({
+            total: active.length,
+            categories: data.categoryCounts || {},
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleAudienceChange = (val: string) => {
+    setSelectedAudience(val);
+    if (onTargetAudienceChange) {
+      onTargetAudienceChange(val);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress.trim()) {
+      setTestSendResult({ success: false, message: "Please provide a valid test recipient email address." });
+      return;
+    }
+    setIsSendingTest(true);
+    setTestSendResult(null);
+    try {
+      const compiledHtml = compileStudioEmailHtml(state, false, true);
+      const res = await fetch("/api/marketing/test-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: testEmailAddress.trim(),
+          subject: state.subject || state.title || "Email Preview",
+          contentHtml: compiledHtml,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setTestSendResult({
+          success: true,
+          message: `Preview delivered to ${testEmailAddress.trim()} via corporate SMTP.`,
+        });
+      } else {
+        setTestSendResult({
+          success: false,
+          message: data.error || "Failed to send test preview email.",
+        });
+      }
+    } catch {
+      setTestSendResult({ success: false, message: "Network connection error while sending test email." });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
+  const handleConfirmBroadcast = async () => {
+    if (!onDispatchNow) return;
+    setIsDispatching(true);
+    try {
+      const compiledHtml = compileStudioEmailHtml(state, false, true);
+      await onDispatchNow({
+        id: initialData?.id,
+        title: state.title,
+        subject: state.subject,
+        contentHtml: compiledHtml,
+        occasion: state.occasion,
+        targetAudience: selectedAudience,
+      });
+      setIsDispatchModalOpen(false);
+    } catch {
+      // Handled by parent
+    } finally {
+      setIsDispatching(false);
+    }
+  };
 
   const selectOccasion = (preset: EmailPresetDefinition) => {
     setState((prev) => ({
@@ -1914,6 +2047,99 @@ export function EmailComposerStudio({
             </div>
           )}
 
+          {/* Target Audience & Test Dispatch Card (Campaign Mode Only) */}
+          {mode === "campaign" && (
+            <div className="rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03] p-4 space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                    <Users className="h-3.5 w-3.5 text-red-600" />
+                    Target Audience Directory
+                  </label>
+                  <span className="text-[11px] font-mono font-semibold text-red-600 dark:text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
+                    {selectedAudience.startsWith("FORM:")
+                      ? `${
+                          availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)
+                            ?.submissionsCount || 0
+                        } form attendee(s)`
+                      : selectedAudience === "ALL"
+                      ? `${audienceCounts.total} verified contact(s)`
+                      : `${audienceCounts.categories[selectedAudience] || 0} contact(s)`}
+                  </span>
+                </div>
+                <select
+                  value={selectedAudience}
+                  onChange={(e) => handleAudienceChange(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c24] px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-red-500 focus:outline-none"
+                >
+                  <optgroup label="General Directory & Contacts">
+                    <option value="ALL">All Contacts (Subscribers & Form Registrants)</option>
+                    <option value="CLIENT">Clients & Corporate Partners</option>
+                    <option value="LEAD">Prospective Inquiries & Commercial Leads</option>
+                    <option value="NEWSLETTER">Official Newsletter Subscribers</option>
+                  </optgroup>
+                  {availableForms.length > 0 && (
+                    <optgroup label="Live Forms & Event Registrations">
+                      {availableForms.map((form) => (
+                        <option key={form.id} value={`FORM:${form.slug}`}>
+                          Form: {form.title} ({form.submissionsCount} registrants)
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {selectedAudience.startsWith("FORM:")
+                    ? "Delivers this broadcast exclusively to all respondents who registered on this form."
+                    : "Delivers this campaign to all verified contacts matching this audience segment."}
+                </p>
+              </div>
+
+              {/* Instant Test Preview Dispatch */}
+              <div className="pt-3 border-t border-slate-200/60 dark:border-white/[0.06] space-y-2">
+                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>Send Test Preview to Your Inbox</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Direct SMTP Check</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
+                    placeholder="e.g. it.admin@dextaafrica.com"
+                    className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c24] px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-red-500 focus:outline-none"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    isLoading={isSendingTest}
+                    onClick={handleSendTestEmail}
+                    className="text-xs shrink-0"
+                  >
+                    Send Test
+                  </Button>
+                </div>
+                {testSendResult && (
+                  <div
+                    className={`flex items-start gap-1.5 text-[11px] p-2 rounded-lg ${
+                      testSendResult.success
+                        ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40"
+                        : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/40"
+                    }`}
+                  >
+                    {testSendResult.success ? (
+                      <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    )}
+                    <span>{testSendResult.message}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Save / Action Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-white/[0.06]">
             <div className="flex items-center gap-2">
@@ -1952,25 +2178,31 @@ export function EmailComposerStudio({
               )}
               <Button
                 type="submit"
-                variant="primary"
+                variant="secondary"
                 size="md"
                 isLoading={isSubmitting}
-                leftIcon={
-                  mode === "campaign" ? (
-                    <Send className="h-4 w-4" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )
-                }
+                leftIcon={<Save className="h-4 w-4" />}
               >
                 {initialData?.id
                   ? mode === "campaign"
-                    ? "Update Campaign Draft"
+                    ? "Update Draft"
                     : "Update Saved Template"
                   : mode === "campaign"
                   ? "Save Campaign Draft"
                   : "Save New Template"}
               </Button>
+              {mode === "campaign" && onDispatchNow && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  onClick={() => setIsDispatchModalOpen(true)}
+                  leftIcon={<Send className="h-4 w-4" />}
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-sm"
+                >
+                  🚀 Send Broadcast
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -2558,6 +2790,77 @@ export function EmailComposerStudio({
           </div>
         </div>
       </div>
+
+      {/* Broadcast Dispatch Confirmation Modal */}
+      <Modal
+        isOpen={isDispatchModalOpen}
+        onClose={() => !isDispatching && setIsDispatchModalOpen(false)}
+        title="Confirm Campaign Broadcast Dispatch"
+        description="Verify recipient target and dispatch details before transmitting via corporate SMTP."
+        maxWidth="md"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={isDispatching}
+              onClick={() => setIsDispatchModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              isLoading={isDispatching}
+              onClick={handleConfirmBroadcast}
+              leftIcon={<Send className="h-4 w-4" />}
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+            >
+              {isDispatching ? "Transmitting..." : "Confirm & Send Broadcast Now"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 text-xs">
+          <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Campaign Subject:</span>
+              <span className="font-bold text-slate-900 dark:text-white truncate max-w-[240px]">
+                {state.subject || state.title || "(Untitled Campaign)"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Target Segment:</span>
+              <span className="font-semibold text-red-600 dark:text-red-400">
+                {selectedAudience.startsWith("FORM:")
+                  ? `Form: ${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.title || selectedAudience}`
+                  : selectedAudience === "ALL"
+                  ? "All Verified Contacts & Attendees"
+                  : selectedAudience}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Sender Identity:</span>
+              <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                {state.senderName} &lt;{state.senderEmail}&gt;
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] space-y-1">
+            <p className="font-semibold flex items-center gap-1.5">
+              <AlertCircle className="h-3.5 w-3.5" />
+              Direct Transmission Notice
+            </p>
+            <p>
+              Each contact in the selected audience will receive a personalized individual email.
+              The broadcast record will be saved in your Sent Campaigns archive for analytics and delivery verification.
+            </p>
+          </div>
+        </div>
+      </Modal>
     </form>
   );
 }

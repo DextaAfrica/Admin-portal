@@ -86,42 +86,119 @@ export async function dispatchCampaign(campaignId: string, targetCategory?: stri
 
   if (!campaign) throw new Error("Campaign not found");
 
-  const whereClause: any = { status: "SUBSCRIBED" };
-  if (targetCategory && targetCategory !== "ALL") {
-    whereClause.category = targetCategory;
+  // Build target recipient list from AudienceSubscribers and FormSubmissions
+  const recipientMap = new Map<string, {
+    email: string;
+    firstName: string;
+    lastName: string;
+    fullName: string;
+    company: string;
+    category: string;
+  }>();
+
+  // 1. If targeting a specific form: targetCategory = "FORM:<slug>"
+  if (targetCategory && targetCategory.startsWith("FORM:")) {
+    const formSlug = targetCategory.replace("FORM:", "").trim();
+    const form = await prisma.customForm.findUnique({
+      where: { slug: formSlug },
+      include: { submissions: true },
+    });
+    if (form) {
+      for (const sub of form.submissions) {
+        if (sub.email) {
+          const parts = (sub.fullName || "").trim().split(/\s+/);
+          recipientMap.set(sub.email.toLowerCase(), {
+            email: sub.email.toLowerCase(),
+            firstName: parts[0] || sub.fullName || "Valued Partner",
+            lastName: parts.slice(1).join(" ") || "",
+            fullName: sub.fullName || "Valued Partner",
+            company: sub.company || "Partner",
+            category: sub.category || "Attendee",
+          });
+        }
+      }
+    }
+  } else {
+    // 2. Query AudienceSubscriber directory
+    const whereClause: any = { status: "SUBSCRIBED" };
+    if (targetCategory && targetCategory !== "ALL") {
+      whereClause.category = targetCategory;
+    }
+
+    const subscribers = await prisma.audienceSubscriber.findMany({
+      where: whereClause,
+    });
+
+    for (const sub of subscribers) {
+      if (sub.email) {
+        recipientMap.set(sub.email.toLowerCase(), {
+          email: sub.email.toLowerCase(),
+          firstName: sub.firstName || sub.company || "Valued Partner",
+          lastName: sub.lastName || "",
+          fullName: [sub.firstName, sub.lastName].filter(Boolean).join(" ") || sub.company || "Valued Partner",
+          company: sub.company || "Partner",
+          category: sub.category || "General",
+        });
+      }
+    }
+
+    // 3. If target is ALL and audience has few/no records, also include unique FormSubmission contacts
+    if (!targetCategory || targetCategory === "ALL") {
+      const submissions = await prisma.formSubmission.findMany({
+        select: { email: true, fullName: true, company: true, category: true },
+      });
+      for (const sub of submissions) {
+        if (sub.email && !recipientMap.has(sub.email.toLowerCase())) {
+          const parts = (sub.fullName || "").trim().split(/\s+/);
+          recipientMap.set(sub.email.toLowerCase(), {
+            email: sub.email.toLowerCase(),
+            firstName: parts[0] || sub.fullName || "Valued Partner",
+            lastName: parts.slice(1).join(" ") || "",
+            fullName: sub.fullName || "Valued Partner",
+            company: sub.company || "Partner",
+            category: sub.category || "Attendee",
+          });
+        }
+      }
+    }
   }
 
-  const subscribers = await prisma.audienceSubscriber.findMany({
-    where: whereClause,
-  });
+  const recipients = Array.from(recipientMap.values());
 
   await prisma.emailCampaign.update({
     where: { id: campaignId },
     data: {
       status: "SENDING",
-      recipientCount: subscribers.length,
+      recipientCount: recipients.length,
     },
   });
 
-  const portalUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const portalUrl = process.env.NEXT_PUBLIC_APP_URL || "https://admin.dextaafrica.com";
 
-  for (const sub of subscribers) {
-    const fullName = [sub.firstName, sub.lastName].filter(Boolean).join(" ") || sub.company || "Valued Partner";
+  let successfulDispatches = 0;
+  for (const rec of recipients) {
     const personalizedHtml = compileTemplate(campaign.contentHtml, {
-      firstName: sub.firstName || sub.company || "Valued Partner",
-      lastName: sub.lastName || "",
-      fullName,
-      company: sub.company || "Partner",
-      category: sub.category || "General",
+      firstName: rec.firstName,
+      lastName: rec.lastName,
+      fullName: rec.fullName,
+      company: rec.company,
+      category: rec.category,
       portalUrl,
-      unsubscribeLink: `${portalUrl}/unsubscribe?email=${encodeURIComponent(sub.email)}`,
+      unsubscribeLink: `${portalUrl}/unsubscribe?email=${encodeURIComponent(rec.email)}`,
     });
 
-    await sendEmail({
-      to: sub.email,
-      subject: campaign.subject,
-      html: personalizedHtml,
-    });
+    try {
+      const sendRes = await sendEmail({
+        to: rec.email,
+        subject: campaign.subject,
+        html: personalizedHtml,
+      });
+      if (sendRes.success) {
+        successfulDispatches++;
+      }
+    } catch (err) {
+      console.error(`Failed to dispatch to ${rec.email}:`, err);
+    }
   }
 
   return prisma.emailCampaign.update({
@@ -129,6 +206,7 @@ export async function dispatchCampaign(campaignId: string, targetCategory?: stri
     data: {
       status: "SENT",
       sentAt: new Date(),
+      recipientCount: recipients.length,
     },
   });
 }
