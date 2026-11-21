@@ -164,8 +164,9 @@ export default function PublicRegistrationPage({
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("folder", "forms");
 
-      const res = await fetch("/api/storage/local-upload", {
+      const res = await fetch("/api/storage/upload", {
         method: "POST",
         body: formData,
       });
@@ -176,10 +177,10 @@ export default function PublicRegistrationPage({
       setCustomAnswers((prev) => ({
         ...prev,
         [fieldId]: {
-          url: data.path,
-          fileName: file.name,
-          fileSize: file.size,
-          fileType: file.type,
+          url: data.url,
+          fileName: data.fileName || file.name,
+          fileSize: data.fileSize || file.size,
+          fileType: data.mimeType || file.type,
         },
       }));
     } catch (err: any) {

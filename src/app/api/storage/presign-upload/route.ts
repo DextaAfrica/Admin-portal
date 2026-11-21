@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
-import { getPresignedUploadUrl } from "@/lib/storage/s3";
+import { getPresignedUploadUrl, activeBucketName } from "@/lib/storage/s3";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent } from "@/lib/auth/audit";
 
@@ -20,21 +20,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
     const timestamp = Date.now();
     const sanitizedName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const key = `${folder}/${timestamp}-${sanitizedName}`;
+    const key = `${folder}/${year}/${month}/${timestamp}-${sanitizedName}`;
 
-    const { uploadUrl, finalUrl, isDirectLocal } = await getPresignedUploadUrl({
+    const { uploadUrl, finalUrl, isDirectLocal, provider } = await getPresignedUploadUrl({
       key,
       mimeType,
     });
 
-    const bucketName = process.env.AWS_S3_BUCKET_NAME || "dexta-assets-storage";
-
     // Record asset in database
     const asset = await prisma.storageAsset.create({
       data: {
-        bucket: bucketName,
+        bucket: activeBucketName,
         key,
         fileName,
         fileSize,
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest) {
       entityId: asset.id,
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent"),
-      metadata: { key, fileSize, mimeType },
+      metadata: { key, fileSize, mimeType, provider },
     });
 
     return NextResponse.json({
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
       uploadUrl,
       finalUrl,
       isDirectLocal,
+      provider,
     });
   } catch (err: unknown) {
     return NextResponse.json(
@@ -70,4 +72,3 @@ export async function POST(req: NextRequest) {
     );
   }
 }
-

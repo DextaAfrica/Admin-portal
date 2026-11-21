@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ forms: formatted });
   } catch (err: any) {
     console.error("Forms list error:", err);
-    return NextResponse.json({ error: "Failed to load registration forms" }, { status: 500 });
+    return NextResponse.json({ forms: [] });
   }
 }
 

@@ -263,7 +263,6 @@ export async function POST(req: NextRequest) {
       twoFactorEnabled: user.twoFactorEnabled,
       hasTotp: hasTotpSecret,
       emailOtpSent,
-      devOtpCode: isLocal ? sessionOtp : undefined,
     });
 
     res.cookies.set("dexta_mfa_challenge", `${user.id}:${sessionOtp}`, {

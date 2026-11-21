@@ -35,7 +35,7 @@ interface CommandSlide {
 const COMMAND_PORTRAITS: CommandSlide[] = [
   {
     image: "/images/team-dexta.jpg",
-    name: "Enterprise IT & Systems Command",
+    name: "Enterprise IT & Administration",
     role: "Global Infrastructure Governance",
     department: "Systems & Security Operations",
     summary:
@@ -131,7 +131,7 @@ export default function AdminPortalLandingPage() {
               className="btn-crimson-exec h-9 sm:h-10 rounded-xl px-3.5 sm:px-5 text-xs sm:text-sm font-bold shadow-md shadow-red-500/20 hover:shadow-red-500/35 transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
             >
               <span>Sign In</span>
-              <span className="hidden sm:inline">to Command</span>
+              <span className="hidden sm:inline">to Portal</span>
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -147,7 +147,7 @@ export default function AdminPortalLandingPage() {
               <div className="inline-flex items-center gap-2 rounded-full border border-red-200/90 dark:border-red-500/25 bg-red-50/90 dark:bg-red-500/10 px-3.5 py-1 animate-fade-in">
                 <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
                 <span className="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#ED2618] dark:text-red-400">
-                  Dexta Africa Systems Command
+                  Dexta Africa Administration Portal
                 </span>
               </div>
 
@@ -320,7 +320,7 @@ export default function AdminPortalLandingPage() {
       {/* Footer */}
       <footer className="relative z-20 border-t border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#070A0F] py-8 text-center text-xs text-slate-500">
         <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p>&copy; {new Date().getFullYear()} Dexta Africa Enterprise Systems Command &bull; admin.dextafrica.org</p>
+          <p>&copy; {new Date().getFullYear()} Dexta Africa Enterprise Administration &bull; admin.dextafrica.org</p>
           <div className="flex items-center gap-6">
             <Link href="/login" className="hover:text-[#ED2618] transition-colors">
               Operator Sign In

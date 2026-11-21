@@ -334,12 +334,24 @@ export default function FormDemographicsPage({
 
         {/* Export & Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/marketing/campaigns?formSlug=${form.slug}&formTitle=${encodeURIComponent(form.title)}`}
+          >
+            <Button
+              size="sm"
+              className="bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 text-xs h-8"
+            >
+              <Mail className="w-3.5 h-3.5 mr-1.5" />
+              <span>Design Studio Campaign</span>
+            </Button>
+          </Link>
+
           <Button
             variant="outline"
             size="sm"
             onClick={fetchAnalytics}
             disabled={loading}
-            className="border-neutral-800 text-neutral-300 hover:bg-neutral-800"
+            className="border-neutral-800 text-neutral-300 hover:bg-neutral-800 text-xs h-8"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
             <span>Refresh</span>
