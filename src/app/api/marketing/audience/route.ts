@@ -60,10 +60,21 @@ export async function GET(req: NextRequest) {
       activeSubscribersCount: allSubscribers.filter((s) => s.status === "SUBSCRIBED").length,
     });
   } catch (err: unknown) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to load audience contacts" },
-      { status: 500 }
-    );
+    console.error("GET /api/marketing/audience error:", err);
+    return NextResponse.json({
+      subscribers: [],
+      categoryCounts: {
+        ALL: 0,
+        CLIENT: 0,
+        INVESTOR: 0,
+        PARTNER: 0,
+        CONTRACTOR: 0,
+        LEAD: 0,
+        NEWSLETTER: 0,
+      },
+      totalCount: 0,
+      activeSubscribersCount: 0,
+    });
   }
 }
 

@@ -18,10 +18,8 @@ export async function GET() {
 
     return NextResponse.json({ campaigns });
   } catch (err: unknown) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Failed to load campaigns" },
-      { status: 500 }
-    );
+    console.error("GET /api/marketing/campaigns error:", err);
+    return NextResponse.json({ campaigns: [] });
   }
 }
 
