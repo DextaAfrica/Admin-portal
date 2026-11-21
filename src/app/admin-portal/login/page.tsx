@@ -114,7 +114,12 @@ export default function AdminPortalLoginPage() {
         body: JSON.stringify({ email: cleanEmail, password }),
       });
 
-      const data = await res.json();
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        data = { error: `Server returned error (${res.status}). Please verify connection.` };
+      }
 
       if (!res.ok) {
         setErrorMessage(data.error || "Authentication failed");
@@ -221,7 +226,6 @@ export default function AdminPortalLoginPage() {
           src="/images/olufemi-dexta.png"
           alt="Dexta Systems Command Banner"
           fill
-          priority
           sizes="100vw"
           className="object-cover opacity-20 dark:opacity-15 blur-[4px] scale-105"
           style={{ objectPosition: "50% 15%" }}
@@ -270,7 +274,6 @@ export default function AdminPortalLoginPage() {
               src="/images/olufemi-dexta.png"
               alt="Dexta Africa Systems Command"
               fill
-              priority
               sizes="(max-width: 1024px) 100vw, 58vw"
               className="object-cover"
               style={{ objectPosition: "50% 12%" }}
@@ -332,7 +335,6 @@ export default function AdminPortalLoginPage() {
                 src="/images/olufemi-dexta.png"
                 alt="Dexta Systems Command"
                 fill
-                priority
                 sizes="(max-width: 1024px) 100vw, 420px"
                 className="object-cover"
                 style={{ objectPosition: "50% 12%" }}

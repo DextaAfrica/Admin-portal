@@ -15,7 +15,6 @@ export default function AdminPortalRegisterPage() {
           src="/images/olufemi-dexta.png"
           alt="Dexta Africa Systems Command"
           fill
-          priority
           className="object-cover opacity-15 dark:opacity-10 scale-105 blur-sm"
           style={{ objectPosition: "50% 15%" }}
         />

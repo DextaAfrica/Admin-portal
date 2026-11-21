@@ -28,8 +28,23 @@ export async function POST(req: NextRequest) {
 
     const { email, password } = validationResult.data;
 
+    // Resilient defensive query: only select essential auth columns
+    // This prevents 500 errors if optional non-auth columns are pending migration
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase().trim() },
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        passwordHash: true,
+        status: true,
+        role: true,
+        department: true,
+        twoFactorEnabled: true,
+        twoFactorSecret: true,
+        mustChangePassword: true,
+        activationKey: true,
+      },
     });
 
     if (!user || user.status !== "ACTIVE") {
@@ -40,7 +55,7 @@ export async function POST(req: NextRequest) {
         ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
         userAgent: req.headers.get("user-agent"),
         metadata: { reason: "Account not found or inactive" },
-      });
+      }).catch(() => {});
 
       return NextResponse.json(
         { error: "Invalid email or password, or account access is paused" },
@@ -58,7 +73,7 @@ export async function POST(req: NextRequest) {
         ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
         userAgent: req.headers.get("user-agent"),
         metadata: { reason: "Incorrect password" },
-      });
+      }).catch(() => {});
 
       return NextResponse.json(
         { error: "Incorrect email or password. Please try again." },
@@ -148,6 +163,8 @@ export async function POST(req: NextRequest) {
       await prisma.user.update({
         where: { id: user.id },
         data: { lastLoginAt: new Date() },
+      }).catch((err) => {
+        console.warn("Could not update lastLoginAt:", err);
       });
 
       await logAuditEvent({
@@ -159,7 +176,7 @@ export async function POST(req: NextRequest) {
         ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
         userAgent: req.headers.get("user-agent"),
         metadata: { method: "PASSWORD" },
-      });
+      }).catch(() => {});
 
       const res = NextResponse.json({
         requiresMfa: false,

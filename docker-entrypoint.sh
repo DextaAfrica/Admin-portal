@@ -24,15 +24,13 @@ fi
 
 # 2. Database schema synchronization
 if [ "${AUTO_MIGRATE:-true}" = "true" ]; then
-  echo "🔄 [Database] Synchronizing Prisma schema..."
-  if [ -x "./node_modules/.bin/prisma" ]; then
-    ./node_modules/.bin/prisma db push --skip-generate --accept-data-loss || {
-      echo "⚠️  [Database] Warning: schema push encountered an issue, proceeding..."
+  echo "🔄 [Database] Synchronizing database schema and security models..."
+  if [ -f "./prisma/ensure-schema.js" ]; then
+    node ./prisma/ensure-schema.js || {
+      echo "⚠️  [Database] Warning: ensure-schema encountered an issue, proceeding..."
     }
-  elif command -v prisma >/dev/null 2>&1; then
-    prisma db push --skip-generate --accept-data-loss || {
-      echo "⚠️  [Database] Warning: schema push encountered an issue, proceeding..."
-    }
+  elif [ -x "./node_modules/.bin/prisma" ]; then
+    ./node_modules/.bin/prisma db push --skip-generate --accept-data-loss || true
   else
     npx --no-install prisma db push --skip-generate --accept-data-loss 2>/dev/null || true
   fi

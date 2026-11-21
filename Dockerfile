@@ -86,6 +86,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
 # Copy Prisma schema, migrations, and seed scripts
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 # Copy Prisma CLI and engine binaries from builder for runtime schema sync
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
