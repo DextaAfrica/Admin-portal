@@ -210,6 +210,12 @@ export async function dispatchCampaign(
 
   const recipients = Array.from(recipientMap.values());
 
+  if (recipients.length === 0) {
+    throw new Error(
+      "No eligible email recipients found in the selected target group. Please ensure subscribers are active or attach a custom recipient list before broadcasting."
+    );
+  }
+
   await prisma.emailCampaign.update({
     where: { id: campaignId },
     data: {
@@ -221,6 +227,8 @@ export async function dispatchCampaign(
   const portalUrl = process.env.NEXT_PUBLIC_APP_URL || "https://admin.dextaafrica.com";
 
   let successfulDispatches = 0;
+  let lastError = "";
+
   for (const rec of recipients) {
     const personalizedHtml = compileTemplate(campaign.contentHtml, {
       firstName: rec.firstName,
@@ -240,10 +248,23 @@ export async function dispatchCampaign(
       });
       if (sendRes.success) {
         successfulDispatches++;
+      } else if (sendRes.error) {
+        lastError = sendRes.error;
       }
     } catch (err) {
+      lastError = err instanceof Error ? err.message : "SMTP transport failure";
       console.error(`Failed to dispatch to ${rec.email}:`, err);
     }
+  }
+
+  if (successfulDispatches === 0 && recipients.length > 0) {
+    await prisma.emailCampaign.update({
+      where: { id: campaignId },
+      data: { status: "FAILED" },
+    });
+    throw new Error(
+      `Delivery failed for all ${recipients.length} recipients: ${lastError || "SMTP service unavailable"}. Please verify your SMTP server configuration in environment settings.`
+    );
   }
 
   return prisma.emailCampaign.update({
@@ -251,7 +272,7 @@ export async function dispatchCampaign(
     data: {
       status: "SENT",
       sentAt: new Date(),
-      recipientCount: recipients.length,
+      recipientCount: successfulDispatches,
     },
   });
 }

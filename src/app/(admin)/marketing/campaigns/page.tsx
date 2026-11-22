@@ -1033,10 +1033,16 @@ function CampaignsPageContent() {
               size="sm"
               onClick={() => sendConfirmCampaign && handleDispatchNow(sendConfirmCampaign.id)}
               isLoading={Boolean(dispatchingId)}
+              disabled={
+                Boolean(dispatchingId) ||
+                (targetAudienceCategory === "ALL"
+                  ? subscribersCount === 0
+                  : (categoryCounts[targetAudienceCategory] ?? 0) === 0)
+              }
               leftIcon={<Send className="h-4 w-4" />}
-              className="bg-[#ED2618] hover:bg-[#c91e12] text-xs font-bold"
+              className="bg-[#ED2618] hover:bg-[#c91e12] text-xs font-bold disabled:opacity-50"
             >
-              Yes, Dispatch Now
+              {dispatchingId ? "Transmitting..." : "Yes, Dispatch Now"}
             </Button>
           </div>
         }
@@ -1073,6 +1079,15 @@ function CampaignsPageContent() {
                 {targetAudienceCategory === "ALL" ? subscribersCount : (categoryCounts[targetAudienceCategory] ?? 0)} Contacts
               </strong>
             </div>
+
+            {(targetAudienceCategory === "ALL" ? subscribersCount === 0 : (categoryCounts[targetAudienceCategory] ?? 0) === 0) && (
+              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                <span>
+                  No subscribers found in this segment. Please select &quot;All Active Contacts&quot;, or add contacts to this segment in your Audience Directory before broadcasting.
+                </span>
+              </div>
+            )}
 
             <div className="flex justify-between items-center text-[11px] pt-1 text-slate-400">
               <span>Need to collect more contacts first?</span>

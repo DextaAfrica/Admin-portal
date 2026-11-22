@@ -1212,7 +1212,78 @@ export function EmailComposerStudio({
     setAssetVaultTarget(null);
   };
 
-  const uploadFileToStorage = async (file: File, folder = "campaigns"): Promise<string> => {
+/**
+ * Downscales oversized images client-side before network transmission.
+ * Prevents net::ERR_HTTP2_PROTOCOL_ERROR from reverse proxy body size limits (e.g. 5-15MB phone photos)
+ * and keeps email payloads fast and crisp.
+ */
+async function optimizeImageBeforeUpload(file: File): Promise<File> {
+  if (typeof window === "undefined") return file;
+  if (!file.type.startsWith("image/") || file.type.includes("svg") || file.type.includes("gif")) {
+    return file;
+  }
+
+  if (file.size <= 1024 * 1024) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const MAX_DIMENSION = 1600;
+      let { width, height } = img;
+
+      if (width <= MAX_DIMENSION && height <= MAX_DIMENSION && file.size < 1.8 * 1024 * 1024) {
+        resolve(file);
+        return;
+      }
+
+      if (width > height && width > MAX_DIMENSION) {
+        height = Math.round((height * MAX_DIMENSION) / width);
+        width = MAX_DIMENSION;
+      } else if (height > MAX_DIMENSION) {
+        width = Math.round((width * MAX_DIMENSION) / height);
+        height = MAX_DIMENSION;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        resolve(file);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(file);
+            return;
+          }
+          const optimizedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
+            type: "image/jpeg",
+            lastModified: Date.now(),
+          });
+          resolve(optimizedFile);
+        },
+        "image/jpeg",
+        0.88
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file);
+    };
+    img.src = objectUrl;
+  });
+}
+
+  const uploadFileToStorage = async (rawFile: File, folder = "campaigns"): Promise<string> => {
+    const file = await optimizeImageBeforeUpload(rawFile);
     // 1. Primary Attempt: /api/storage/upload (Cloudflare R2 / AWS S3 / StorageAsset DB)
     try {
       const formData = new FormData();
@@ -1229,8 +1300,8 @@ export function EmailComposerStudio({
         const data = await res.json();
         if (data?.url) return data.url;
       }
-    } catch (e) {
-      console.warn("Primary storage upload route unavailable, attempting local route fallback:", e);
+    } catch {
+      // Primary route network error handled, proceeding to secondary fallback
     }
 
     // 2. Secondary Attempt: /api/storage/local-upload (Universal disk/buffer fallback)
@@ -3836,7 +3907,7 @@ export function EmailComposerStudio({
         description="Verify recipient target and dispatch details before transmitting via corporate SMTP."
         maxWidth="md"
         footer={
-          <div className="flex items-center justify-end gap-2.5">
+          <div className="flex items-center justify-end gap-2.5 w-full">
             <Button
               type="button"
               variant="ghost"
@@ -3851,9 +3922,19 @@ export function EmailComposerStudio({
               variant="primary"
               size="md"
               isLoading={isDispatching}
+              disabled={
+                isDispatching ||
+                (recipientSource === "custom_list" || recipientSource === "external_link"
+                  ? customRecipients.length === 0
+                  : selectedAudience.startsWith("FORM:")
+                  ? (availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.submissionsCount ?? 0) === 0
+                  : selectedAudience === "ALL"
+                  ? (audienceCounts.total || 0) === 0
+                  : (audienceCounts.categories[selectedAudience] ?? 0) === 0)
+              }
               onClick={handleConfirmBroadcast}
               leftIcon={<Send className="h-4 w-4" />}
-              className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+              className="bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50"
             >
               {isDispatching ? "Transmitting..." : "Confirm & Send Broadcast Now"}
             </Button>
@@ -3876,10 +3957,10 @@ export function EmailComposerStudio({
                   : recipientSource === "external_link"
                   ? `Imported External Link (${customRecipients.length} contacts)`
                   : selectedAudience.startsWith("FORM:")
-                  ? `Form: ${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.title || selectedAudience}`
+                  ? `Form: ${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.title || selectedAudience} (${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.submissionsCount ?? 0})`
                   : selectedAudience === "ALL"
-                  ? "All Verified Contacts & Attendees"
-                  : selectedAudience}
+                  ? `All Verified Contacts (${audienceCounts.total || 0} recipients)`
+                  : `${selectedAudience} (${audienceCounts.categories[selectedAudience] ?? 0} recipients)`}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -3890,16 +3971,34 @@ export function EmailComposerStudio({
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] space-y-1">
-            <p className="font-semibold flex items-center gap-1.5">
-              <AlertCircle className="h-3.5 w-3.5" />
-              Direct Transmission Notice
-            </p>
-            <p>
-              Each contact in the selected audience will receive a personalized individual email.
-              The broadcast record will be saved in your Sent Campaigns archive for analytics and delivery verification.
-            </p>
-          </div>
+          {(recipientSource === "custom_list" || recipientSource === "external_link"
+            ? customRecipients.length === 0
+            : selectedAudience.startsWith("FORM:")
+            ? (availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.submissionsCount ?? 0) === 0
+            : selectedAudience === "ALL"
+            ? (audienceCounts.total || 0) === 0
+            : (audienceCounts.categories[selectedAudience] ?? 0) === 0) ? (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs space-y-1.5">
+              <p className="font-bold flex items-center gap-1.5">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
+                Target Audience Has 0 Active Recipients
+              </p>
+              <p className="text-[11px] leading-relaxed">
+                No subscribed contacts were found in this segment. Please select &quot;All Contacts&quot;, attach a CSV/TXT email list under Audience &amp; Dispatch, or import contacts from an external URL before broadcasting.
+              </p>
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] space-y-1">
+              <p className="font-semibold flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5" />
+                Direct Transmission Notice
+              </p>
+              <p>
+                Each contact in the selected audience will receive a personalized individual email.
+                The broadcast record will be saved in your Sent Campaigns archive for analytics and delivery verification.
+              </p>
+            </div>
+          )}
         </div>
       </Modal>
 
