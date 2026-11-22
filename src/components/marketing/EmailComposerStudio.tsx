@@ -818,6 +818,7 @@ export function EmailComposerStudio({
 
   const [studioTab, setStudioTab] = React.useState<"content" | "design" | "audience" | "html">("content");
   const [previewTab, setPreviewTab] = React.useState<"visual" | "html_code" | "details" | "plaintext">("visual");
+  const [mobileView, setMobileView] = React.useState<"editor" | "preview">("editor");
 
   const heroInputRef = React.useRef<HTMLInputElement>(null);
   const logoInputRef = React.useRef<HTMLInputElement>(null);
@@ -1348,7 +1349,13 @@ export function EmailComposerStudio({
       const uploadedUrl = await uploadFileToStorage(file, "campaigns");
       updateCustomBlock(blockId, { imageUrl: uploadedUrl });
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "Failed to upload image to storage bucket");
+      console.error("Custom block image upload failed, falling back to local file preview:", err);
+      try {
+        const localPreview = URL.createObjectURL(file);
+        updateCustomBlock(blockId, { imageUrl: localPreview });
+      } catch {
+        // Silent recovery
+      }
     } finally {
       setIsUploadingImage(null);
       e.target.value = "";
@@ -1417,7 +1424,7 @@ export function EmailComposerStudio({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5">
+        <div className="flex overflow-x-auto sm:grid sm:grid-cols-3 xl:grid-cols-6 gap-2.5 pb-2 -mx-1 px-1 no-scrollbar">
           {EMAIL_OCCASION_PRESETS.map((preset) => {
             const Icon = preset.icon;
             const isSelected = state.occasion === preset.id && !state.useCustomHtmlOverride;
@@ -1426,7 +1433,7 @@ export function EmailComposerStudio({
                 key={preset.id}
                 type="button"
                 onClick={() => selectOccasion(preset)}
-                className={`flex flex-col items-start justify-between p-3 rounded-2xl border text-left transition-all cursor-pointer min-h-[96px] ${
+                className={`flex flex-col items-start justify-between p-3 rounded-2xl border text-left transition-all cursor-pointer min-h-[96px] min-w-[150px] sm:min-w-0 shrink-0 sm:shrink ${
                   isSelected
                     ? "border-red-600 bg-red-50/70 dark:bg-red-950/25 shadow-xs ring-1 ring-red-600/30"
                     : "border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#14151b] hover:border-slate-300 dark:hover:border-white/20"
@@ -1455,10 +1462,38 @@ export function EmailComposerStudio({
         </div>
       </div>
 
+      {/* Mobile View Toggle: Switch between Inspector & Canvas Preview */}
+      <div className="lg:hidden flex items-center justify-center p-1 rounded-2xl bg-slate-100 dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/10">
+        <button
+          type="button"
+          onClick={() => setMobileView("editor")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            mobileView === "editor"
+              ? "bg-white dark:bg-[#1a1c24] text-red-600 dark:text-white shadow-xs"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+          }`}
+        >
+          <Layers className="h-3.5 w-3.5" />
+          <span>Editor &amp; Blocks</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setMobileView("preview")}
+          className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            mobileView === "preview"
+              ? "bg-white dark:bg-[#1a1c24] text-red-600 dark:text-white shadow-xs"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+          }`}
+        >
+          <Eye className="h-3.5 w-3.5" />
+          <span>Live Email Canvas</span>
+        </button>
+      </div>
+
       {/* Main Two-Column Studio Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Multi-Tab Design & Content Inspector (6 cols) */}
-        <div className="lg:col-span-6 space-y-5 rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#121318] p-4 sm:p-6 shadow-xs">
+        <div className={`lg:col-span-6 space-y-5 rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#121318] p-3.5 sm:p-6 shadow-xs ${mobileView === "editor" ? "block" : "hidden lg:block"}`}>
           {/* Studio Mode Switcher Tabs */}
           <div className="border-b border-slate-100 dark:border-white/[0.06] pb-3.5">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-100 dark:bg-white/[0.04]">
@@ -3044,7 +3079,7 @@ export function EmailComposerStudio({
         </div>
 
         {/* Right Column: Interactive Live Canvas & HTML Preview (6 cols) */}
-        <div className="lg:col-span-6 space-y-3 lg:sticky lg:top-20">
+        <div className={`lg:col-span-6 space-y-3 lg:sticky lg:top-20 ${mobileView === "preview" ? "block" : "hidden lg:block"}`}>
           <div
             className="rounded-2xl border border-slate-200/90 dark:border-white/10 p-4 sm:p-6 shadow-sm transition-colors"
             style={{ backgroundColor: state.canvasBackgroundColor || "#F8FAFC" }}

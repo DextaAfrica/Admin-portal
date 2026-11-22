@@ -106,7 +106,7 @@ export function getAppBaseUrl(): string {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
-  return "https://admin.dextaafrica.org";
+  return "https://admin.dextaafrica.com";
 }
 
 /**
@@ -119,22 +119,18 @@ export function getAppBaseUrl(): string {
 export function resolvePublicAssetUrl(key: string, forceAbsolute = true): string {
   const cleanKey = key.replace(/^\/+/, "");
 
-  if (storageProvider === "cloudflare_r2") {
-    if (r2PublicUrl) {
-      return `${r2PublicUrl.replace(/\/$/, "")}/${cleanKey}`;
-    }
-    return `https://${r2BucketName}.${r2AccountId}.r2.cloudflarestorage.com/${cleanKey}`;
+  // If a public Cloudflare R2 CDN URL is configured (e.g. https://assets.dextaafrica.com or https://pub-xxx.r2.dev)
+  if (r2PublicUrl) {
+    return `${r2PublicUrl.replace(/\/$/, "")}/${cleanKey}`;
   }
 
-  if (storageProvider === "aws_s3") {
-    return `https://${awsBucketName}.s3.${awsRegion}.amazonaws.com/${cleanKey}`;
+  // If R2 or S3 is active but no public CDN domain is mapped, route through the streaming proxy endpoint
+  // This guarantees public visibility for email clients & mobile browsers without S3 authentication errors
+  if (storageProvider === "cloudflare_r2" || storageProvider === "custom_s3" || storageProvider === "aws_s3") {
+    return `${getAppBaseUrl()}/api/storage/file?key=${encodeURIComponent(cleanKey)}`;
   }
 
-  if (storageProvider === "custom_s3" && customS3Endpoint) {
-    return `${customS3Endpoint.replace(/\/$/, "")}/${awsBucketName}/${cleanKey}`;
-  }
-
-  // Local fallback
+  // Local disk storage fallback
   if (forceAbsolute) {
     return `${getAppBaseUrl()}/uploads/${cleanKey}`;
   }
