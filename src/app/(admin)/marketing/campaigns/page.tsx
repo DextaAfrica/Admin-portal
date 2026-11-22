@@ -176,6 +176,7 @@ function CampaignsPageContent() {
     contentHtml: string;
     occasion: EmailOccasionId;
     targetAudience: string;
+    customRecipients?: Array<{ email: string; fullName?: string }>;
   }) => {
     try {
       const isUpdating = Boolean(payload.id);
@@ -208,7 +209,10 @@ function CampaignsPageContent() {
       const dispatchRes = await fetch(`/api/marketing/campaigns/${campaignId}/dispatch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetCategory: payload.targetAudience || targetAudienceCategory }),
+        body: JSON.stringify({
+          targetCategory: payload.targetAudience || targetAudienceCategory,
+          customRecipients: payload.customRecipients,
+        }),
       });
 
       const dispatchData = await dispatchRes.json();
@@ -227,6 +231,74 @@ function CampaignsPageContent() {
       toastError("Network Error", err instanceof Error ? err.message : "Error contacting email dispatcher.");
     } finally {
       setDispatchingId(null);
+    }
+  };
+
+  // Save and Schedule Campaign Broadcast for Future Delivery
+  const handleSaveAndScheduleCampaign = async (payload: {
+    id?: string;
+    title: string;
+    subject: string;
+    contentHtml: string;
+    occasion: EmailOccasionId;
+    targetAudience: string;
+    scheduledAt: string;
+    customRecipients?: Array<{ email: string; fullName?: string }>;
+  }) => {
+    try {
+      const isUpdating = Boolean(payload.id);
+      const saveRes = await fetch("/api/marketing/campaigns", {
+        method: isUpdating ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: payload.id,
+          title: payload.title,
+          subject: payload.subject,
+          contentHtml: payload.contentHtml,
+        }),
+      });
+
+      if (!saveRes.ok) {
+        const errData = await saveRes.json();
+        toastError("Save Issue", errData.error || "Could not save campaign before scheduling.");
+        return;
+      }
+
+      const savedData = await saveRes.json();
+      const campaignId = payload.id || savedData.campaign?.id;
+
+      if (!campaignId) {
+        toastError("Scheduling Error", "Campaign identifier missing.");
+        return;
+      }
+
+      setIsScheduling(true);
+      const scheduleRes = await fetch(`/api/marketing/campaigns/${campaignId}/schedule`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scheduledAt: payload.scheduledAt,
+          targetCategory: payload.targetAudience || targetAudienceCategory,
+          customRecipients: payload.customRecipients,
+        }),
+      });
+
+      const schedData = await scheduleRes.json();
+      if (scheduleRes.ok) {
+        toastSuccess(
+          "Campaign Scheduled",
+          schedData.message || `Scheduled for automated delivery on ${new Date(payload.scheduledAt).toLocaleString()}`
+        );
+        setEditingCampaign(null);
+        await fetchCampaigns();
+        setActiveTab("scheduled");
+      } else {
+        toastError("Schedule Issue", schedData.error || "Could not schedule campaign delivery.");
+      }
+    } catch (err: unknown) {
+      toastError("Network Error", err instanceof Error ? err.message : "Error contacting scheduling service.");
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -814,6 +886,7 @@ function CampaignsPageContent() {
             targetAudience={targetAudienceCategory}
             onTargetAudienceChange={setTargetAudienceCategory}
             onSaveDraft={handleSaveCampaign}
+            onSchedule={handleSaveAndScheduleCampaign}
             onDispatchNow={handleSaveAndDispatchCampaign}
             onCancel={() => setActiveTab("drafts")}
           />

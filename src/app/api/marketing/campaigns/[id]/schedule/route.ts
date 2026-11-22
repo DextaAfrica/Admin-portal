@@ -15,7 +15,7 @@ export async function POST(
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const campaignId = params.id;
-    const { scheduledAt } = await req.json();
+    const { scheduledAt, targetCategory, customRecipients } = await req.json();
 
     if (!scheduledAt) {
       return NextResponse.json(
@@ -40,17 +40,33 @@ export async function POST(
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
     }
 
-    // Get active subscribers count
-    const subscriberCount = await prisma.audienceSubscriber.count({
-      where: { status: "SUBSCRIBED" },
-    });
+    // Determine target recipient count accurately
+    let recipientCount = 0;
+    if (customRecipients && Array.isArray(customRecipients) && customRecipients.length > 0) {
+      recipientCount = customRecipients.length;
+    } else if (targetCategory && targetCategory.startsWith("FORM:")) {
+      const slug = targetCategory.replace("FORM:", "");
+      const form = await prisma.registrationForm.findUnique({
+        where: { slug },
+        include: { submissions: true },
+      });
+      recipientCount = form ? form.submissions.filter((s: { status: string }) => s.status !== "ARCHIVED").length : 0;
+    } else if (targetCategory && targetCategory !== "ALL") {
+      recipientCount = await prisma.audienceSubscriber.count({
+        where: { status: "SUBSCRIBED", category: targetCategory },
+      });
+    } else {
+      recipientCount = await prisma.audienceSubscriber.count({
+        where: { status: "SUBSCRIBED" },
+      });
+    }
 
     const updated = await prisma.emailCampaign.update({
       where: { id: campaignId },
       data: {
         status: "SCHEDULED",
         sentAt: scheduledDate,
-        recipientCount: subscriberCount,
+        recipientCount,
       },
     });
 
@@ -62,7 +78,11 @@ export async function POST(
       entityId: campaignId,
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent"),
-      metadata: { scheduledAt: scheduledDate.toISOString(), recipientCount: subscriberCount },
+      metadata: {
+        scheduledAt: scheduledDate.toISOString(),
+        recipientCount,
+        targetCategory: targetCategory || (customRecipients?.length ? "CUSTOM_LIST" : "ALL"),
+      },
     });
 
     return NextResponse.json({

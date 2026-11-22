@@ -35,6 +35,13 @@ import {
   AlertCircle,
   Loader2,
   FolderOpen,
+  CalendarClock,
+  FileSpreadsheet,
+  UploadCloud,
+  Globe,
+  FileText,
+  Clock,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -133,7 +140,7 @@ const BASE_DESIGN_DEFAULTS = {
   contentAlignment: "left" as const,
   headlineSize: "lg" as const,
   showBrandHeader: true,
-  brandLogoUrl: "/dexta.svg",
+  brandLogoUrl: "/images/dexta-logo-dark.png",
   brandHeaderAlignment: "split" as const,
   brandHeaderBg: "white" as const,
   brandLogoHeight: 32,
@@ -370,11 +377,57 @@ export function compileStudioEmailHtml(
   const replaceVars = (str: string) =>
     previewSampleName ? str.replace(/\{\{firstName\}\}/g, sampleName) : str;
 
+  const isCardDark =
+    (state.cardBackgroundColor || "#ffffff").toLowerCase() === "#0f172a" ||
+    (state.cardBackgroundColor || "#ffffff").toLowerCase() === "#000000" ||
+    (state.cardBackgroundColor || "").toLowerCase().startsWith("#1");
+
+  const isHeaderDark =
+    state.brandHeaderBg === "dark" ||
+    (state.brandHeaderBg === "tinted" && isCardDark);
+
+  const getLogoAbsoluteUrl = (isDark: boolean): string => {
+    // If the user specified an external URL (e.g. S3 upload or http/https)
+    if (
+      state.brandLogoUrl &&
+      (state.brandLogoUrl.startsWith("http://") ||
+        state.brandLogoUrl.startsWith("https://") ||
+        state.brandLogoUrl.startsWith("data:"))
+    ) {
+      if (
+        state.brandLogoUrl.endsWith("/dexta.svg") ||
+        state.brandLogoUrl.endsWith("dexta.svg")
+      ) {
+        return isDark
+          ? "https://admin.dextaafrica.com/images/dexta-logo-light.png"
+          : "https://admin.dextaafrica.com/images/dexta-logo-dark.png";
+      }
+      return state.brandLogoUrl;
+    }
+    const base =
+      typeof window !== "undefined" && window.location.origin.includes("dexta")
+        ? window.location.origin
+        : "https://admin.dextaafrica.com";
+    if (
+      !state.brandLogoUrl ||
+      state.brandLogoUrl === "/dexta.svg" ||
+      state.brandLogoUrl.includes("dexta")
+    ) {
+      return isDark
+        ? `${base}/images/dexta-logo-light.png`
+        : `${base}/images/dexta-logo-dark.png`;
+    }
+    return `${base}/${state.brandLogoUrl.replace(/^\/+/, "")}`;
+  };
+
   const toEmailSafeUrl = (url: string | undefined): string => {
     if (!url) return "";
     if (url.startsWith("http://") || url.startsWith("https://")) return url;
     if (url.startsWith("data:")) return url;
-    const base = typeof window !== "undefined" ? window.location.origin : "https://admin.dextaafrica.org";
+    const base =
+      typeof window !== "undefined" && window.location.origin.includes("dexta")
+        ? window.location.origin
+        : "https://admin.dextaafrica.com";
     return `${base.replace(/\/$/, "")}/${url.replace(/^\/+/, "")}`;
   };
 
@@ -427,22 +480,30 @@ export function compileStudioEmailHtml(
   const headerLabelColor = state.brandHeaderBg === "dark" ? "#cbd5e1" : "#64748b";
 
   const brandHeader = state.showBrandHeader
-    ? `<div style="padding:22px 32px;border-bottom:1px solid #f1f5f9;background:${headerBgColor};display:flex;align-items:center;justify-content:${
-        state.brandHeaderAlignment === "center"
-          ? "center"
-          : state.brandHeaderAlignment === "left"
-          ? "flex-start"
-          : "space-between"
-      };gap:16px;">
-         <img src="${toEmailSafeUrl(state.brandLogoUrl || "/dexta.svg")}" alt="${
-        state.senderName
-      }" style="height:${state.brandLogoHeight || 32}px;width:auto;display:block;" />
-         ${
-           state.brandHeaderAlignment === "split" && state.brandRightLabel
-             ? `<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.16em;color:${headerLabelColor};">${state.brandRightLabel}</span>`
-             : ""
-         }
-       </div>`
+    ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:${headerBgColor};border-bottom:1px solid #f1f5f9;border-collapse:collapse;">
+         <tr>
+           <td style="padding:22px 28px;vertical-align:middle;text-align:${
+             state.brandHeaderAlignment === "center"
+               ? "center"
+               : "left"
+           };">
+             <img src="${getLogoAbsoluteUrl(isHeaderDark)}" alt="${
+               state.senderName
+             }" height="${state.brandLogoHeight || 30}" style="height:${
+               state.brandLogoHeight || 30
+             }px;width:auto;border:0;display:${
+               state.brandHeaderAlignment === "center" ? "inline-block" : "block"
+             };line-height:100%;outline:none;text-decoration:none;" />
+           </td>
+           ${
+             state.brandHeaderAlignment === "split" && state.brandRightLabel
+               ? `<td style="padding:22px 28px;vertical-align:middle;text-align:right;">
+                    <span style="font-family:${fontStack};font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.16em;color:${headerLabelColor};">${state.brandRightLabel}</span>
+                  </td>`
+               : ""
+           }
+         </tr>
+       </table>`
     : "";
 
   const categoryPill =
@@ -565,25 +626,44 @@ export function compileStudioEmailHtml(
          </div>`
       : "";
 
+  const unsubscribeHref = previewSampleName ? "#unsubscribe" : "{{unsubscribeLink}}";
+  const footerLogoUrl = getLogoAbsoluteUrl(isCardDark);
+  const footerTextColor = isCardDark ? "#e2e8f0" : "#0f172a";
+  const footerMutedColor = isCardDark ? "#94a3b8" : "#64748b";
+  const footerBorderColor = isCardDark ? "#334155" : "#e2e8f0";
+
   const footerHtml = state.showFooter
-    ? `<div style="margin-top:28px;padding-top:20px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;gap:12px;">
-         <div style="text-align:left;">
-           <p style="margin:0;font-size:14px;font-weight:700;color:#0f172a;">${replaceVars(
-             state.signOffName
-           )}</p>
-           <p style="margin:2px 0 0 0;font-size:12px;color:#64748b;">${replaceVars(
-             state.signOffRole
-           )}</p>
-           ${
-             state.footerAddress
-               ? `<p style="margin:6px 0 0 0;font-size:11px;color:#94a3b8;">${state.footerAddress}</p>`
-               : ""
-           }
-         </div>
-         <img src="${
-           state.brandLogoUrl || "/dexta.svg"
-         }" alt="Dexta Africa" style="height:22px;width:auto;opacity:0.65;" />
-       </div>`
+    ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:28px;border-top:1px solid ${footerBorderColor};padding-top:22px;border-collapse:collapse;">
+         <tr>
+           <td style="vertical-align:top;text-align:left;padding-bottom:18px;">
+             <p style="margin:0;font-size:14px;font-weight:700;color:${footerTextColor};font-family:${fontStack};">${replaceVars(
+               state.signOffName
+             )}</p>
+             <p style="margin:3px 0 0 0;font-size:12px;color:${footerMutedColor};font-family:${fontStack};">${replaceVars(
+               state.signOffRole
+             )}</p>
+           </td>
+           <td style="vertical-align:top;text-align:right;padding-bottom:18px;">
+             <img src="${footerLogoUrl}" alt="Dexta Africa" height="26" style="height:26px;width:auto;border:0;display:inline-block;outline:none;" />
+           </td>
+         </tr>
+         <tr>
+           <td colspan="2" style="border-top:1px solid ${footerBorderColor};padding-top:16px;text-align:left;">
+             <p style="margin:0 0 6px 0;font-size:11px;color:${footerMutedColor};line-height:1.5;font-family:${fontStack};">
+               ${state.footerAddress || "Dexta Africa Limited • Victoria Island, Lagos, Nigeria • communications@dextaafrica.com"}
+             </p>
+             <p style="margin:0 0 8px 0;font-size:10px;color:#94a3b8;line-height:1.5;font-family:${fontStack};">
+               This official communication was transmitted via Dexta Africa Enterprise Systems. NDPR &amp; GDPR compliant data processing.
+             </p>
+             <p style="margin:0;font-size:11px;color:${footerMutedColor};font-family:${fontStack};">
+               You received this because you are an authorized contact or registered stakeholder.
+               <a href="${unsubscribeHref}" style="color:#DC2626;text-decoration:underline;margin-left:4px;">Unsubscribe</a>
+               <span style="color:#cbd5e1;margin:0 6px;">|</span>
+               <a href="https://dextaafrica.com/privacy" style="color:${footerMutedColor};text-decoration:none;">Privacy Policy</a>
+             </p>
+           </td>
+         </tr>
+       </table>`
     : "";
 
   const topOrderedHero =
@@ -684,6 +764,16 @@ interface EmailComposerStudioProps {
     contentHtml: string;
     occasion: EmailOccasionId;
   }) => Promise<void>;
+  onSchedule?: (payload: {
+    id?: string;
+    title: string;
+    subject: string;
+    contentHtml: string;
+    occasion: EmailOccasionId;
+    targetAudience: string;
+    scheduledAt: string;
+    customRecipients?: Array<{ email: string; fullName?: string }>;
+  }) => Promise<void>;
   onDispatchNow?: (payload: {
     id?: string;
     title: string;
@@ -691,6 +781,7 @@ interface EmailComposerStudioProps {
     contentHtml: string;
     occasion: EmailOccasionId;
     targetAudience: string;
+    customRecipients?: Array<{ email: string; fullName?: string }>;
   }) => Promise<void>;
   onCancel?: () => void;
   isSubmitting?: boolean;
@@ -703,6 +794,7 @@ export function EmailComposerStudio({
   targetAudience = "ALL",
   onTargetAudienceChange,
   onSaveDraft,
+  onSchedule,
   onDispatchNow,
   onCancel,
   isSubmitting = false,
@@ -724,12 +816,13 @@ export function EmailComposerStudio({
     };
   });
 
-  const [studioTab, setStudioTab] = React.useState<"content" | "design" | "html">("content");
+  const [studioTab, setStudioTab] = React.useState<"content" | "design" | "audience" | "html">("content");
   const [previewTab, setPreviewTab] = React.useState<"visual" | "html_code" | "details" | "plaintext">("visual");
 
   const heroInputRef = React.useRef<HTMLInputElement>(null);
   const logoInputRef = React.useRef<HTMLInputElement>(null);
   const attachmentInputRef = React.useRef<HTMLInputElement>(null);
+  const recipientsFileInputRef = React.useRef<HTMLInputElement>(null);
   const headlineCanvasRef = React.useRef<HTMLTextAreaElement>(null);
 
   React.useEffect(() => {
@@ -740,6 +833,21 @@ export function EmailComposerStudio({
   }, [state.headline, state.headlineSize]);
 
   const [selectedAudience, setSelectedAudience] = React.useState<string>(targetAudience);
+  const [recipientSource, setRecipientSource] = React.useState<"directory" | "custom_list" | "external_link">("directory");
+  const [customRecipients, setCustomRecipients] = React.useState<Array<{ email: string; fullName?: string }>>([]);
+  const [pastedEmailsText, setPastedEmailsText] = React.useState<string>("");
+  const [externalUrl, setExternalUrl] = React.useState<string>("");
+  const [isFetchingExternal, setIsFetchingExternal] = React.useState<boolean>(false);
+  const [externalFetchFeedback, setExternalFetchFeedback] = React.useState<{ success: boolean; message: string; count?: number } | null>(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = React.useState<boolean>(false);
+  const [scheduledDateTime, setScheduledDateTime] = React.useState<string>(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    const tzOffset = tomorrow.getTimezoneOffset() * 60000;
+    return new Date(tomorrow.getTime() - tzOffset).toISOString().slice(0, 16);
+  });
+  const [isScheduling, setIsScheduling] = React.useState<boolean>(false);
   const [availableForms, setAvailableForms] = React.useState<
     Array<{ id: string; title: string; slug: string; submissionsCount: number }>
   >([]);
@@ -832,11 +940,153 @@ export function EmailComposerStudio({
     }
   };
 
+  const parseRawEmailsText = (rawText: string) => {
+    const lines = rawText.split(/[\r\n,;]+/);
+    const parsed: Array<{ email: string; fullName?: string }> = [];
+    const seen = new Set<string>();
+
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (!line) continue;
+      // Format: "Full Name <email@example.com>" or "email@example.com"
+      const bracketMatch = line.match(/^(.*?)[<\[]([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})[>\]]$/);
+      if (bracketMatch) {
+        const name = bracketMatch[1].trim().replace(/^["']|["']$/g, "");
+        const email = bracketMatch[2].toLowerCase();
+        if (!seen.has(email)) {
+          seen.add(email);
+          parsed.push({ email, fullName: name || undefined });
+        }
+        continue;
+      }
+      const emailMatch = line.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+      if (emailMatch) {
+        const email = emailMatch[0].toLowerCase();
+        if (!seen.has(email)) {
+          seen.add(email);
+          parsed.push({ email });
+        }
+      }
+    }
+    return parsed;
+  };
+
+  const handleParsePastedEmails = () => {
+    if (!pastedEmailsText.trim()) return;
+    const parsed = parseRawEmailsText(pastedEmailsText);
+    if (parsed.length > 0) {
+      setCustomRecipients((prev) => {
+        const map = new Map<string, { email: string; fullName?: string }>();
+        for (const item of [...prev, ...parsed]) {
+          map.set(item.email.toLowerCase(), item);
+        }
+        return Array.from(map.values());
+      });
+      setExternalFetchFeedback({
+        success: true,
+        message: `Parsed & validated ${parsed.length} unique email recipient(s).`,
+        count: parsed.length,
+      });
+      setPastedEmailsText("");
+    } else {
+      setExternalFetchFeedback({
+        success: false,
+        message: "No valid email addresses found. Please paste valid emails.",
+      });
+    }
+  };
+
+  const handleFileUploadRecipients = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+
+      const parsed = parseRawEmailsText(text);
+      if (parsed.length > 0) {
+        setCustomRecipients((prev) => {
+          const map = new Map<string, { email: string; fullName?: string }>();
+          for (const item of [...prev, ...parsed]) {
+            map.set(item.email.toLowerCase(), item);
+          }
+          return Array.from(map.values());
+        });
+        setExternalFetchFeedback({
+          success: true,
+          message: `Successfully parsed ${parsed.length} recipient(s) from "${file.name}".`,
+          count: parsed.length,
+        });
+      } else {
+        setExternalFetchFeedback({
+          success: false,
+          message: `No valid email addresses found in "${file.name}".`,
+        });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const handleFetchExternalLink = async () => {
+    if (!externalUrl.trim()) {
+      setExternalFetchFeedback({ success: false, message: "Please provide a valid external URL (HTTP/HTTPS)." });
+      return;
+    }
+    setIsFetchingExternal(true);
+    setExternalFetchFeedback(null);
+    try {
+      const res = await fetch("/api/marketing/fetch-external-contacts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: externalUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to fetch contacts from link");
+      }
+      const fetched: Array<{ email: string; fullName?: string }> = data.contacts || [];
+      if (fetched.length === 0) {
+        setExternalFetchFeedback({
+          success: false,
+          message: "No email contacts could be extracted from that URL or endpoint.",
+        });
+      } else {
+        setCustomRecipients((prev) => {
+          const map = new Map<string, { email: string; fullName?: string }>();
+          for (const item of [...prev, ...fetched]) {
+            map.set(item.email.toLowerCase(), item);
+          }
+          return Array.from(map.values());
+        });
+        setExternalFetchFeedback({
+          success: true,
+          message: `Imported ${fetched.length} contact(s) from external link successfully.`,
+          count: fetched.length,
+        });
+      }
+    } catch (err: unknown) {
+      setExternalFetchFeedback({
+        success: false,
+        message: err instanceof Error ? err.message : "Error contacting external link endpoint.",
+      });
+    } finally {
+      setIsFetchingExternal(false);
+    }
+  };
+
   const handleConfirmBroadcast = async () => {
     if (!onDispatchNow) return;
     setIsDispatching(true);
     try {
       const compiledHtml = compileStudioEmailHtml(state, false, true);
+      const customList =
+        recipientSource === "custom_list" || recipientSource === "external_link"
+          ? customRecipients
+          : undefined;
+
       await onDispatchNow({
         id: initialData?.id,
         title: state.title,
@@ -844,12 +1094,41 @@ export function EmailComposerStudio({
         contentHtml: compiledHtml,
         occasion: state.occasion,
         targetAudience: selectedAudience,
+        customRecipients: customList,
       });
       setIsDispatchModalOpen(false);
     } catch {
       // Handled by parent
     } finally {
       setIsDispatching(false);
+    }
+  };
+
+  const handleConfirmSchedule = async () => {
+    if (!onSchedule) return;
+    setIsScheduling(true);
+    try {
+      const compiledHtml = compileStudioEmailHtml(state, false, true);
+      const customList =
+        recipientSource === "custom_list" || recipientSource === "external_link"
+          ? customRecipients
+          : undefined;
+
+      await onSchedule({
+        id: initialData?.id,
+        title: state.title,
+        subject: state.subject,
+        contentHtml: compiledHtml,
+        occasion: state.occasion,
+        targetAudience: selectedAudience,
+        scheduledAt: new Date(scheduledDateTime).toISOString(),
+        customRecipients: customList,
+      });
+      setIsScheduleModalOpen(false);
+    } catch {
+      // Handled by parent
+    } finally {
+      setIsScheduling(false);
     }
   };
 
@@ -1065,6 +1344,10 @@ export function EmailComposerStudio({
 
   const sampleName = state.previewRecipientName || "Olamide";
   const replaceSample = (txt: string) => txt.replace(/\{\{firstName\}\}/g, sampleName);
+  const isCardDark =
+    (state.cardBackgroundColor || "#ffffff").toLowerCase() === "#0f172a" ||
+    (state.cardBackgroundColor || "#ffffff").toLowerCase() === "#000000" ||
+    (state.cardBackgroundColor || "").toLowerCase().startsWith("#1");
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -1148,6 +1431,27 @@ export function EmailComposerStudio({
                 <Palette className="h-3.5 w-3.5" />
                 Design & Layout
               </button>
+              {mode === "campaign" && (
+                <button
+                  type="button"
+                  onClick={() => setStudioTab("audience")}
+                  className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    studioTab === "audience"
+                      ? "bg-white dark:bg-[#1d1f29] text-red-600 dark:text-white shadow-xs"
+                      : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  }`}
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Audience &amp; Dispatch
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400">
+                    {recipientSource === "custom_list" || recipientSource === "external_link"
+                      ? `${customRecipients.length}`
+                      : selectedAudience.startsWith("FORM:")
+                      ? `${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.submissionsCount || 0}`
+                      : `${selectedAudience === "ALL" ? audienceCounts.total : (audienceCounts.categories[selectedAudience] || 0)}`}
+                  </span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -2183,67 +2487,310 @@ export function EmailComposerStudio({
             </div>
           )}
 
-          {/* Target Audience & Test Dispatch Card (Campaign Mode Only) */}
-          {mode === "campaign" && (
-            <div className="rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03] p-4 space-y-4">
-              <div className="space-y-2">
+          {/* TAB 4: AUDIENCE & RECIPIENT DISPATCH (Campaign Mode) */}
+          {mode === "campaign" && studioTab === "audience" && (
+            <div className="space-y-5 animate-fade-in">
+              <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/60 dark:from-white/[0.04] dark:to-white/[0.02] p-4 sm:p-5 border border-slate-200/80 dark:border-white/10 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-red-600" />
-                    Target Audience Directory
-                  </label>
-                  <span className="text-[11px] font-mono font-semibold text-red-600 dark:text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
-                    {selectedAudience.startsWith("FORM:")
-                      ? `${
-                          availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)
-                            ?.submissionsCount || 0
-                        } form attendee(s)`
-                      : selectedAudience === "ALL"
-                      ? `${audienceCounts.total} verified contact(s)`
-                      : `${audienceCounts.categories[selectedAudience] || 0} contact(s)`}
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Users className="h-4 w-4 text-red-600" />
+                      Recipient &amp; Audience Targeting
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Choose your email delivery source: platform directory, attached custom list, or live external link
+                    </p>
+                  </div>
+                  <span className="text-xs font-mono font-bold px-2.5 py-1 rounded-full bg-red-100 dark:bg-red-950/80 text-red-600 dark:text-red-400 border border-red-200/60 dark:border-red-800/40">
+                    {recipientSource === "custom_list" || recipientSource === "external_link"
+                      ? `${customRecipients.length} Recipient(s)`
+                      : selectedAudience.startsWith("FORM:")
+                      ? `${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.submissionsCount || 0} Registrant(s)`
+                      : `${selectedAudience === "ALL" ? audienceCounts.total : (audienceCounts.categories[selectedAudience] || 0)} Contact(s)`}
                   </span>
                 </div>
-                <select
-                  value={selectedAudience}
-                  onChange={(e) => handleAudienceChange(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c24] px-3 py-2 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-red-500 focus:outline-none"
-                >
-                  <optgroup label="General Directory & Contacts">
-                    <option value="ALL">All Contacts (Subscribers & Form Registrants)</option>
-                    <option value="CLIENT">Clients & Corporate Partners</option>
-                    <option value="LEAD">Prospective Inquiries & Commercial Leads</option>
-                    <option value="NEWSLETTER">Official Newsletter Subscribers</option>
-                  </optgroup>
-                  {availableForms.length > 0 && (
-                    <optgroup label="Live Forms & Event Registrations">
-                      {availableForms.map((form) => (
-                        <option key={form.id} value={`FORM:${form.slug}`}>
-                          Form: {form.title} ({form.submissionsCount} registrants)
-                        </option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {selectedAudience.startsWith("FORM:")
-                    ? "Delivers this broadcast exclusively to all respondents who registered on this form."
-                    : "Delivers this campaign to all verified contacts matching this audience segment."}
-                </p>
+
+                {/* 3 Source Options Toggle */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setRecipientSource("directory")}
+                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                      recipientSource === "directory"
+                        ? "border-red-600 bg-white dark:bg-[#1a1c24] text-red-600 dark:text-red-400 shadow-xs ring-1 ring-red-600/30"
+                        : "border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                    }`}
+                  >
+                    <Building2 className="h-4 w-4 shrink-0 text-red-600" />
+                    <div>
+                      <div className="leading-tight">Platform Directory</div>
+                      <div className="text-[10px] font-normal text-slate-400">Database &amp; Forms</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRecipientSource("custom_list")}
+                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                      recipientSource === "custom_list"
+                        ? "border-red-600 bg-white dark:bg-[#1a1c24] text-red-600 dark:text-red-400 shadow-xs ring-1 ring-red-600/30"
+                        : "border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                    }`}
+                  >
+                    <FileSpreadsheet className="h-4 w-4 shrink-0 text-red-600" />
+                    <div>
+                      <div className="leading-tight">Attach Custom List</div>
+                      <div className="text-[10px] font-normal text-slate-400">CSV, TXT, or Paste</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setRecipientSource("external_link")}
+                    className={`flex items-center gap-2 p-2.5 rounded-xl border text-left text-xs font-bold transition-all cursor-pointer ${
+                      recipientSource === "external_link"
+                        ? "border-red-600 bg-white dark:bg-[#1a1c24] text-red-600 dark:text-red-400 shadow-xs ring-1 ring-red-600/30"
+                        : "border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/[0.02] text-slate-700 dark:text-slate-300 hover:border-slate-300"
+                    }`}
+                  >
+                    <Globe className="h-4 w-4 shrink-0 text-red-600" />
+                    <div>
+                      <div className="leading-tight">Fetch External Link</div>
+                      <div className="text-[10px] font-normal text-slate-400">API, Webhook, URL</div>
+                    </div>
+                  </button>
+                </div>
               </div>
 
+              {/* Source Panel 1: Platform Directory & Forms */}
+              {recipientSource === "directory" && (
+                <div className="rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#171821] p-5 space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-red-600" />
+                      Select Audience Segment or Registration Form
+                    </label>
+                    <select
+                      value={selectedAudience}
+                      onChange={(e) => handleAudienceChange(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c24] px-3.5 py-2.5 text-xs font-medium text-slate-900 dark:text-slate-100 focus:border-red-500 focus:outline-none"
+                    >
+                      <optgroup label="General Platform Directory">
+                        <option value="ALL">All Contacts (Subscribers &amp; Form Registrants)</option>
+                        <option value="CLIENT">Clients &amp; Corporate Partners</option>
+                        <option value="LEAD">Prospective Inquiries &amp; Commercial Leads</option>
+                        <option value="NEWSLETTER">Official Newsletter Subscribers</option>
+                      </optgroup>
+                      {availableForms.length > 0 && (
+                        <optgroup label="Active Forms &amp; Landing Pages">
+                          {availableForms.map((form) => (
+                            <option key={form.id} value={`FORM:${form.slug}`}>
+                              Form: {form.title} ({form.submissionsCount} registrants)
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                    </select>
+                    <p className="text-[11px] text-slate-500">
+                      {selectedAudience.startsWith("FORM:")
+                        ? "Delivers this broadcast exclusively to all respondents who completed this registration form."
+                        : "Delivers this campaign to all verified contacts matching this audience segment."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Source Panel 2: Attach Custom List (CSV / TXT / Paste) */}
+              {recipientSource === "custom_list" && (
+                <div className="rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#171821] p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <UploadCloud className="h-3.5 w-3.5 text-red-600" />
+                        Upload or Paste Custom Email List
+                      </h4>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Accepts CSV, TXT, or direct pasted text. Duplicates and invalid formats are cleaned automatically.
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="outline"
+                      onClick={() => recipientsFileInputRef.current?.click()}
+                      leftIcon={<UploadCloud className="h-3.5 w-3.5" />}
+                    >
+                      Upload CSV / TXT
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <textarea
+                      rows={4}
+                      value={pastedEmailsText}
+                      onChange={(e) => setPastedEmailsText(e.target.value)}
+                      placeholder="Paste emails separated by commas or line breaks:&#10;investor@dexta.com&#10;John Doe <john.doe@partner.org>&#10;procurement@enterprise.com"
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#1a1c24] p-3 text-xs font-mono leading-relaxed focus:border-red-500 focus:outline-none"
+                    />
+                    <div className="flex items-center justify-between">
+                      <Button
+                        type="button"
+                        size="xs"
+                        variant="secondary"
+                        onClick={handleParsePastedEmails}
+                        disabled={!pastedEmailsText.trim()}
+                        leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                      >
+                        Parse &amp; Validate Emails
+                      </Button>
+                      {customRecipients.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setCustomRecipients([])}
+                          className="text-[11px] font-semibold text-red-600 hover:underline cursor-pointer"
+                        >
+                          Clear Attached List ({customRecipients.length})
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Attached Custom Recipients Live List */}
+                  {customRecipients.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02] p-3 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <span>Attached Recipients ({customRecipients.length})</span>
+                        <span className="text-[10px] font-normal text-slate-400">Showing first 25 entries</span>
+                      </div>
+                      <div className="max-h-40 overflow-y-auto space-y-1 pr-1 font-mono text-[11px]">
+                        {customRecipients.slice(0, 25).map((rec, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between py-1 px-2 rounded-md bg-white dark:bg-[#121318] border border-slate-100 dark:border-white/5"
+                          >
+                            <span className="text-slate-800 dark:text-slate-200 truncate">
+                              {rec.fullName ? `${rec.fullName} <${rec.email}>` : rec.email}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setCustomRecipients((prev) => prev.filter((_, idx) => idx !== i))}
+                              className="text-slate-400 hover:text-red-600 ml-2"
+                              title="Remove recipient"
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                        {customRecipients.length > 25 && (
+                          <p className="text-[10px] text-slate-400 text-center pt-1">
+                            ...and {customRecipients.length - 25} more verified recipient(s)
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Source Panel 3: Fetch from External Link */}
+              {recipientSource === "external_link" && (
+                <div className="rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#171821] p-5 space-y-4">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5 text-red-600" />
+                      Fetch Contacts from External URL / Webhook
+                    </h4>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Enter any public or authenticated endpoint, Google Sheet CSV export link, or webhook returning contacts.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={externalUrl}
+                        onChange={(e) => setExternalUrl(e.target.value)}
+                        placeholder="https://api.domain.com/contacts or Google Sheet CSV link"
+                        className="flex-1 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c24] px-3.5 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-red-500 focus:outline-none"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="primary"
+                        isLoading={isFetchingExternal}
+                        onClick={handleFetchExternalLink}
+                        leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
+                        className="bg-red-600 hover:bg-red-700 text-white shrink-0 font-bold"
+                      >
+                        Fetch Contacts
+                      </Button>
+                    </div>
+
+                    {externalFetchFeedback && (
+                      <div
+                        className={`flex items-start gap-1.5 text-[11px] p-2.5 rounded-xl border ${
+                          externalFetchFeedback.success
+                            ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40"
+                            : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/40"
+                        }`}
+                      >
+                        {externalFetchFeedback.success ? (
+                          <Check className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        )}
+                        <span>{externalFetchFeedback.message}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {customRecipients.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02] p-3 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-800 dark:text-slate-200">
+                        <span>Imported Contacts ({customRecipients.length})</span>
+                        <button
+                          type="button"
+                          onClick={() => setCustomRecipients([])}
+                          className="text-[11px] text-red-600 hover:underline cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="max-h-36 overflow-y-auto space-y-1 font-mono text-[11px]">
+                        {customRecipients.slice(0, 15).map((rec, i) => (
+                          <div
+                            key={i}
+                            className="py-1 px-2 rounded-md bg-white dark:bg-[#121318] border border-slate-100 dark:border-white/5 truncate"
+                          >
+                            {rec.fullName ? `${rec.fullName} <${rec.email}>` : rec.email}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Instant Test Preview Dispatch */}
-              <div className="pt-3 border-t border-slate-200/60 dark:border-white/[0.06] space-y-2">
-                <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                  <span>Send Test Preview to Your Inbox</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Direct SMTP Check</span>
-                </label>
+              <div className="rounded-2xl border border-slate-200/90 dark:border-white/10 bg-white dark:bg-[#171821] p-5 space-y-3">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center justify-between">
+                    <span>Send Test Preview to Your Inbox</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Direct Corporate SMTP Check</span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Verify visual layout, white-on-dark logo visibility, and footer formatting before broadcast.
+                  </p>
+                </div>
+
                 <div className="flex gap-2">
                   <input
                     type="email"
                     value={testEmailAddress}
                     onChange={(e) => setTestEmailAddress(e.target.value)}
                     placeholder="e.g. it.admin@dextaafrica.com"
-                    className="flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c24] px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-red-500 focus:outline-none"
+                    className="flex-1 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c24] px-3.5 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:border-red-500 focus:outline-none"
                   />
                   <Button
                     type="button"
@@ -2251,17 +2798,17 @@ export function EmailComposerStudio({
                     variant="secondary"
                     isLoading={isSendingTest}
                     onClick={handleSendTestEmail}
-                    className="text-xs shrink-0"
+                    className="text-xs shrink-0 font-bold"
                   >
-                    Send Test
+                    Send Test Email
                   </Button>
                 </div>
                 {testSendResult && (
                   <div
-                    className={`flex items-start gap-1.5 text-[11px] p-2 rounded-lg ${
+                    className={`flex items-start gap-1.5 text-[11px] p-2.5 rounded-xl border ${
                       testSendResult.success
-                        ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40"
-                        : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800/40"
+                        ? "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40"
+                        : "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800/40"
                     }`}
                   >
                     {testSendResult.success ? (
@@ -2276,6 +2823,48 @@ export function EmailComposerStudio({
             </div>
           )}
 
+          {/* Quick Audience Summary Pill (When on Content/Design/HTML tabs in Campaign mode) */}
+          {mode === "campaign" && studioTab !== "audience" && (
+            <div className="rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.03] p-3.5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-lg bg-red-100 dark:bg-red-950/50 flex items-center justify-center text-red-600">
+                  <Users className="h-4 w-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>
+                      {recipientSource === "custom_list"
+                        ? `Custom List (${customRecipients.length} attached)`
+                        : recipientSource === "external_link"
+                        ? `External Link (${customRecipients.length} imported)`
+                        : selectedAudience.startsWith("FORM:")
+                        ? `Form: ${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.title || selectedAudience}`
+                        : selectedAudience === "ALL"
+                        ? "All Platform Contacts"
+                        : `${selectedAudience}`}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    {recipientSource !== "directory"
+                      ? `${customRecipients.length} custom recipient(s) ready`
+                      : selectedAudience.startsWith("FORM:")
+                      ? `${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.submissionsCount || 0} registered attendee(s)`
+                      : `${selectedAudience === "ALL" ? audienceCounts.total : (audienceCounts.categories[selectedAudience] || 0)} verified contact(s)`}
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="xs"
+                variant="outline"
+                onClick={() => setStudioTab("audience")}
+                leftIcon={<Users className="h-3 w-3" />}
+              >
+                Change Audience / Attach List
+              </Button>
+            </div>
+          )}
+
           {/* Save / Action Bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100 dark:border-white/[0.06]">
             <div className="flex items-center gap-2">
@@ -2284,6 +2873,13 @@ export function EmailComposerStudio({
                 type="file"
                 accept="image/*"
                 onChange={(e) => handleImageFileSelect(e, "attachmentImageUrl")}
+                className="hidden"
+              />
+              <input
+                ref={recipientsFileInputRef}
+                type="file"
+                accept=".csv,.txt,.tsv"
+                onChange={handleFileUploadRecipients}
                 className="hidden"
               />
               <Button
@@ -2326,7 +2922,7 @@ export function EmailComposerStudio({
               )}
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               {onCancel && (
                 <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
                   Cancel
@@ -2347,6 +2943,18 @@ export function EmailComposerStudio({
                   ? "Save Campaign Draft"
                   : "Save New Template"}
               </Button>
+              {mode === "campaign" && onSchedule && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  onClick={() => setIsScheduleModalOpen(true)}
+                  leftIcon={<Clock className="h-4 w-4 text-amber-600" />}
+                  className="font-bold border-amber-500/40 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                >
+                  📅 Schedule
+                </Button>
+              )}
               {mode === "campaign" && onDispatchNow && (
                 <Button
                   type="button"
@@ -2354,7 +2962,7 @@ export function EmailComposerStudio({
                   size="md"
                   onClick={() => setIsDispatchModalOpen(true)}
                   leftIcon={<Send className="h-4 w-4" />}
-                  className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-sm"
+                  className="bg-red-600 hover:bg-red-700 text-white font-bold shadow-sm"
                 >
                   🚀 Send Broadcast
                 </Button>
@@ -2934,9 +3542,9 @@ export function EmailComposerStudio({
                         />
                       </div>
                       <img
-                        src={state.brandLogoUrl || "/dexta.svg"}
+                        src={isCardDark ? "/images/dexta-logo-light.png" : (state.brandLogoUrl || "/images/dexta-logo-dark.png")}
                         alt="Dexta Africa"
-                        className="h-5 w-auto opacity-65"
+                        className="h-5 w-auto opacity-75"
                       />
                     </div>
                   )}
@@ -2946,6 +3554,133 @@ export function EmailComposerStudio({
           </div>
         </div>
       </div>
+
+      {/* Schedule Broadcast Modal */}
+      <Modal
+        isOpen={isScheduleModalOpen}
+        onClose={() => !isScheduling && setIsScheduleModalOpen(false)}
+        title="Schedule Email Broadcast"
+        description="Configure automated future delivery time via Dexta Africa Enterprise SMTP engine"
+        maxWidth="md"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={isScheduling}
+              onClick={() => setIsScheduleModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              isLoading={isScheduling}
+              onClick={handleConfirmSchedule}
+              leftIcon={<Clock className="h-4 w-4" />}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
+            >
+              {isScheduling ? "Scheduling..." : "Confirm & Schedule Broadcast"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 pt-1 text-xs">
+          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-200/60 dark:border-white/[0.06] space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Campaign Subject:</span>
+              <span className="font-bold text-slate-900 dark:text-white truncate max-w-[240px]">
+                {state.subject || state.title || "(Untitled Campaign)"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Target Segment:</span>
+              <span className="font-bold text-red-600 dark:text-red-400">
+                {recipientSource === "custom_list"
+                  ? `Custom Attached List (${customRecipients.length} recipients)`
+                  : recipientSource === "external_link"
+                  ? `Imported External Link (${customRecipients.length} contacts)`
+                  : selectedAudience.startsWith("FORM:")
+                  ? `Form: ${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.title || selectedAudience}`
+                  : selectedAudience === "ALL"
+                  ? `All Verified Contacts (${audienceCounts.total})`
+                  : `${selectedAudience} (${audienceCounts.categories[selectedAudience] || 0})`}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">Sender Identity:</span>
+              <span className="font-mono text-[11px] text-slate-600 dark:text-slate-400">
+                {state.senderName} &lt;{state.senderEmail}&gt;
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+              Select Scheduled Date &amp; Time (WAT / GMT+1)
+            </label>
+            <input
+              type="datetime-local"
+              value={scheduledDateTime}
+              onChange={(e) => setScheduledDateTime(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1a1c24] px-3.5 py-2.5 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:border-red-500 focus:outline-none"
+            />
+
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date(Date.now() + 60 * 60 * 1000);
+                  const tz = d.getTimezoneOffset() * 60000;
+                  setScheduledDateTime(new Date(d.getTime() - tz).toISOString().slice(0, 16));
+                }}
+                className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                +1 Hour
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + 1);
+                  d.setHours(9, 0, 0, 0);
+                  const tz = d.getTimezoneOffset() * 60000;
+                  setScheduledDateTime(new Date(d.getTime() - tz).toISOString().slice(0, 16));
+                }}
+                className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                Tomorrow 09:00 AM
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const d = new Date();
+                  d.setDate(d.getDate() + 3);
+                  d.setHours(10, 0, 0, 0);
+                  const tz = d.getTimezoneOffset() * 60000;
+                  setScheduledDateTime(new Date(d.getTime() - tz).toISOString().slice(0, 16));
+                }}
+                className="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/[0.05] hover:bg-slate-200 text-slate-700 dark:text-slate-300 cursor-pointer"
+              >
+                In 3 Days
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] space-y-1">
+            <p className="font-semibold flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              Automated SMTP Queue Notice
+            </p>
+            <p>
+              This broadcast will be queued. At the specified time, our delivery engine will automatically transmit personalized individual emails with delivery logging.
+            </p>
+          </div>
+        </div>
+      </Modal>
 
       {/* Broadcast Dispatch Confirmation Modal */}
       <Modal
@@ -2989,8 +3724,12 @@ export function EmailComposerStudio({
             </div>
             <div className="flex items-center justify-between">
               <span className="font-semibold text-slate-700 dark:text-slate-300">Target Segment:</span>
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                {selectedAudience.startsWith("FORM:")
+              <span className="font-bold text-red-600 dark:text-red-400">
+                {recipientSource === "custom_list"
+                  ? `Custom Attached List (${customRecipients.length} recipients)`
+                  : recipientSource === "external_link"
+                  ? `Imported External Link (${customRecipients.length} contacts)`
+                  : selectedAudience.startsWith("FORM:")
                   ? `Form: ${availableForms.find((f) => `FORM:${f.slug}` === selectedAudience)?.title || selectedAudience}`
                   : selectedAudience === "ALL"
                   ? "All Verified Contacts & Attendees"
