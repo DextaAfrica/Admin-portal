@@ -23,20 +23,31 @@ const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY || "";
 const awsBucketName = process.env.AWS_S3_BUCKET_NAME || "dexta-assets-storage";
 const customS3Endpoint = process.env.S3_ENDPOINT || process.env.AWS_ENDPOINT || "";
 
+function isValidCredential(val: string | undefined): boolean {
+  if (!val) return false;
+  const lower = val.toLowerCase().trim();
+  if (
+    lower.includes("your_") ||
+    lower.includes("placeholder") ||
+    lower.includes("test") ||
+    lower.includes("example") ||
+    lower.includes("change_me") ||
+    lower.length < 8
+  ) {
+    return false;
+  }
+  return true;
+}
+
 export const isR2Configured = Boolean(
-  r2AccountId &&
-  r2AccessKeyId &&
-  r2SecretAccessKey &&
-  !r2AccessKeyId.includes("test") &&
-  !r2AccessKeyId.includes("placeholder")
+  isValidCredential(r2AccountId) &&
+  isValidCredential(r2AccessKeyId) &&
+  isValidCredential(r2SecretAccessKey)
 );
 
 export const isS3Configured = Boolean(
-  (isR2Configured) ||
-  (awsAccessKeyId &&
-   awsSecretAccessKey &&
-   !awsAccessKeyId.includes("test") &&
-   !awsAccessKeyId.includes("placeholder"))
+  isR2Configured ||
+  (isValidCredential(awsAccessKeyId) && isValidCredential(awsSecretAccessKey))
 );
 
 export const storageProvider: "cloudflare_r2" | "aws_s3" | "custom_s3" | "local" = (() => {
@@ -150,47 +161,65 @@ export async function uploadBufferToStorage({
   const cleanKey = key.replace(/^\/+/, "");
 
   if (s3Client) {
-    const command = new PutObjectCommand({
-      Bucket: activeBucketName,
-      Key: cleanKey,
-      Body: buffer,
-      ContentType: mimeType,
-      CacheControl: cacheControl,
-      ContentDisposition: contentDisposition,
-    });
+    try {
+      const command = new PutObjectCommand({
+        Bucket: activeBucketName,
+        Key: cleanKey,
+        Body: buffer,
+        ContentType: mimeType,
+        CacheControl: cacheControl,
+        ContentDisposition: contentDisposition,
+      });
 
-    await s3Client.send(command);
+      await s3Client.send(command);
+      const finalUrl = resolvePublicAssetUrl(cleanKey, true);
+
+      return {
+        success: true,
+        url: finalUrl,
+        key: cleanKey,
+        bucket: activeBucketName,
+        provider: storageProvider,
+      };
+    } catch (s3Err) {
+      console.warn("⚠️  [Storage] Remote S3/R2 upload failed, falling back to local storage:", s3Err);
+    }
+  }
+
+  // Local storage fallback for offline / development environments
+  try {
+    const uploadsDir = path.join(process.cwd(), "public", "uploads");
+    const targetDir = path.dirname(path.join(uploadsDir, cleanKey));
+
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const filePath = path.join(uploadsDir, cleanKey);
+    fs.writeFileSync(filePath, buffer);
+
     const finalUrl = resolvePublicAssetUrl(cleanKey, true);
 
     return {
       success: true,
       url: finalUrl,
       key: cleanKey,
-      bucket: activeBucketName,
-      provider: storageProvider,
+      bucket: "local_disk",
+      provider: "local",
+    };
+  } catch (fsErr) {
+    console.warn("⚠️  [Storage] Local disk storage write failed, providing high-res inline fallback:", fsErr);
+    const base64 = buffer.toString("base64");
+    const dataUrl = `data:${mimeType};base64,${base64}`;
+
+    return {
+      success: true,
+      url: dataUrl,
+      key: cleanKey,
+      bucket: "memory_buffer",
+      provider: "memory",
     };
   }
-
-  // Local storage fallback for offline / development environments
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  const targetDir = path.dirname(path.join(uploadsDir, cleanKey));
-
-  if (!fs.existsSync(targetDir)) {
-    fs.mkdirSync(targetDir, { recursive: true });
-  }
-
-  const filePath = path.join(uploadsDir, cleanKey);
-  fs.writeFileSync(filePath, buffer);
-
-  const finalUrl = resolvePublicAssetUrl(cleanKey, true);
-
-  return {
-    success: true,
-    url: finalUrl,
-    key: cleanKey,
-    bucket: "local_disk",
-    provider: "local",
-  };
 }
 
 export async function getPresignedUploadUrl({

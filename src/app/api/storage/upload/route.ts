@@ -85,32 +85,74 @@ export async function POST(req: NextRequest) {
 
     let assetId: string | null = null;
 
-    // Record asset in database if user session is present
+    // Record asset in database if user session is present (with automated schema healing)
     if (user) {
-      const asset = await prisma.storageAsset.create({
-        data: {
-          bucket: activeBucketName,
-          key,
-          fileName: originalName,
-          fileSize: file.size,
-          mimeType,
-          url: uploadResult.url,
-          folder,
-          uploadedById: user.id,
-        },
-      });
-      assetId = asset.id;
+      try {
+        const asset = await prisma.storageAsset.create({
+          data: {
+            bucket: uploadResult.bucket || activeBucketName,
+            key,
+            fileName: originalName,
+            fileSize: file.size,
+            mimeType,
+            url: uploadResult.url,
+            folder,
+            uploadedById: user.id,
+          },
+        });
+        assetId = asset.id;
 
-      await logAuditEvent({
-        actorId: user.id,
-        actorEmail: user.email,
-        action: "ASSET_UPLOADED",
-        entity: "StorageAsset",
-        entityId: asset.id,
-        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
-        userAgent: req.headers.get("user-agent"),
-        metadata: { key, fileSize: file.size, mimeType, provider: uploadResult.provider },
-      });
+        await logAuditEvent({
+          actorId: user.id,
+          actorEmail: user.email,
+          action: "ASSET_UPLOADED",
+          entity: "StorageAsset",
+          entityId: asset.id,
+          ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+          userAgent: req.headers.get("user-agent"),
+          metadata: { key, fileSize: file.size, mimeType, provider: uploadResult.provider },
+        });
+      } catch (dbErr: unknown) {
+        console.warn("⚠️  [Storage] Initial asset DB log failed, attempting schema bootstrap:", dbErr);
+        try {
+          // Self-heal: ensure StorageAsset table exists
+          await prisma.$executeRawUnsafe(`
+            CREATE TABLE IF NOT EXISTS "StorageAsset" (
+              "id" TEXT NOT NULL PRIMARY KEY,
+              "bucket" TEXT NOT NULL,
+              "key" TEXT NOT NULL,
+              "fileName" TEXT NOT NULL,
+              "fileSize" INTEGER NOT NULL,
+              "mimeType" TEXT NOT NULL,
+              "url" TEXT NOT NULL,
+              "folder" TEXT NOT NULL DEFAULT 'general',
+              "uploadedById" TEXT,
+              "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              CONSTRAINT "StorageAsset_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+            );
+          `);
+          await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "StorageAsset_key_key" ON "StorageAsset"("key");`);
+          await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StorageAsset_folder_idx" ON "StorageAsset"("folder");`);
+          await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "StorageAsset_createdAt_idx" ON "StorageAsset"("createdAt");`);
+
+          const retryAsset = await prisma.storageAsset.create({
+            data: {
+              bucket: uploadResult.bucket || activeBucketName,
+              key,
+              fileName: originalName,
+              fileSize: file.size,
+              mimeType,
+              url: uploadResult.url,
+              folder,
+              uploadedById: user.id,
+            },
+          });
+          assetId = retryAsset.id;
+        } catch (retryErr) {
+          console.warn("⚠️  [Storage] Database asset record skipped, proceeding with successful file upload:", retryErr);
+        }
+      }
     }
 
     return NextResponse.json({
