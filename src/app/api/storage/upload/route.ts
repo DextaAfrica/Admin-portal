@@ -170,7 +170,10 @@ export async function POST(req: NextRequest) {
     console.error("Storage upload error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to upload file to storage" },
-      { status: 500 }
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
     );
   }
 }
