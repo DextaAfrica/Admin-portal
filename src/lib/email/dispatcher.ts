@@ -79,14 +79,25 @@ export async function sendEmail({
   }
 }
 
-export async function dispatchCampaign(campaignId: string, targetCategory?: string) {
+export async function dispatchCampaign(
+  campaignId: string,
+  targetCategory?: string,
+  customRecipients?: Array<{
+    email: string;
+    fullName?: string;
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+    category?: string;
+  }>
+) {
   const campaign = await prisma.emailCampaign.findUnique({
     where: { id: campaignId },
   });
 
   if (!campaign) throw new Error("Campaign not found");
 
-  // Build target recipient list from AudienceSubscribers and FormSubmissions
+  // Build target recipient list from Custom List, Form Submissions, or Audience Directory
   const recipientMap = new Map<string, {
     email: string;
     firstName: string;
@@ -96,8 +107,24 @@ export async function dispatchCampaign(campaignId: string, targetCategory?: stri
     category: string;
   }>();
 
-  // 1. If targeting a specific form: targetCategory = "FORM:<slug>"
-  if (targetCategory && targetCategory.startsWith("FORM:")) {
+  // 1. If explicit custom list was attached or fetched from external link
+  if (customRecipients && Array.isArray(customRecipients) && customRecipients.length > 0) {
+    for (const item of customRecipients) {
+      if (item.email && item.email.includes("@")) {
+        const cleanEmail = item.email.trim().toLowerCase();
+        const parts = (item.fullName || "").trim().split(/\s+/);
+        recipientMap.set(cleanEmail, {
+          email: cleanEmail,
+          firstName: item.firstName || parts[0] || item.fullName || "Valued Partner",
+          lastName: item.lastName || parts.slice(1).join(" ") || "",
+          fullName: item.fullName || [item.firstName, item.lastName].filter(Boolean).join(" ") || "Valued Partner",
+          company: item.company || "Partner",
+          category: item.category || "Custom List",
+        });
+      }
+    }
+  } else if (targetCategory && targetCategory.startsWith("FORM:")) {
+    // 2. If targeting a specific form/registration link: targetCategory = "FORM:<slug>"
     const formSlug = targetCategory.replace("FORM:", "").trim();
     const form = await prisma.customForm.findUnique({
       where: { slug: formSlug },
@@ -119,7 +146,7 @@ export async function dispatchCampaign(campaignId: string, targetCategory?: stri
       }
     }
   } else {
-    // 2. Query AudienceSubscriber directory
+    // 3. Query AudienceSubscriber directory
     const whereClause: any = { status: "SUBSCRIBED" };
     if (targetCategory && targetCategory !== "ALL") {
       whereClause.category = targetCategory;
@@ -142,7 +169,7 @@ export async function dispatchCampaign(campaignId: string, targetCategory?: stri
       }
     }
 
-    // 3. If target is ALL and audience has few/no records, also include unique FormSubmission contacts
+    // 4. If target is ALL and audience has few/no records, also include unique FormSubmission contacts
     if (!targetCategory || targetCategory === "ALL") {
       const submissions = await prisma.formSubmission.findMany({
         select: { email: true, fullName: true, company: true, category: true },
