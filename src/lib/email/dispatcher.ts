@@ -37,13 +37,30 @@ export const emailTransporter = isEmailConfigured
       })
   : null;
 
+/**
+ * Guarantees all relative asset and link paths (e.g. /images/..., /api/storage/...)
+ * are converted to absolute public URLs using the configured application domain.
+ * This ensures email clients (Gmail, Apple Mail, Outlook) render images crisply.
+ */
+export function ensureAbsoluteEmailUrls(
+  html: string,
+  baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://admin.dextaafrica.com"
+): string {
+  if (!html) return "";
+  const cleanBase = baseUrl.replace(/\/+$/, "");
+
+  return html
+    .replace(/(src|href|poster)=(["'])\/(?!\/)/gi, `$1=$2${cleanBase}/`)
+    .replace(/url\((["']?)\/(?!\/)/gi, `url($1${cleanBase}/`);
+}
+
 export function compileTemplate(html: string, variables: Record<string, string>): string {
   let result = html;
   for (const [key, val] of Object.entries(variables)) {
     const regex = new RegExp(`{{\\s*${key}\\s*}}`, "g");
     result = result.replace(regex, val);
   }
-  return result;
+  return ensureAbsoluteEmailUrls(result, variables.portalUrl);
 }
 
 export async function sendEmail({
@@ -64,11 +81,12 @@ export async function sendEmail({
   }
 
   try {
+    const finalHtml = ensureAbsoluteEmailUrls(html);
     const info = await emailTransporter.sendMail({
       from: emailFrom,
       to: recipients,
       subject,
-      html,
+      html: finalHtml,
     });
     console.log(`[Email Dispatcher] Dispatched email to "${recipients}" via SMTP on ${smtpHost}:${smtpPort} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
@@ -192,6 +210,12 @@ export async function dispatchCampaign(
 
   const recipients = Array.from(recipientMap.values());
 
+  if (recipients.length === 0) {
+    throw new Error(
+      "No eligible email recipients found in the selected target group. Please ensure subscribers are active or attach a custom recipient list before broadcasting."
+    );
+  }
+
   await prisma.emailCampaign.update({
     where: { id: campaignId },
     data: {
@@ -203,6 +227,8 @@ export async function dispatchCampaign(
   const portalUrl = process.env.NEXT_PUBLIC_APP_URL || "https://admin.dextaafrica.com";
 
   let successfulDispatches = 0;
+  let lastError = "";
+
   for (const rec of recipients) {
     const personalizedHtml = compileTemplate(campaign.contentHtml, {
       firstName: rec.firstName,
@@ -222,10 +248,23 @@ export async function dispatchCampaign(
       });
       if (sendRes.success) {
         successfulDispatches++;
+      } else if (sendRes.error) {
+        lastError = sendRes.error;
       }
     } catch (err) {
+      lastError = err instanceof Error ? err.message : "SMTP transport failure";
       console.error(`Failed to dispatch to ${rec.email}:`, err);
     }
+  }
+
+  if (successfulDispatches === 0 && recipients.length > 0) {
+    await prisma.emailCampaign.update({
+      where: { id: campaignId },
+      data: { status: "FAILED" },
+    });
+    throw new Error(
+      `Delivery failed for all ${recipients.length} recipients: ${lastError || "SMTP service unavailable"}. Please verify your SMTP server configuration in environment settings.`
+    );
   }
 
   return prisma.emailCampaign.update({
@@ -233,7 +272,7 @@ export async function dispatchCampaign(
     data: {
       status: "SENT",
       sentAt: new Date(),
-      recipientCount: recipients.length,
+      recipientCount: successfulDispatches,
     },
   });
 }
