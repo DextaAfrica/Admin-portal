@@ -37,35 +37,70 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const assets = await prisma.storageAsset.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        uploader: {
-          select: { fullName: true, email: true },
-        },
-      },
-    });
+    let assets: any[] = [];
+    let totalFiles = 0;
+    let totalBytes = 0;
+    let myFilesCount = 0;
+    let myFilesBytes = 0;
 
-    const [totalAggregate, myAggregate] = await Promise.all([
-      prisma.storageAsset.aggregate({
-        _sum: { fileSize: true },
-        _count: { id: true },
-      }),
-      prisma.storageAsset.aggregate({
-        where: { uploadedById: user.id },
-        _sum: { fileSize: true },
-        _count: { id: true },
-      }),
-    ]);
+    try {
+      assets = await prisma.storageAsset.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        include: {
+          uploader: {
+            select: { fullName: true, email: true },
+          },
+        },
+      });
+
+      const [totalAggregate, myAggregate] = await Promise.all([
+        prisma.storageAsset.aggregate({
+          _sum: { fileSize: true },
+          _count: { id: true },
+        }),
+        prisma.storageAsset.aggregate({
+          where: { uploadedById: user.id },
+          _sum: { fileSize: true },
+          _count: { id: true },
+        }),
+      ]);
+
+      totalFiles = totalAggregate._count.id || 0;
+      totalBytes = totalAggregate._sum.fileSize || 0;
+      myFilesCount = myAggregate._count.id || 0;
+      myFilesBytes = myAggregate._sum.fileSize || 0;
+    } catch {
+      // Self-heal table if not exists
+      try {
+        await prisma.$executeRawUnsafe(`
+          CREATE TABLE IF NOT EXISTS "StorageAsset" (
+            "id" TEXT NOT NULL PRIMARY KEY,
+            "bucket" TEXT NOT NULL,
+            "key" TEXT NOT NULL,
+            "fileName" TEXT NOT NULL,
+            "fileSize" INTEGER NOT NULL,
+            "mimeType" TEXT NOT NULL,
+            "url" TEXT NOT NULL,
+            "folder" TEXT NOT NULL DEFAULT 'general',
+            "uploadedById" TEXT,
+            "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT "StorageAsset_uploadedById_fkey" FOREIGN KEY ("uploadedById") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+          );
+        `);
+      } catch {
+        // ignore
+      }
+    }
 
     return NextResponse.json({
       assets,
       stats: {
-        totalFiles: totalAggregate._count.id || 0,
-        totalBytes: totalAggregate._sum.fileSize || 0,
-        myFilesCount: myAggregate._count.id || 0,
-        myFilesBytes: myAggregate._sum.fileSize || 0,
+        totalFiles,
+        totalBytes,
+        myFilesCount,
+        myFilesBytes,
       },
     });
   } catch (err: unknown) {

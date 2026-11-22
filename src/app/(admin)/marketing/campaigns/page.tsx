@@ -418,16 +418,16 @@ function CampaignsPageContent() {
   return (
     <div className="space-y-6 animate-fade-in w-full max-w-7xl mx-auto">
       {/* 1. Executive Top Header */}
-      <div className="rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-6 sm:p-8 shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <div className="rounded-2xl sm:rounded-3xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] p-4 sm:p-6 lg:p-8 shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
               <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
+              <span className="text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider text-[#ED2618]">
                 Corporate Communications &bull; SMTP Live
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Email Marketing &amp; Broadcast Scheduling
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
@@ -435,29 +435,7 @@ function CampaignsPageContent() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            <Link href="/marketing/audience">
-              <Button
-                size="sm"
-                variant="outline"
-                leftIcon={<Users className="h-3.5 w-3.5 text-slate-500" />}
-                className="text-xs"
-              >
-                Audience &amp; Contacts ({subscribersCount})
-              </Button>
-            </Link>
-
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={fetchCampaigns}
-              isLoading={isLoading}
-              leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
-              className="text-xs"
-            >
-              Sync Campaigns
-            </Button>
-
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full lg:w-auto shrink-0">
             <Button
               size="sm"
               variant="primary"
@@ -466,79 +444,119 @@ function CampaignsPageContent() {
                 setActiveTab("compose");
               }}
               leftIcon={<Plus className="h-4 w-4" />}
-              className="bg-[#ED2618] hover:bg-[#c91e12] text-xs font-bold"
+              className="bg-[#ED2618] hover:bg-[#c91e12] text-xs font-bold w-full sm:w-auto justify-center"
             >
               Compose New Broadcast
             </Button>
+
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+              <Link href="/marketing/audience" className="w-full sm:w-auto">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<Users className="h-3.5 w-3.5 text-slate-500" />}
+                  className="text-xs w-full justify-center"
+                >
+                  Audience ({subscribersCount})
+                </Button>
+              </Link>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={fetchCampaigns}
+                isLoading={isLoading}
+                leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+                className="text-xs w-full justify-center"
+              >
+                Sync
+              </Button>
+            </div>
           </div>
         </div>
 
         {/* Real Metrics Overview Banner */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-6 mt-6 border-t border-slate-100 dark:border-white/[0.06]">
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-slate-100 dark:border-white/[0.06]">
+          <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-xs font-semibold">Scheduled in Queue</span>
-              <Clock className="h-4 w-4 text-[#ED2618]" />
+              <span className="text-[11px] sm:text-xs font-semibold">Scheduled</span>
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#ED2618]" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
               {scheduledCampaigns.length}
             </div>
-            <span className="text-[10px] text-slate-400">Automated background dispatch</span>
+            <span className="hidden sm:block text-[10px] text-slate-400">Automated background dispatch</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
+          <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-xs font-semibold">Active Drafts</span>
-              <Pencil className="h-4 w-4 text-slate-400" />
+              <span className="text-[11px] sm:text-xs font-semibold">Drafts</span>
+              <Pencil className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
               {draftCampaigns.length}
             </div>
-            <span className="text-[10px] text-slate-400">In design or awaiting schedule</span>
+            <span className="hidden sm:block text-[10px] text-slate-400">In design or awaiting schedule</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
+          <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-xs font-semibold">Delivered Broadcasts</span>
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span className="text-[11px] sm:text-xs font-semibold">Delivered</span>
+              <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
               {sentCampaigns.length}
             </div>
-            <span className="text-[10px] text-slate-400">Successfully sent via SMTP</span>
+            <span className="hidden sm:block text-[10px] text-slate-400">Successfully sent via SMTP</span>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
+          <div className="p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05]">
             <div className="flex items-center justify-between text-slate-500 mb-1">
-              <span className="text-xs font-semibold">Audience Reach</span>
-              <Users className="h-4 w-4 text-indigo-500" />
+              <span className="text-[11px] sm:text-xs font-semibold">Audience</span>
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-500" />
             </div>
-            <div className="text-2xl font-extrabold text-slate-900 dark:text-white">
+            <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
               {subscribersCount}
             </div>
-            <span className="text-[10px] text-slate-400">Subscribed partner contacts</span>
+            <span className="hidden sm:block text-[10px] text-slate-400">Subscribed partner contacts</span>
           </div>
         </div>
 
         {/* Modern Tab Bar */}
-        <div className="flex items-center gap-2 pt-6 mt-6 border-t border-slate-100 dark:border-white/[0.06] overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-1.5 pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-slate-100 dark:border-white/[0.06] overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => {
+              setEditingCampaign(null);
+              setActiveTab("compose");
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+              activeTab === "compose"
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5 text-[#ED2618]" />
+            <span>Studio Composer</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveTab("scheduled")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === "scheduled"
                 ? "bg-[#ED2618] text-white shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
             }`}
           >
             <Clock className="h-3.5 w-3.5" />
-            <span>Scheduled Queue ({scheduledCampaigns.length})</span>
+            <span>Scheduled ({scheduledCampaigns.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab("drafts")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === "drafts"
                 ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
@@ -551,30 +569,14 @@ function CampaignsPageContent() {
           <button
             type="button"
             onClick={() => setActiveTab("sent")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
               activeTab === "sent"
                 ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm"
                 : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
             }`}
           >
             <Send className="h-3.5 w-3.5" />
-            <span>Delivered History ({sentCampaigns.length})</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setEditingCampaign(null);
-              setActiveTab("compose");
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === "compose"
-                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm"
-                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]"
-            }`}
-          >
-            <Sparkles className="h-3.5 w-3.5 text-[#ED2618]" />
-            <span>Campaign Studio Composer</span>
+            <span>History ({sentCampaigns.length})</span>
           </button>
         </div>
       </div>
