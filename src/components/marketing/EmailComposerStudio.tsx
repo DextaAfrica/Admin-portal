@@ -387,6 +387,11 @@ export function compileStudioEmailHtml(
     (state.brandHeaderBg === "tinted" && isCardDark);
 
   const getLogoAbsoluteUrl = (isDark: boolean): string => {
+    const base =
+      typeof window !== "undefined" && window.location.origin.includes("dexta")
+        ? window.location.origin
+        : "https://admin.dextaafrica.com";
+
     // If the user specified an external URL (e.g. S3 upload or http/https)
     if (
       state.brandLogoUrl &&
@@ -396,7 +401,8 @@ export function compileStudioEmailHtml(
     ) {
       if (
         state.brandLogoUrl.endsWith("/dexta.svg") ||
-        state.brandLogoUrl.endsWith("dexta.svg")
+        state.brandLogoUrl.endsWith("dexta.svg") ||
+        state.brandLogoUrl.toLowerCase().endsWith(".svg")
       ) {
         return isDark
           ? "https://admin.dextaafrica.com/images/dexta-logo-light.png"
@@ -404,13 +410,11 @@ export function compileStudioEmailHtml(
       }
       return state.brandLogoUrl;
     }
-    const base =
-      typeof window !== "undefined" && window.location.origin.includes("dexta")
-        ? window.location.origin
-        : "https://admin.dextaafrica.com";
+
     if (
       !state.brandLogoUrl ||
       state.brandLogoUrl === "/dexta.svg" ||
+      state.brandLogoUrl.toLowerCase().endsWith(".svg") ||
       state.brandLogoUrl.includes("dexta")
     ) {
       return isDark
@@ -635,16 +639,16 @@ export function compileStudioEmailHtml(
   const footerHtml = state.showFooter
     ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:28px;border-top:1px solid ${footerBorderColor};padding-top:22px;border-collapse:collapse;">
          <tr>
-           <td style="vertical-align:top;text-align:left;padding-bottom:18px;">
-             <p style="margin:0;font-size:14px;font-weight:700;color:${footerTextColor};font-family:${fontStack};">${replaceVars(
+           <td style="vertical-align:top;text-align:left;padding-bottom:18px;width:72%;">
+             <p style="margin:0;font-size:14px;font-weight:700;color:${footerTextColor};font-family:${fontStack};line-height:1.4;">${replaceVars(
                state.signOffName
              )}</p>
              <p style="margin:3px 0 0 0;font-size:12px;color:${footerMutedColor};font-family:${fontStack};">${replaceVars(
                state.signOffRole
              )}</p>
            </td>
-           <td style="vertical-align:top;text-align:right;padding-bottom:18px;">
-             <img src="${footerLogoUrl}" alt="Dexta Africa" width="60" height="26" style="height:26px;width:60px;max-width:100%;border:0;display:inline-block;outline:none;" />
+           <td style="vertical-align:top;text-align:right;padding-bottom:18px;width:28%;min-width:65px;">
+             <img src="${footerLogoUrl}" alt="Dexta Africa" width="70" height="28" style="height:28px;width:auto;max-width:100%;border:0;display:inline-block;outline:none;vertical-align:middle;" />
            </td>
          </tr>
          <tr>
@@ -922,7 +926,18 @@ export function EmailComposerStudio({
           contentHtml: compiledHtml,
         }),
       });
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") || "";
+      let data: any = {};
+      try {
+        if (contentType.includes("application/json")) {
+          data = await res.json();
+        } else {
+          data = { error: `Server returned ${res.status}: ${res.statusText || "Service error"}` };
+        }
+      } catch {
+        data = { error: `Server returned ${res.status}` };
+      }
+
       if (res.ok) {
         setTestSendResult({
           success: true,
@@ -1161,8 +1176,9 @@ export function EmailComposerStudio({
     setIsLoadingVault(true);
     try {
       const res = await fetch("/api/storage/assets?folder=all");
-      const data = await res.json();
-      if (res.ok) {
+      const contentType = res.headers.get("content-type") || "";
+      if (res.ok && contentType.includes("application/json")) {
+        const data = await res.json();
         setVaultAssets(data.assets || []);
       }
     } catch {

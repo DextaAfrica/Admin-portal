@@ -46,6 +46,24 @@ interface EmailCampaign {
   creator?: { fullName: string; email: string };
 }
 
+// Production Safe JSON Parser to prevent Unexpected token '<' crashes on server error HTML
+async function safeParseJson<T = any>(res: Response): Promise<{ ok: boolean; data?: T; error?: string }> {
+  try {
+    const text = await res.text();
+    const parsed = JSON.parse(text);
+    return {
+      ok: res.ok,
+      data: parsed,
+      error: !res.ok ? (parsed.error || parsed.message || `Server error (${res.status})`) : undefined,
+    };
+  } catch {
+    return {
+      ok: false,
+      error: `Server response error (${res.status}: ${res.statusText || "Unexpected response"})`,
+    };
+  }
+}
+
 function CampaignsPageContent() {
   const { success: toastSuccess, error: toastError } = useToast();
   const searchParams = useSearchParams();
@@ -104,15 +122,16 @@ function CampaignsPageContent() {
         fetch("/api/marketing/audience"),
       ]);
 
-      if (campRes.ok) {
-        const campData = await campRes.json();
-        setCampaigns(campData.campaigns || []);
+      const campParsed = await safeParseJson(campRes);
+      if (campParsed.ok && campParsed.data) {
+        setCampaigns(campParsed.data.campaigns || []);
       }
-      if (audRes.ok) {
-        const audData = await audRes.json();
-        setSubscribersCount((audData.subscribers || []).filter((s: any) => s.status === "SUBSCRIBED").length);
-        if (audData.categoryCounts) {
-          setCategoryCounts(audData.categoryCounts);
+
+      const audParsed = await safeParseJson(audRes);
+      if (audParsed.ok && audParsed.data) {
+        setSubscribersCount((audParsed.data.subscribers || []).filter((s: any) => s.status === "SUBSCRIBED").length);
+        if (audParsed.data.categoryCounts) {
+          setCategoryCounts(audParsed.data.categoryCounts);
         }
       }
     } catch {
@@ -152,7 +171,8 @@ function CampaignsPageContent() {
         }),
       });
 
-      if (res.ok) {
+      const parsed = await safeParseJson(res);
+      if (parsed.ok) {
         toastSuccess(
           isUpdating ? "Campaign Updated" : "Campaign Saved to Drafts",
           "Your email design and subject are ready for scheduling or dispatch."
@@ -161,7 +181,7 @@ function CampaignsPageContent() {
         await fetchCampaigns();
         setActiveTab("drafts");
       } else {
-        toastError("Save Issue", "Could not save campaign.");
+        toastError("Save Issue", parsed.error || "Could not save campaign.");
       }
     } catch {
       toastError("Connection Error", "Please verify connection to email service.");
@@ -191,14 +211,13 @@ function CampaignsPageContent() {
         }),
       });
 
-      if (!saveRes.ok) {
-        const errData = await saveRes.json();
-        toastError("Save Issue", errData.error || "Could not save campaign before dispatch.");
+      const saveParsed = await safeParseJson(saveRes);
+      if (!saveParsed.ok) {
+        toastError("Save Issue", saveParsed.error || "Could not save campaign before dispatch.");
         return;
       }
 
-      const savedData = await saveRes.json();
-      const campaignId = payload.id || savedData.campaign?.id;
+      const campaignId = payload.id || saveParsed.data?.campaign?.id;
 
       if (!campaignId) {
         toastError("Dispatch Error", "Campaign identifier missing.");
@@ -215,17 +234,17 @@ function CampaignsPageContent() {
         }),
       });
 
-      const dispatchData = await dispatchRes.json();
-      if (dispatchRes.ok) {
+      const dispatchParsed = await safeParseJson(dispatchRes);
+      if (dispatchParsed.ok) {
         toastSuccess(
           "Broadcast Dispatched",
-          `Campaign transmitted to ${dispatchData.recipientCount ?? "all"} contact(s) via SMTP.`
+          `Campaign transmitted to ${dispatchParsed.data?.recipientCount ?? "all"} contact(s) via SMTP.`
         );
         setEditingCampaign(null);
         await fetchCampaigns();
         setActiveTab("sent");
       } else {
-        toastError("Delivery Notice", dispatchData.error || "Could not complete email dispatch.");
+        toastError("Delivery Notice", dispatchParsed.error || "Could not complete email dispatch.");
       }
     } catch (err: unknown) {
       toastError("Network Error", err instanceof Error ? err.message : "Error contacting email dispatcher.");
@@ -258,14 +277,13 @@ function CampaignsPageContent() {
         }),
       });
 
-      if (!saveRes.ok) {
-        const errData = await saveRes.json();
-        toastError("Save Issue", errData.error || "Could not save campaign before scheduling.");
+      const saveParsed = await safeParseJson(saveRes);
+      if (!saveParsed.ok) {
+        toastError("Save Issue", saveParsed.error || "Could not save campaign before scheduling.");
         return;
       }
 
-      const savedData = await saveRes.json();
-      const campaignId = payload.id || savedData.campaign?.id;
+      const campaignId = payload.id || saveParsed.data?.campaign?.id;
 
       if (!campaignId) {
         toastError("Scheduling Error", "Campaign identifier missing.");
@@ -283,17 +301,17 @@ function CampaignsPageContent() {
         }),
       });
 
-      const schedData = await scheduleRes.json();
-      if (scheduleRes.ok) {
+      const schedParsed = await safeParseJson(scheduleRes);
+      if (schedParsed.ok) {
         toastSuccess(
           "Campaign Scheduled",
-          schedData.message || `Scheduled for automated delivery on ${new Date(payload.scheduledAt).toLocaleString()}`
+          schedParsed.data?.message || `Scheduled for automated delivery on ${new Date(payload.scheduledAt).toLocaleString()}`
         );
         setEditingCampaign(null);
         await fetchCampaigns();
         setActiveTab("scheduled");
       } else {
-        toastError("Schedule Issue", schedData.error || "Could not schedule campaign delivery.");
+        toastError("Schedule Issue", schedParsed.error || "Could not schedule campaign delivery.");
       }
     } catch (err: unknown) {
       toastError("Network Error", err instanceof Error ? err.message : "Error contacting scheduling service.");
@@ -327,10 +345,10 @@ function CampaignsPageContent() {
         body: JSON.stringify({ scheduledAt: new Date(scheduledDateTime).toISOString() }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to schedule campaign");
+      const parsed = await safeParseJson(res);
+      if (!parsed.ok) throw new Error(parsed.error || "Failed to schedule campaign");
 
-      toastSuccess("Campaign Scheduled", data.message || "Scheduled for automated delivery.");
+      toastSuccess("Campaign Scheduled", parsed.data?.message || "Scheduled for automated delivery.");
       setSchedulingCampaign(null);
       await fetchCampaigns();
       setActiveTab("scheduled");

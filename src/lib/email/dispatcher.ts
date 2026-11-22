@@ -37,13 +37,30 @@ export const emailTransporter = isEmailConfigured
       })
   : null;
 
+/**
+ * Guarantees all relative asset and link paths (e.g. /images/..., /api/storage/...)
+ * are converted to absolute public URLs using the configured application domain.
+ * This ensures email clients (Gmail, Apple Mail, Outlook) render images crisply.
+ */
+export function ensureAbsoluteEmailUrls(
+  html: string,
+  baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://admin.dextaafrica.com"
+): string {
+  if (!html) return "";
+  const cleanBase = baseUrl.replace(/\/+$/, "");
+
+  return html
+    .replace(/(src|href|poster)=(["'])\/(?!\/)/gi, `$1=$2${cleanBase}/`)
+    .replace(/url\((["']?)\/(?!\/)/gi, `url($1${cleanBase}/`);
+}
+
 export function compileTemplate(html: string, variables: Record<string, string>): string {
   let result = html;
   for (const [key, val] of Object.entries(variables)) {
     const regex = new RegExp(`{{\\s*${key}\\s*}}`, "g");
     result = result.replace(regex, val);
   }
-  return result;
+  return ensureAbsoluteEmailUrls(result, variables.portalUrl);
 }
 
 export async function sendEmail({
@@ -64,11 +81,12 @@ export async function sendEmail({
   }
 
   try {
+    const finalHtml = ensureAbsoluteEmailUrls(html);
     const info = await emailTransporter.sendMail({
       from: emailFrom,
       to: recipients,
       subject,
-      html,
+      html: finalHtml,
     });
     console.log(`[Email Dispatcher] Dispatched email to "${recipients}" via SMTP on ${smtpHost}:${smtpPort} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };
