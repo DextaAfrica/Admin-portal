@@ -131,8 +131,8 @@ const BASE_DESIGN_DEFAULTS = {
   showCta: true,
   ctaStyle: "rounded" as const,
   heroLayout: "top_full" as const,
-  heroHeight: "standard" as const,
-  heroObjectFit: "cover" as const,
+  heroHeight: "auto" as const,
+  heroObjectFit: "contain" as const,
   cardBackgroundColor: "#FFFFFF",
   canvasBackgroundColor: "#F8FAFC",
   textColor: "#0F172A",
@@ -453,18 +453,23 @@ export function compileStudioEmailHtml(
     })
     .join("");
 
-  const heroImgStyle = `width:100%;${
-    maxHeroH !== "none" ? `max-height:${maxHeroH};` : ""
-  }object-fit:${state.heroObjectFit};object-position:top center;display:block;`;
+  const heroBg = isCardDark
+    ? (state.cardBackgroundColor || "#0f172a")
+    : (state.cardBackgroundColor || "#ffffff");
+
+  const heroImgStyle =
+    maxHeroH !== "none"
+      ? `width:100%;max-width:100%;max-height:${maxHeroH};object-fit:${state.heroObjectFit};object-position:top center;display:block;margin:0 auto;border:0;outline:none;`
+      : `width:100%;max-width:100%;height:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none;`;
 
   const heroHtml =
     state.heroImageUrl && state.heroLayout !== "none"
       ? `<div style="${
           state.heroLayout === "inset_card"
-            ? "padding:20px 28px 0 28px;"
-            : "width:100%;overflow:hidden;background:#0f172a;"
+            ? "padding:20px 28px 0 28px;text-align:center;"
+            : `width:100%;overflow:hidden;background-color:${heroBg};text-align:center;`
         }">
-           <img src="${toEmailSafeUrl(state.heroImageUrl)}" alt="${state.headline}" style="${heroImgStyle}${
+           <img src="${toEmailSafeUrl(state.heroImageUrl)}" alt="${state.headline}" width="640" style="${heroImgStyle}${
           state.heroLayout === "inset_card" ? "border-radius:12px;" : ""
         }" />
          </div>`
@@ -3392,7 +3397,10 @@ async function optimizeImageBeforeUpload(file: File): Promise<File> {
               >
                 {/* Hero Banner if Top Full-Width */}
                 {state.heroImageUrl && state.heroLayout === "top_full" && (
-                  <div className="relative w-full bg-slate-900 overflow-hidden group">
+                  <div
+                    className="relative w-full overflow-hidden group"
+                    style={{ backgroundColor: state.cardBackgroundColor || "#ffffff" }}
+                  >
                     <img
                       src={state.heroImageUrl}
                       alt={state.headline}
@@ -3501,8 +3509,9 @@ async function optimizeImageBeforeUpload(file: File): Promise<File> {
                   (state.heroLayout === "below_header" || state.heroLayout === "inset_card") && (
                     <div
                       className={`relative group ${
-                        state.heroLayout === "inset_card" ? "px-7 pt-6" : "w-full bg-slate-900"
+                        state.heroLayout === "inset_card" ? "px-7 pt-6" : "w-full"
                       }`}
+                      style={{ backgroundColor: state.cardBackgroundColor || "#ffffff" }}
                     >
                       <img
                         src={state.heroImageUrl}
