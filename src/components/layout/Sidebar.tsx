@@ -37,6 +37,8 @@ import {
   Compass,
   Cpu,
   Sliders,
+  GraduationCap,
+  Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
@@ -74,6 +76,7 @@ const OPERATIONS_NAV: NavSection[] = [
     items: [
       { title: "GM Operational Command", href: "/dashboard/gm", icon: Compass, badge: "GM" },
       { title: "Operations Dashboard", href: "/dashboard", tabId: "operations", icon: LayoutDashboard },
+      { title: "Dexta Clan Academy", href: "/clan", icon: GraduationCap, badge: "Cohorts" },
       { title: "Projects & Milestones", href: "/projects", icon: Building2 },
       { title: "Reports & Dossiers", href: "/reports", icon: FileText },
       { title: "Inter-Dept Clearances", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2 },
@@ -95,6 +98,7 @@ const SYSTEMS_NAV: NavSection[] = [
   {
     label: "Email & Broadcasts",
     items: [
+      { title: "Dexta Clan Academy", href: "/clan", icon: GraduationCap, badge: "Cohorts" },
       { title: "Registration & Forms", href: "/forms", icon: Link2 },
       { title: "Email Campaigns", href: "/marketing/campaigns", icon: Send },
       { title: "Audience & Contacts", href: "/marketing/audience", icon: Users },
@@ -136,6 +140,7 @@ const EXECUTIVE_NAV: NavSection[] = [
     items: [
       { title: "Sovereign Deals Pipeline", href: "/crm", icon: Briefcase, badge: "Pipeline" },
       { title: "Enterprise Treasury & Inflow", href: "/dashboard?tab=treasury", tabId: "treasury", icon: Landmark, badge: "Ledger" },
+      { title: "Dexta Clan Fellows", href: "/clan", icon: GraduationCap, badge: "Academy" },
       { title: "Landmark Developments", href: "/portfolio", icon: Building2 },
     ],
   },
