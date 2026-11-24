@@ -32,6 +32,11 @@ import {
   Sparkles,
   X,
   CheckSquare,
+  UploadCloud,
+  Sliders,
+  Plus,
+  Trash2,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -105,6 +110,36 @@ export default function FormDemographicsPage({
   const [batchSubject, setBatchSubject] = React.useState("");
   const [batchMessage, setBatchMessage] = React.useState("");
   const [isSendingBatch, setIsSendingBatch] = React.useState(false);
+
+  // Upload Submissions States
+  const [isUploadModalOpen, setIsUploadModalOpen] = React.useState(false);
+  const [uploadMode, setUploadMode] = React.useState<"file" | "paste" | "single">("file");
+  const [pastedSubmissions, setPastedSubmissions] = React.useState("");
+  const [parsedUploads, setParsedUploads] = React.useState<any[]>([]);
+  const [isSubmittingUpload, setIsSubmittingUpload] = React.useState(false);
+  const [singleEntry, setSingleEntry] = React.useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    company: "",
+    jobTitle: "",
+    category: "Attendee",
+    attendanceMode: "in-person",
+    status: "registered",
+    notes: "",
+  });
+
+  // Dynamic Fields Editor States
+  const [isFieldsModalOpen, setIsFieldsModalOpen] = React.useState(false);
+  const [editingFields, setEditingFields] = React.useState<any[]>([]);
+  const [isSavingFields, setIsSavingFields] = React.useState(false);
+  const [newFieldData, setNewFieldData] = React.useState({
+    label: "",
+    type: "text",
+    placeholder: "",
+    required: false,
+    options: "",
+  });
 
   const fetchAnalytics = React.useCallback(async () => {
     setLoading(true);
@@ -182,6 +217,157 @@ export default function FormDemographicsPage({
 
   const handleExportPDF = () => {
     window.print();
+  };
+
+  React.useEffect(() => {
+    if (data?.form.fields) {
+      setEditingFields(data.form.fields);
+    }
+  }, [data]);
+
+  const parseUploadRows = (text: string) => {
+    const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) return [];
+
+    const firstLine = lines[0];
+    const isHeader =
+      firstLine.toLowerCase().includes("name") ||
+      firstLine.toLowerCase().includes("email");
+
+    const startIdx = isHeader ? 1 : 0;
+    const delimiter = firstLine.includes("\t") ? "\t" : ",";
+
+    const results = [];
+    for (let i = startIdx; i < lines.length; i++) {
+      const parts = lines[i].split(delimiter).map((p) => p.trim().replace(/^"|"$/g, ""));
+      if (parts.length >= 2) {
+        results.push({
+          fullName: parts[0] || "",
+          email: parts[1] || "",
+          phone: parts[2] || "",
+          company: parts[3] || "",
+          jobTitle: parts[4] || "",
+          category: parts[5] || "Attendee",
+          attendanceMode: parts[6] || "in-person",
+          status: parts[7] || "registered",
+        });
+      }
+    }
+    return results;
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const parsed = parseUploadRows(content);
+      setParsedUploads(parsed);
+      if (parsed.length > 0) {
+        toastSuccess(`Parsed ${parsed.length} row(s) from ${file.name}`);
+      } else {
+        toastError("No valid rows detected. Ensure columns are: Full Name, Email, Phone, Company");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleConfirmUpload = async () => {
+    let payload: any[] = [];
+    if (uploadMode === "file" || uploadMode === "paste") {
+      const items = uploadMode === "paste" ? parseUploadRows(pastedSubmissions) : parsedUploads;
+      if (items.length === 0) {
+        toastError("No submission rows to upload.");
+        return;
+      }
+      payload = items;
+    } else {
+      if (!singleEntry.fullName || !singleEntry.email) {
+        toastError("Full Name and Email are mandatory");
+        return;
+      }
+      payload = [singleEntry];
+    }
+
+    setIsSubmittingUpload(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}/submissions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: payload }),
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Failed to upload submissions");
+
+      toastSuccess(resData.message || `Uploaded ${payload.length} submission(s)`);
+      setIsUploadModalOpen(false);
+      setParsedUploads([]);
+      setPastedSubmissions("");
+      fetchAnalytics();
+    } catch (err: any) {
+      toastError(err.message || "Failed to upload submissions");
+    } finally {
+      setIsSubmittingUpload(false);
+    }
+  };
+
+  const handleAddNewField = () => {
+    if (!newFieldData.label.trim()) {
+      toastError("Field Label is required");
+      return;
+    }
+    const id = newFieldData.label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `field_${Date.now()}`;
+    const opts = newFieldData.options
+      ? newFieldData.options.split(",").map((o) => o.trim()).filter(Boolean)
+      : undefined;
+
+    const updated = [
+      ...editingFields,
+      {
+        id,
+        label: newFieldData.label.trim(),
+        type: newFieldData.type,
+        placeholder: newFieldData.placeholder.trim(),
+        required: newFieldData.required,
+        options: opts,
+      },
+    ];
+    setEditingFields(updated);
+    setNewFieldData({
+      label: "",
+      type: "text",
+      placeholder: "",
+      required: false,
+      options: "",
+    });
+    toastSuccess(`Added "${newFieldData.label}" field`);
+  };
+
+  const handleRemoveField = (fieldId: string) => {
+    setEditingFields(editingFields.filter((f) => f.id !== fieldId));
+  };
+
+  const handleSaveFields = async () => {
+    setIsSavingFields(true);
+    try {
+      const res = await fetch(`/api/forms/${formId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fields: editingFields }),
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Failed to save form fields");
+
+      toastSuccess("Form fields updated successfully!");
+      setIsFieldsModalOpen(false);
+      fetchAnalytics();
+    } catch (err: any) {
+      toastError(err.message || "Failed to update form fields");
+    } finally {
+      setIsSavingFields(false);
+    }
   };
 
   if (loading && !data) {
@@ -334,15 +520,35 @@ export default function FormDemographicsPage({
 
         {/* Export & Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            onClick={() => setIsUploadModalOpen(true)}
+            className="bg-red-600 hover:bg-red-500 text-white font-bold shadow-md shadow-red-600/30 text-xs h-8"
+          >
+            <UploadCloud className="w-3.5 h-3.5 mr-1.5" />
+            <span>Upload Details / Ingest</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFieldsModalOpen(true)}
+            className="border-neutral-800 text-neutral-300 hover:bg-neutral-800 text-xs h-8 font-semibold"
+          >
+            <Sliders className="w-3.5 h-3.5 mr-1.5 text-red-500" />
+            <span>Form Fields &amp; Questions</span>
+          </Button>
+
           <Link
             href={`/marketing/campaigns?formSlug=${form.slug}&formTitle=${encodeURIComponent(form.title)}`}
           >
             <Button
               size="sm"
-              className="bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md shadow-red-600/30 text-xs h-8"
+              variant="outline"
+              className="border-neutral-800 text-neutral-300 hover:bg-neutral-800 text-xs h-8"
             >
               <Mail className="w-3.5 h-3.5 mr-1.5" />
-              <span>Design Studio Campaign</span>
+              <span>Design Campaign</span>
             </Button>
           </Link>
 
@@ -361,22 +567,53 @@ export default function FormDemographicsPage({
             variant="outline"
             size="sm"
             onClick={handleExportCSV}
-            className="border-neutral-800 text-neutral-300 hover:bg-neutral-800"
+            className="border-neutral-800 text-neutral-300 hover:bg-neutral-800 text-xs h-8"
           >
             <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
-            <span>Export CSV</span>
+            <span>CSV</span>
           </Button>
 
           <Button
             size="sm"
             onClick={handleExportPDF}
-            className="bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/30"
+            className="bg-neutral-800 hover:bg-neutral-700 text-white text-xs h-8"
           >
             <Printer className="w-3.5 h-3.5 mr-1.5" />
-            <span>Export PDF</span>
+            <span>PDF</span>
           </Button>
         </div>
       </div>
+
+      {/* Dexta Clan Cohort Link Banner */}
+      {(form.slug.toLowerCase().includes("clan") ||
+        form.title.toLowerCase().includes("clan") ||
+        form.title.toLowerCase().includes("cohort")) && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-red-950/40 to-slate-900 border border-red-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center shrink-0">
+              <GraduationCap className="h-5 w-5 text-red-500" />
+            </div>
+            <div>
+              <div className="font-bold text-white flex items-center gap-2">
+                Dexta Clan Masterclass Cohort Portal Detected
+                <span className="px-2 py-0.2 rounded-full text-[10px] font-mono bg-red-600 text-white uppercase font-extrabold">
+                  Academy
+                </span>
+              </div>
+              <p className="text-neutral-400 text-[11px] mt-0.5">
+                Submissions to this form feed directly into the Dexta Clan Masterclass Registry. Track cohort progress, admissions, and accreditation in the dedicated Clan desk.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/clan"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shrink-0 transition-colors shadow-sm"
+          >
+            <span>Open Dexta Clan Desk</span>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      )}
 
       {/* Print-only title */}
       <div className="hidden print:block mb-6 border-b pb-4">
@@ -882,6 +1119,421 @@ export default function FormDemographicsPage({
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* MODAL 2: UPLOAD & INGEST DETAILS */}
+      <Modal
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        title={`Upload Details into ${form.title}`}
+        description="Ingest participant details directly into this portal's backend registry. Supports CSV, Excel, TXT, or direct paste."
+        maxWidth="lg"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSubmittingUpload}
+              onClick={() => setIsUploadModalOpen(false)}
+              className="border-neutral-800 text-neutral-300 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={isSubmittingUpload}
+              onClick={handleConfirmUpload}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs"
+            >
+              {isSubmittingUpload ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  <span>Processing Ingestion...</span>
+                </>
+              ) : uploadMode === "single" ? (
+                "Add Single Submission"
+              ) : (
+                `Confirm & Ingest ${uploadMode === "paste" ? parseUploadRows(pastedSubmissions).length : parsedUploads.length} Records`
+              )}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 pt-1 text-xs">
+          {/* Mode Switcher */}
+          <div className="flex rounded-xl bg-[#111624] border border-neutral-800 p-1 gap-1">
+            <button
+              type="button"
+              onClick={() => setUploadMode("file")}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                uploadMode === "file" ? "bg-red-600 text-white shadow-sm" : "text-neutral-400"
+              }`}
+            >
+              File Upload (CSV / Excel)
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadMode("paste")}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                uploadMode === "paste" ? "bg-red-600 text-white shadow-sm" : "text-neutral-400"
+              }`}
+            >
+              Quick Copy &amp; Paste
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadMode("single")}
+              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                uploadMode === "single" ? "bg-red-600 text-white shadow-sm" : "text-neutral-400"
+              }`}
+            >
+              Single Entry Form
+            </button>
+          </div>
+
+          {/* MODE 1: FILE UPLOAD */}
+          {uploadMode === "file" && (
+            <div className="space-y-3">
+              <label className="flex flex-col items-center justify-center border-2 border-dashed border-neutral-800 rounded-2xl p-6 text-center cursor-pointer hover:border-red-500/50 transition-colors bg-[#111624]/50">
+                <UploadCloud className="h-8 w-8 text-red-500 mb-2" />
+                <span className="text-xs font-bold text-neutral-100">
+                  Select CSV, XLSX, or TXT File
+                </span>
+                <span className="text-[11px] text-neutral-500 mt-0.5">
+                  Columns: Full Name, Email, Phone, Company, Job Title, Category
+                </span>
+                <input
+                  type="file"
+                  accept=".csv,.txt,.xlsx,.xls"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
+              </label>
+
+              {parsedUploads.length > 0 && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-bold">
+                    <span className="text-emerald-400">
+                      ✓ {parsedUploads.length} Registrant(s) Ready to Ingest
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setParsedUploads([])}
+                      className="text-red-400 hover:underline"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto rounded-xl border border-neutral-800 bg-[#111624] p-2 space-y-1">
+                    {parsedUploads.slice(0, 10).map((row, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-[11px] py-1 border-b border-neutral-800/60">
+                        <span className="font-bold text-neutral-200 truncate max-w-[180px]">{row.fullName}</span>
+                        <span className="text-neutral-400 truncate max-w-[200px]">{row.email}</span>
+                        <span className="text-neutral-500 text-[10px] truncate max-w-[120px]">{row.company}</span>
+                      </div>
+                    ))}
+                    {parsedUploads.length > 10 && (
+                      <div className="text-center text-[10px] text-neutral-500 pt-1">
+                        + {parsedUploads.length - 10} more rows
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* MODE 2: PASTE */}
+          {uploadMode === "paste" && (
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-neutral-300">
+                Paste CSV or Tab-separated rows
+              </label>
+              <textarea
+                rows={6}
+                value={pastedSubmissions}
+                onChange={(e) => setPastedSubmissions(e.target.value)}
+                placeholder={"Olamide Adeleke, olamide@realty.ng, +2348031234567, Adeleke Prime, Broker\nChinedu Eze, chinedu@horizon.ng, +2348129876543, Horizon Capital, Associate"}
+                className="w-full rounded-xl border border-neutral-800 bg-[#111624] p-3 font-mono text-xs text-neutral-100 focus:outline-none focus:border-red-500"
+              />
+              <span className="text-[11px] text-neutral-500">
+                Detected: {parseUploadRows(pastedSubmissions).length} row(s)
+              </span>
+            </div>
+          )}
+
+          {/* MODE 3: SINGLE ENTRY */}
+          {uploadMode === "single" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={singleEntry.fullName}
+                    onChange={(e) => setSingleEntry({ ...singleEntry, fullName: e.target.value })}
+                    placeholder="e.g. Olamide Adeleke"
+                    className="w-full rounded-lg border border-neutral-800 bg-[#111624] p-2 text-xs text-neutral-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                    Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    value={singleEntry.email}
+                    onChange={(e) => setSingleEntry({ ...singleEntry, email: e.target.value })}
+                    placeholder="olamide@realty.ng"
+                    className="w-full rounded-lg border border-neutral-800 bg-[#111624] p-2 text-xs text-neutral-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={singleEntry.phone}
+                    onChange={(e) => setSingleEntry({ ...singleEntry, phone: e.target.value })}
+                    placeholder="+234 803 123 4567"
+                    className="w-full rounded-lg border border-neutral-800 bg-[#111624] p-2 text-xs text-neutral-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                    Company / Organization
+                  </label>
+                  <input
+                    type="text"
+                    value={singleEntry.company}
+                    onChange={(e) => setSingleEntry({ ...singleEntry, company: e.target.value })}
+                    placeholder="Adeleke Prime Realty"
+                    className="w-full rounded-lg border border-neutral-800 bg-[#111624] p-2 text-xs text-neutral-100"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={singleEntry.category}
+                    onChange={(e) => setSingleEntry({ ...singleEntry, category: e.target.value })}
+                    className="w-full rounded-lg border border-neutral-800 bg-[#111624] p-2 text-xs text-neutral-100"
+                  >
+                    <option value="Attendee">Attendee</option>
+                    <option value="Lead">Lead</option>
+                    <option value="Partner">Partner</option>
+                    <option value="Client">Client</option>
+                    <option value="Investor">Investor</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                    Attendance Mode
+                  </label>
+                  <select
+                    value={singleEntry.attendanceMode}
+                    onChange={(e) => setSingleEntry({ ...singleEntry, attendanceMode: e.target.value })}
+                    className="w-full rounded-lg border border-neutral-800 bg-[#111624] p-2 text-xs text-neutral-100"
+                  >
+                    <option value="in-person">In-Person</option>
+                    <option value="virtual">Virtual</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* MODAL 3: FORM FIELDS & DYNAMIC QUESTIONS EDITOR */}
+      <Modal
+        isOpen={isFieldsModalOpen}
+        onClose={() => setIsFieldsModalOpen(false)}
+        title={`Customize Form Fields & Questions`}
+        description="Add custom questions, dropdowns, document uploads, or track selections to this registration portal. Updates apply immediately to live links."
+        maxWidth="lg"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isSavingFields}
+              onClick={() => setIsFieldsModalOpen(false)}
+              className="border-neutral-800 text-neutral-300 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={isSavingFields}
+              onClick={handleSaveFields}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs"
+            >
+              {isSavingFields ? "Saving Fields..." : "Save & Publish Form Fields"}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 pt-1 text-xs">
+          {/* Current Fields List */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-neutral-200 uppercase tracking-wider text-[11px]">
+                Active Custom Fields ({editingFields.length})
+              </span>
+              <span className="text-[11px] text-neutral-500">
+                (Standard: Full Name, Email, Phone, Company are automatically included)
+              </span>
+            </div>
+
+            {editingFields.length === 0 ? (
+              <div className="p-4 rounded-xl border border-neutral-800 bg-[#111624] text-center text-neutral-400">
+                No custom questions added yet. Use the builder below to add questions.
+              </div>
+            ) : (
+              <div className="space-y-1.5 max-h-48 overflow-y-auto rounded-xl border border-neutral-800 bg-[#111624] p-2">
+                {editingFields.map((field) => (
+                  <div key={field.id} className="flex items-center justify-between p-2 rounded-lg bg-[#141a29] border border-neutral-800/80">
+                    <div className="space-y-0.5">
+                      <div className="font-bold text-neutral-100 flex items-center gap-1.5">
+                        <span>{field.label}</span>
+                        {field.required && (
+                          <span className="text-[9px] px-1 py-0.2 rounded bg-red-500/20 text-red-400 font-bold">
+                            REQUIRED
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-neutral-500 font-mono">
+                        Type: {field.type} {field.options ? `• Options: ${field.options.join(", ")}` : ""}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveField(field.id)}
+                      className="p-1 rounded text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="Delete Field"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Add New Field Builder Card */}
+          <div className="p-4 rounded-xl border border-neutral-800 bg-[#111624] space-y-3">
+            <h4 className="font-bold text-neutral-200 flex items-center gap-1.5 text-xs">
+              <Plus className="h-3.5 w-3.5 text-red-500" />
+              Add a New Question or Form Field
+            </h4>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                  Field Label / Question *
+                </label>
+                <input
+                  type="text"
+                  value={newFieldData.label}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, label: e.target.value })}
+                  placeholder="e.g. Real Estate License Number"
+                  className="w-full rounded-lg border border-neutral-800 bg-[#141a29] p-2 text-xs text-neutral-100"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                  Field Type
+                </label>
+                <select
+                  value={newFieldData.type}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, type: e.target.value })}
+                  className="w-full rounded-lg border border-neutral-800 bg-[#141a29] p-2 text-xs text-neutral-100 font-semibold"
+                >
+                  <option value="text">Text (Single Line)</option>
+                  <option value="textarea">Textarea (Multi-line)</option>
+                  <option value="select">Dropdown / Select</option>
+                  <option value="radio">Radio Buttons</option>
+                  <option value="checkbox">Checkbox (Multi-select)</option>
+                  <option value="date">Date Picker</option>
+                  <option value="number">Number</option>
+                  <option value="phone">Phone Number</option>
+                  <option value="email">Email Address</option>
+                  <option value="url">Website / Portfolio Link</option>
+                  <option value="file">File / Document Upload</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                  Placeholder / Help Text
+                </label>
+                <input
+                  type="text"
+                  value={newFieldData.placeholder}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, placeholder: e.target.value })}
+                  placeholder="e.g. Enter your verified association ID"
+                  className="w-full rounded-lg border border-neutral-800 bg-[#141a29] p-2 text-xs text-neutral-100"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="requiredCheck"
+                  checked={newFieldData.required}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, required: e.target.checked })}
+                  className="rounded border-neutral-700 bg-neutral-900"
+                />
+                <label htmlFor="requiredCheck" className="text-xs font-semibold text-neutral-300 cursor-pointer">
+                  Mandatory / Required Field
+                </label>
+              </div>
+            </div>
+
+            {(newFieldData.type === "select" || newFieldData.type === "radio" || newFieldData.type === "checkbox") && (
+              <div>
+                <label className="block text-[11px] font-semibold text-neutral-400 mb-1">
+                  Dropdown Options (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={newFieldData.options}
+                  onChange={(e) => setNewFieldData({ ...newFieldData, options: e.target.value })}
+                  placeholder="Luxury Residential, Commercial Acquisition, Land Syndication"
+                  className="w-full rounded-lg border border-neutral-800 bg-[#141a29] p-2 text-xs text-neutral-100"
+                />
+              </div>
+            )}
+
+            <Button
+              type="button"
+              size="xs"
+              onClick={handleAddNewField}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Add Field to Form
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

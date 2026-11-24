@@ -42,6 +42,7 @@ import {
   FileText,
   Clock,
   ExternalLink,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -109,6 +110,14 @@ export interface EmailStudioState {
   signOffName: string;
   signOffRole: string;
   footerAddress: string;
+  showSocialLinks: boolean;
+  socialLinks: {
+    linkedin?: string;
+    twitter?: string;
+    instagram?: string;
+    facebook?: string;
+    website?: string;
+  };
   customBlocks: CustomEmailBlock[];
   useCustomHtmlOverride: boolean;
   customHtmlCode: string;
@@ -131,8 +140,8 @@ const BASE_DESIGN_DEFAULTS = {
   showCta: true,
   ctaStyle: "rounded" as const,
   heroLayout: "top_full" as const,
-  heroHeight: "standard" as const,
-  heroObjectFit: "cover" as const,
+  heroHeight: "auto" as const,
+  heroObjectFit: "contain" as const,
   cardBackgroundColor: "#FFFFFF",
   canvasBackgroundColor: "#F8FAFC",
   textColor: "#0F172A",
@@ -144,9 +153,17 @@ const BASE_DESIGN_DEFAULTS = {
   brandHeaderAlignment: "split" as const,
   brandHeaderBg: "white" as const,
   brandLogoHeight: 32,
-  brandRightLabel: "Official Dispatch",
+  brandRightLabel: "",
   showFooter: true,
-  footerAddress: "Dexta Africa • Victoria Island, Lagos",
+  footerAddress: "Dexta Africa Limited • Victoria Island, Lagos, Nigeria",
+  showSocialLinks: true,
+  socialLinks: {
+    linkedin: "https://www.linkedin.com/company/dextaafrica",
+    twitter: "https://x.com/dextaafrica",
+    instagram: "https://www.instagram.com/dextaafrica",
+    facebook: "https://www.facebook.com/dextaafrica",
+    website: "https://dextaafrica.com",
+  },
   customBlocks: [] as CustomEmailBlock[],
   useCustomHtmlOverride: false,
   customHtmlCode: "",
@@ -453,18 +470,23 @@ export function compileStudioEmailHtml(
     })
     .join("");
 
-  const heroImgStyle = `width:100%;${
-    maxHeroH !== "none" ? `max-height:${maxHeroH};` : ""
-  }object-fit:${state.heroObjectFit};object-position:top center;display:block;`;
+  const heroBg = isCardDark
+    ? (state.cardBackgroundColor || "#0f172a")
+    : (state.cardBackgroundColor || "#ffffff");
+
+  const heroImgStyle =
+    maxHeroH !== "none"
+      ? `width:100%;max-width:100%;max-height:${maxHeroH};object-fit:${state.heroObjectFit};object-position:top center;display:block;margin:0 auto;border:0;outline:none;`
+      : `width:100%;max-width:100%;height:auto;display:block;margin:0 auto;border:0;outline:none;text-decoration:none;`;
 
   const heroHtml =
     state.heroImageUrl && state.heroLayout !== "none"
       ? `<div style="${
           state.heroLayout === "inset_card"
-            ? "padding:20px 28px 0 28px;"
-            : "width:100%;overflow:hidden;background:#0f172a;"
+            ? "padding:20px 28px 0 28px;text-align:center;"
+            : `width:100%;overflow:hidden;background-color:${heroBg};text-align:center;`
         }">
-           <img src="${toEmailSafeUrl(state.heroImageUrl)}" alt="${state.headline}" style="${heroImgStyle}${
+           <img src="${toEmailSafeUrl(state.heroImageUrl)}" alt="${state.headline}" width="640" style="${heroImgStyle}${
           state.heroLayout === "inset_card" ? "border-radius:12px;" : ""
         }" />
          </div>`
@@ -500,9 +522,9 @@ export function compileStudioEmailHtml(
              };line-height:100%;outline:none;text-decoration:none;" />
            </td>
            ${
-             state.brandHeaderAlignment === "split" && state.brandRightLabel
+             state.brandHeaderAlignment === "split" && Boolean(state.brandRightLabel?.trim())
                ? `<td style="padding:22px 28px;vertical-align:middle;text-align:right;">
-                    <span style="font-family:${fontStack};font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.16em;color:${headerLabelColor};">${state.brandRightLabel}</span>
+                    <span style="font-family:${fontStack};font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.16em;color:${headerLabelColor};">${state.brandRightLabel.trim()}</span>
                   </td>`
                : ""
            }
@@ -636,6 +658,40 @@ export function compileStudioEmailHtml(
   const footerMutedColor = isCardDark ? "#94a3b8" : "#64748b";
   const footerBorderColor = isCardDark ? "#334155" : "#e2e8f0";
 
+  const socialChannels = [
+    { key: "linkedin", label: "LinkedIn", icon: "/images/social/linkedin.png", url: state.socialLinks?.linkedin },
+    { key: "twitter", label: "X (Twitter)", icon: "/images/social/twitter.png", url: state.socialLinks?.twitter },
+    { key: "instagram", label: "Instagram", icon: "/images/social/instagram.png", url: state.socialLinks?.instagram },
+    { key: "facebook", label: "Facebook", icon: "/images/social/facebook.png", url: state.socialLinks?.facebook },
+    { key: "website", label: "Website", icon: "/images/social/website.png", url: state.socialLinks?.website },
+  ].filter((c) => Boolean(c.url && c.url.trim()));
+
+  const socialLinksHtml =
+    state.showSocialLinks !== false && socialChannels.length > 0
+      ? `<tr>
+           <td colspan="2" style="padding-top:14px;padding-bottom:14px;text-align:left;">
+             <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+               <tr>
+                 <td style="font-size:11px;font-weight:700;color:${footerMutedColor};font-family:${fontStack};text-transform:uppercase;letter-spacing:0.08em;padding-right:12px;vertical-align:middle;">
+                   Connect:
+                 </td>
+                 ${socialChannels
+                   .map(
+                     (c) => `
+                   <td style="padding-right:8px;vertical-align:middle;">
+                     <a href="${c.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;text-decoration:none;">
+                       <img src="${toEmailSafeUrl(c.icon)}" alt="${c.label}" width="22" height="22" style="width:22px;height:22px;display:block;border:0;border-radius:4px;" />
+                     </a>
+                   </td>
+                 `
+                   )
+                   .join("")}
+               </tr>
+             </table>
+           </td>
+         </tr>`
+      : "";
+
   const footerHtml = state.showFooter
     ? `<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top:28px;border-top:1px solid ${footerBorderColor};padding-top:22px;border-collapse:collapse;">
          <tr>
@@ -651,6 +707,7 @@ export function compileStudioEmailHtml(
              <img src="${footerLogoUrl}" alt="Dexta Africa" width="70" height="28" style="height:28px;width:auto;max-width:100%;border:0;display:inline-block;outline:none;vertical-align:middle;" />
            </td>
          </tr>
+         ${socialLinksHtml}
          <tr>
            <td colspan="2" style="border-top:1px solid ${footerBorderColor};padding-top:16px;text-align:left;">
              <p style="margin:0 0 6px 0;font-size:11px;color:${footerMutedColor};line-height:1.5;font-family:${fontStack};">
@@ -725,6 +782,9 @@ export function parseStudioStateFromHtml(
       const end = html.indexOf(STUDIO_STATE_SUFFIX);
       const encoded = html.slice(start, end).trim();
       const parsed = JSON.parse(decodeURIComponent(encoded)) as Partial<EmailStudioState>;
+      if (parsed.brandRightLabel === "Official Dispatch") {
+        parsed.brandRightLabel = "";
+      }
       return {
         occasion: "birthday",
         ...EMAIL_OCCASION_PRESETS[0].defaults,
@@ -2168,29 +2228,160 @@ async function optimizeImageBeforeUpload(file: File): Promise<File> {
                 </div>
               </div>
 
-              {/* Sign-Off & Footer Signature */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Signature Name / Team
-                  </label>
-                  <input
-                    type="text"
-                    value={state.signOffName}
-                    onChange={(e) => updateField("signOffName", e.target.value)}
-                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#171821] px-3 py-2 text-xs font-bold text-slate-900 dark:text-white"
-                  />
+              {/* Sign-Off, Footer & Social Channels */}
+              <div className="space-y-4 pt-3 border-t border-slate-100 dark:border-white/[0.06]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Signature Name / Team
+                    </label>
+                    <input
+                      type="text"
+                      value={state.signOffName}
+                      onChange={(e) => updateField("signOffName", e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#171821] px-3 py-2 text-xs font-bold text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                      Signature Title / Department
+                    </label>
+                    <input
+                      type="text"
+                      value={state.signOffRole}
+                      onChange={(e) => updateField("signOffRole", e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#171821] px-3 py-2 text-xs text-slate-900 dark:text-white"
+                    />
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Signature Title / Department
+                    Corporate Footer Address & Legal Info
                   </label>
                   <input
                     type="text"
-                    value={state.signOffRole}
-                    onChange={(e) => updateField("signOffRole", e.target.value)}
+                    value={state.footerAddress}
+                    onChange={(e) => updateField("footerAddress", e.target.value)}
+                    placeholder="Dexta Africa Limited • Victoria Island, Lagos, Nigeria"
                     className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#171821] px-3 py-2 text-xs text-slate-900 dark:text-white"
                   />
+                </div>
+
+                {/* Social Media Channels Management Card */}
+                <div className="rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02] p-3.5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                        <Share2 className="h-3.5 w-3.5 text-red-600" />
+                        Official Social Media Channels
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Include verified social icons in the email footer
+                      </p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={state.showSocialLinks !== false}
+                        onChange={(e) => updateField("showSocialLinks", e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-white/10 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600" />
+                    </label>
+                  </div>
+
+                  {state.showSocialLinks !== false && (
+                    <div className="space-y-2 pt-1 text-xs">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
+                            LinkedIn URL
+                          </label>
+                          <input
+                            type="url"
+                            value={state.socialLinks?.linkedin || ""}
+                            onChange={(e) =>
+                              updateField("socialLinks", {
+                                ...state.socialLinks,
+                                linkedin: e.target.value,
+                              })
+                            }
+                            placeholder="https://linkedin.com/company/dextaafrica"
+                            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#171821] px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
+                            X / Twitter URL
+                          </label>
+                          <input
+                            type="url"
+                            value={state.socialLinks?.twitter || ""}
+                            onChange={(e) =>
+                              updateField("socialLinks", {
+                                ...state.socialLinks,
+                                twitter: e.target.value,
+                              })
+                            }
+                            placeholder="https://x.com/dextaafrica"
+                            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#171821] px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
+                            Instagram URL
+                          </label>
+                          <input
+                            type="url"
+                            value={state.socialLinks?.instagram || ""}
+                            onChange={(e) =>
+                              updateField("socialLinks", {
+                                ...state.socialLinks,
+                                instagram: e.target.value,
+                              })
+                            }
+                            placeholder="https://instagram.com/dextaafrica"
+                            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#171821] px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
+                            Facebook URL
+                          </label>
+                          <input
+                            type="url"
+                            value={state.socialLinks?.facebook || ""}
+                            onChange={(e) =>
+                              updateField("socialLinks", {
+                                ...state.socialLinks,
+                                facebook: e.target.value,
+                              })
+                            }
+                            placeholder="https://facebook.com/dextaafrica"
+                            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#171821] px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">
+                          Official Website URL
+                        </label>
+                        <input
+                          type="url"
+                          value={state.socialLinks?.website || ""}
+                          onChange={(e) =>
+                            updateField("socialLinks", {
+                              ...state.socialLinks,
+                              website: e.target.value,
+                            })
+                          }
+                          placeholder="https://dextaafrica.com"
+                          className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#171821] px-2.5 py-1.5 text-xs text-slate-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -2421,13 +2612,13 @@ async function optimizeImageBeforeUpload(file: File): Promise<File> {
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-500 mb-1">
-                          Right Header Tagline
+                          Right Header Tagline (Optional)
                         </label>
                         <input
                           type="text"
                           value={state.brandRightLabel}
                           onChange={(e) => updateField("brandRightLabel", e.target.value)}
-                          placeholder="Official Dispatch"
+                          placeholder="e.g. Executive Update (Leave blank for clean look)"
                           className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#171821] px-2.5 py-2 text-xs"
                         />
                       </div>
@@ -3392,7 +3583,10 @@ async function optimizeImageBeforeUpload(file: File): Promise<File> {
               >
                 {/* Hero Banner if Top Full-Width */}
                 {state.heroImageUrl && state.heroLayout === "top_full" && (
-                  <div className="relative w-full bg-slate-900 overflow-hidden group">
+                  <div
+                    className="relative w-full overflow-hidden group"
+                    style={{ backgroundColor: state.cardBackgroundColor || "#ffffff" }}
+                  >
                     <img
                       src={state.heroImageUrl}
                       alt={state.headline}
@@ -3474,7 +3668,7 @@ async function optimizeImageBeforeUpload(file: File): Promise<File> {
                         className="w-auto object-contain group-hover:opacity-80 transition-opacity"
                       />
                     </div>
-                    {state.brandHeaderAlignment === "split" && (
+                    {state.brandHeaderAlignment === "split" && Boolean(state.brandRightLabel?.trim()) && (
                       <div className="flex items-center gap-1.5 pl-3">
                         <span
                           className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -3501,8 +3695,9 @@ async function optimizeImageBeforeUpload(file: File): Promise<File> {
                   (state.heroLayout === "below_header" || state.heroLayout === "inset_card") && (
                     <div
                       className={`relative group ${
-                        state.heroLayout === "inset_card" ? "px-7 pt-6" : "w-full bg-slate-900"
+                        state.heroLayout === "inset_card" ? "px-7 pt-6" : "w-full"
                       }`}
+                      style={{ backgroundColor: state.cardBackgroundColor || "#ffffff" }}
                     >
                       <img
                         src={state.heroImageUrl}
@@ -3733,36 +3928,111 @@ async function optimizeImageBeforeUpload(file: File): Promise<File> {
                     </div>
                   )}
 
-                  {/* Editable Sign-off Footer */}
+                  {/* Editable Sign-off Footer & Social Channels */}
                   {state.showFooter && (
-                    <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between text-left">
-                      <div className="space-y-0.5">
-                        <input
-                          type="text"
-                          value={state.signOffName}
-                          onChange={(e) => updateField("signOffName", e.target.value)}
-                          className="block bg-transparent text-sm font-bold text-slate-900 focus:outline-none"
-                          title="Click to edit Sign-off Name"
-                        />
-                        <input
-                          type="text"
-                          value={state.signOffRole}
-                          onChange={(e) => updateField("signOffRole", e.target.value)}
-                          className="block bg-transparent text-xs text-slate-500 focus:outline-none"
-                          title="Click to edit Sign-off Role"
+                    <div className="pt-6 mt-6 border-t border-slate-100 dark:border-white/10 text-left space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <input
+                            type="text"
+                            value={state.signOffName}
+                            onChange={(e) => updateField("signOffName", e.target.value)}
+                            className="block w-full bg-transparent text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-500/30 rounded px-1 -ml-1 transition-all"
+                            placeholder="Sign-off Name / Team"
+                            title="Click to edit Sign-off Name"
+                          />
+                          <input
+                            type="text"
+                            value={state.signOffRole}
+                            onChange={(e) => updateField("signOffRole", e.target.value)}
+                            className="block w-full bg-transparent text-xs text-slate-500 dark:text-slate-400 focus:outline-none focus:ring-1 focus:ring-red-500/30 rounded px-1 -ml-1 transition-all"
+                            placeholder="Sign-off Role / Organization"
+                            title="Click to edit Sign-off Role"
+                          />
+                        </div>
+                        <img
+                          src={
+                            state.brandLogoUrl && !state.brandLogoUrl.includes("dexta")
+                              ? state.brandLogoUrl
+                              : isCardDark
+                              ? "/images/dexta-logo-light.png"
+                              : "/images/dexta-logo-dark.png"
+                          }
+                          alt="Dexta Africa"
+                          className="h-6 w-auto shrink-0 opacity-80"
                         />
                       </div>
-                      <img
-                        src={
-                          state.brandLogoUrl && !state.brandLogoUrl.includes("dexta")
-                            ? state.brandLogoUrl
-                            : isCardDark
-                            ? "/images/dexta-logo-light.png"
-                            : "/images/dexta-logo-dark.png"
-                        }
-                        alt="Dexta Africa"
-                        className="h-5 w-auto opacity-75"
-                      />
+
+                      {/* Live Social Channels Bar */}
+                      {state.showSocialLinks !== false && (
+                        <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            Connect:
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {state.socialLinks?.linkedin && (
+                              <a
+                                href={state.socialLinks.linkedin}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="h-6 w-6 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center p-1 transition-colors"
+                                title="LinkedIn"
+                              >
+                                <img src="/images/social/linkedin.png" alt="LinkedIn" className="h-4 w-4 object-contain" />
+                              </a>
+                            )}
+                            {state.socialLinks?.twitter && (
+                              <a
+                                href={state.socialLinks.twitter}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="h-6 w-6 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center p-1 transition-colors"
+                                title="Twitter / X"
+                              >
+                                <img src="/images/social/twitter.png" alt="X" className="h-4 w-4 object-contain" />
+                              </a>
+                            )}
+                            {state.socialLinks?.instagram && (
+                              <a
+                                href={state.socialLinks.instagram}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="h-6 w-6 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center p-1 transition-colors"
+                                title="Instagram"
+                              >
+                                <img src="/images/social/instagram.png" alt="Instagram" className="h-4 w-4 object-contain" />
+                              </a>
+                            )}
+                            {state.socialLinks?.facebook && (
+                              <a
+                                href={state.socialLinks.facebook}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="h-6 w-6 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center p-1 transition-colors"
+                                title="Facebook"
+                              >
+                                <img src="/images/social/facebook.png" alt="Facebook" className="h-4 w-4 object-contain" />
+                              </a>
+                            )}
+                            {state.socialLinks?.website && (
+                              <a
+                                href={state.socialLinks.website}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="h-6 w-6 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center p-1 transition-colors"
+                                title="Website"
+                              >
+                                <img src="/images/social/website.png" alt="Website" className="h-4 w-4 object-contain" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Footer Address */}
+                      <div className="pt-1 text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                        <p>{state.footerAddress || "Dexta Africa Limited • Victoria Island, Lagos, Nigeria"}</p>
+                      </div>
                     </div>
                   )}
                 </div>

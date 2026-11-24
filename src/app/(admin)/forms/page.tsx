@@ -39,6 +39,7 @@ import {
   Sparkles,
   Lock,
   Clock,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -387,6 +388,16 @@ export default function FormsManagementPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Link href="/clan">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-neutral-800 text-neutral-300 hover:bg-neutral-800"
+            >
+              <GraduationCap className="w-3.5 h-3.5 mr-1.5 text-red-500" />
+              Clan Academy
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="sm"
@@ -406,6 +417,33 @@ export default function FormsManagementPage() {
             Build New Form
           </Button>
         </div>
+      </div>
+
+      {/* Dexta Clan Product Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-red-950/40 via-[#0e131f] to-slate-900 border border-red-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className="h-10 w-10 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center shrink-0">
+            <GraduationCap className="h-5 w-5 text-red-500" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-white">Dexta Clan Executive Academy &amp; Cohorts</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-extrabold uppercase bg-red-600/20 text-red-400 border border-red-500/30 font-mono">
+                Dedicated Product
+              </span>
+            </div>
+            <p className="text-xs text-neutral-400 mt-0.5 max-w-xl">
+              Track certification masterclasses, upload participant records, manage candidate admission pipelines across Cohorts 1 through 4, and generate executive dossiers.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/clan"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shrink-0 transition-colors shadow-md shadow-red-600/30"
+        >
+          <span>Open Dexta Clan Desk</span>
+          <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
       </div>
 
       {/* Forms Grid */}
