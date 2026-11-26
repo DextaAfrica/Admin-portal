@@ -1182,6 +1182,15 @@ export function EmailComposerStudio({
 
   const handleConfirmSchedule = async () => {
     if (!onSchedule) return;
+    if (!scheduledDateTime) {
+      alert("Please select a scheduled date and time.");
+      return;
+    }
+    const parsedDate = new Date(scheduledDateTime);
+    if (Number.isNaN(parsedDate.getTime())) {
+      alert("Invalid date and time selected. Please choose a valid future date.");
+      return;
+    }
     setIsScheduling(true);
     try {
       const compiledHtml = compileStudioEmailHtml(state, false, true);
@@ -1192,12 +1201,12 @@ export function EmailComposerStudio({
 
       await onSchedule({
         id: initialData?.id,
-        title: state.title,
-        subject: state.subject,
+        title: state.title?.trim() || state.subject?.trim() || "Scheduled Broadcast",
+        subject: state.subject?.trim() || state.title?.trim() || "Dexta Africa Update",
         contentHtml: compiledHtml,
         occasion: state.occasion,
         targetAudience: selectedAudience,
-        scheduledAt: new Date(scheduledDateTime).toISOString(),
+        scheduledAt: parsedDate.toISOString(),
         customRecipients: customList,
       });
       setIsScheduleModalOpen(false);
