@@ -51,28 +51,31 @@ export async function ensureCustomFormsSchema() {
       );
     `);
 
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "description" TEXT DEFAULT '';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "formType" TEXT NOT NULL DEFAULT 'event';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'active';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "groupId" TEXT DEFAULT '';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "groupSlug" TEXT DEFAULT 'general';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "routePrefix" TEXT NOT NULL DEFAULT '/events';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "coverImageUrl" TEXT DEFAULT '';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "eventDate" TIMESTAMP(3);
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "eventLocation" TEXT DEFAULT '';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "activeFrom" TIMESTAMP(3);
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "activeUntil" TIMESTAMP(3);
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "fields" TEXT NOT NULL DEFAULT '[]';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "metadata" TEXT NOT NULL DEFAULT '{}';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "sendConfirmationEmail" BOOLEAN NOT NULL DEFAULT true;
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "confirmationSubject" TEXT DEFAULT '';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "confirmationMessage" TEXT DEFAULT '';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "consentNotice" TEXT DEFAULT '';
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "requireConsent" BOOLEAN NOT NULL DEFAULT true;
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
-      ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
-    `);
+    const alterStatements = [
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "description" TEXT DEFAULT '';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "formType" TEXT NOT NULL DEFAULT 'event';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "status" TEXT NOT NULL DEFAULT 'active';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "groupId" TEXT DEFAULT '';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "groupSlug" TEXT DEFAULT 'general';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "routePrefix" TEXT NOT NULL DEFAULT '/events';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "coverImageUrl" TEXT DEFAULT '';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "eventDate" TIMESTAMP(3);`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "eventLocation" TEXT DEFAULT '';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "activeFrom" TIMESTAMP(3);`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "activeUntil" TIMESTAMP(3);`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "fields" TEXT NOT NULL DEFAULT '[]';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "metadata" TEXT NOT NULL DEFAULT '{}';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "sendConfirmationEmail" BOOLEAN NOT NULL DEFAULT true;`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "confirmationSubject" TEXT DEFAULT '';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "confirmationMessage" TEXT DEFAULT '';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "consentNotice" TEXT DEFAULT '';`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "requireConsent" BOOLEAN NOT NULL DEFAULT true;`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
+      `ALTER TABLE "CustomForm" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;`,
+    ];
+    for (const sql of alterStatements) {
+      await prisma.$executeRawUnsafe(sql).catch(() => {});
+    }
 
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "FormSubmission" (
