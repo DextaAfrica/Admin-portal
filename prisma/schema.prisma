@@ -643,6 +643,19 @@ model CareerInquiry {
 // CUSTOM FORMS, ONBOARDING & EVENT REGISTRATION PORTALS
 // =============================================================================
 
+model CustomFormGroup {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  description String?      @default("")
+  routePrefix String       @default("/events")
+  color       String       @default("#dc2626")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([slug])
+}
+
 model CustomForm {
   id                      String           @id @default(uuid())
   slug                    String           @unique
@@ -650,6 +663,9 @@ model CustomForm {
   description             String?          @default("")
   formType                String           @default("event") // "event", "onboarding", "partner", "survey"
   status                  String           @default("active") // "active", "closed", "draft"
+  groupId                 String?          @default("")
+  groupSlug               String?          @default("general")
+  routePrefix             String           @default("/events") // "/visit", "/academy", "/events", "/onboarding", "/f"
   coverImageUrl           String?          @default("")
   eventDate               DateTime?
   eventLocation           String?          @default("")

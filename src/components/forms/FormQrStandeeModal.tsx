@@ -16,6 +16,7 @@ import {
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { getFormPublicPath } from "@/lib/forms/paths";
 
 interface FormQrStandeeModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ interface FormQrStandeeModalProps {
   form: {
     id: string;
     slug: string;
+    routePrefix?: string | null;
+    groupSlug?: string | null;
     title: string;
     description?: string;
     coverImageUrl?: string;
@@ -46,7 +49,7 @@ export function FormQrStandeeModal({ isOpen, onClose, form }: FormQrStandeeModal
       ? window.location.origin
       : "https://admin.dextaafrica.com";
 
-  const targetUrl = form ? `${origin}/register/${form.slug}` : "";
+  const targetUrl = form ? `${origin}${getFormPublicPath(form)}` : "";
   const activeImageUrl = customImageUrl || form?.coverImageUrl || "/images/dexta-logo-dark.png";
 
   React.useEffect(() => {
