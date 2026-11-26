@@ -3,9 +3,10 @@ import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { CreateMarketingCampaignSchema, formatZodError } from "@/lib/validation/schemas";
+import { ensureEmailCampaignsSchema } from "@/lib/email/campaign-schema";
 
 /**
- * Ensures the EmailCampaign table and indexes exist on the underlying SQLite database.
+ * Ensures the EmailCampaign table and columns exist on PostgreSQL.
  * Auto-heals in production if migrations were not executed.
  */
 async function ensureCampaignsSchema(): Promise<void> {
@@ -20,13 +21,15 @@ async function ensureCampaignsSchema(): Promise<void> {
         "recipientCount" INTEGER NOT NULL DEFAULT 0,
         "openCount" INTEGER NOT NULL DEFAULT 0,
         "clickCount" INTEGER NOT NULL DEFAULT 0,
-        "sentAt" DATETIME,
+        "sentAt" TIMESTAMP(3),
+        "scheduledTarget" TEXT DEFAULT 'ALL',
+        "scheduledRecipients" TEXT,
         "createdById" TEXT,
-        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT "EmailCampaign_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "User" ("id") ON DELETE SET NULL ON UPDATE CASCADE
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
+    await ensureEmailCampaignsSchema();
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmailCampaign_status_idx" ON "EmailCampaign"("status");`);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "EmailCampaign_createdAt_idx" ON "EmailCampaign"("createdAt");`);
   } catch (schemaErr) {
@@ -67,6 +70,8 @@ export async function POST(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    await ensureCampaignsSchema();
 
     const body = await req.json();
     const parsed = CreateMarketingCampaignSchema.safeParse(body);
