@@ -1,24 +1,14 @@
-import { prisma } from "@/lib/prisma";
+import { ensureColumn } from "@/lib/db/ensure-column";
 
 let crmSchemaEnsured = false;
 
 /**
- * Self-healing schema guard for Dexta Enterprise CRM tables.
- * Each statement is executed individually for PostgreSQL prepared-statement compatibility.
+ * Self-healing schema guard for Dexta Enterprise CRM columns (SQLite + PostgreSQL).
  */
 export async function ensureCrmSchema() {
   if (crmSchemaEnsured) return;
-  const statements = [
-    `ALTER TABLE "CrmClient" ADD COLUMN IF NOT EXISTS "assignedToUserId" TEXT;`,
-    `ALTER TABLE "CrmClient" ADD COLUMN IF NOT EXISTS "leadSource" TEXT NOT NULL DEFAULT 'DIRECT';`,
-    `ALTER TABLE "CrmDeal" ADD COLUMN IF NOT EXISTS "ownerUserId" TEXT;`,
-  ];
-  for (const sql of statements) {
-    try {
-      await prisma.$executeRawUnsafe(sql);
-    } catch (err) {
-      console.warn("[ensureCrmSchema statement warning]:", err);
-    }
-  }
+  await ensureColumn("CrmClient", "assignedToUserId", "TEXT");
+  await ensureColumn("CrmClient", "leadSource", "TEXT NOT NULL DEFAULT 'DIRECT'");
+  await ensureColumn("CrmDeal", "ownerUserId", "TEXT");
   crmSchemaEnsured = true;
 }
