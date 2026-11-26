@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { prisma } from "../prisma";
+import { ensureUserWorkspaceSchema } from "@/lib/auth/user-schema";
 import crypto from "crypto";
 
 export const SESSION_COOKIE_NAME = "dexta_session_token";
@@ -207,27 +208,52 @@ export async function getCurrentSession(): Promise<{
       return { user: null, sessionToken: null, sessionId: null };
     }
 
-    const session: any = await prisma.session.findUnique({
-      where: { sessionToken: token },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            fullName: true,
-            role: true,
-            department: true,
-            jobTitle: true,
-            seniorityLevel: true,
-            primaryWorkspace: true,
-            assignedModules: true,
-            signatureUrl: true,
-            status: true,
-            twoFactorEnabled: true,
+    await ensureUserWorkspaceSchema();
+
+    let session: any = null;
+    try {
+      session = await prisma.session.findUnique({
+        where: { sessionToken: token },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+              role: true,
+              department: true,
+              jobTitle: true,
+              seniorityLevel: true,
+              primaryWorkspace: true,
+              assignedModules: true,
+              signatureUrl: true,
+              status: true,
+              twoFactorEnabled: true,
+            },
           },
         },
-      },
-    });
+      });
+    } catch {
+      session = await prisma.session.findUnique({
+        where: { sessionToken: token },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              fullName: true,
+              role: true,
+              department: true,
+              jobTitle: true,
+              seniorityLevel: true,
+              signatureUrl: true,
+              status: true,
+              twoFactorEnabled: true,
+            },
+          },
+        },
+      });
+    }
 
     if (!session || new Date() > session.expiresAt || session.user.status !== "ACTIVE") {
       return { user: null, sessionToken: null, sessionId: null };
