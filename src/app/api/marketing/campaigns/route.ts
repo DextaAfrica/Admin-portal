@@ -21,12 +21,12 @@ async function ensureCampaignsSchema(): Promise<void> {
         "recipientCount" INTEGER NOT NULL DEFAULT 0,
         "openCount" INTEGER NOT NULL DEFAULT 0,
         "clickCount" INTEGER NOT NULL DEFAULT 0,
-        "sentAt" TIMESTAMP(3),
+        "sentAt" DATETIME,
         "scheduledTarget" TEXT DEFAULT 'ALL',
         "scheduledRecipients" TEXT,
         "createdById" TEXT,
-        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
       );
     `);
     await ensureEmailCampaignsSchema();
@@ -42,24 +42,15 @@ export async function GET() {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    try {
-      const campaigns = await prisma.emailCampaign.findMany({
-        orderBy: { createdAt: "desc" },
-        include: {
-          creator: { select: { fullName: true, email: true } },
-        },
-      });
-      return NextResponse.json({ campaigns });
-    } catch {
-      await ensureCampaignsSchema();
-      const retryCampaigns = await prisma.emailCampaign.findMany({
-        orderBy: { createdAt: "desc" },
-        include: {
-          creator: { select: { fullName: true, email: true } },
-        },
-      });
-      return NextResponse.json({ campaigns: retryCampaigns });
-    }
+    await ensureCampaignsSchema();
+
+    const campaigns = await prisma.emailCampaign.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        creator: { select: { fullName: true, email: true } },
+      },
+    });
+    return NextResponse.json({ campaigns });
   } catch (err: unknown) {
     console.error("GET /api/marketing/campaigns error:", err);
     return NextResponse.json({ campaigns: [] });
@@ -108,16 +99,43 @@ export async function POST(req: NextRequest) {
           },
         });
       } catch {
-        // If createdById fails foreign-key constraint check (e.g. session user ID mismatch)
-        campaign = await prisma.emailCampaign.create({
-          data: {
+        try {
+          // If createdById fails foreign-key constraint check (e.g. session user ID mismatch)
+          campaign = await prisma.emailCampaign.create({
+            data: {
+              title,
+              subject,
+              contentHtml,
+              status: "DRAFT",
+              createdById: null,
+            },
+          });
+        } catch {
+          // Ultimate raw SQL fallback if Prisma schema columns differ on live DB
+          const { randomUUID } = await import("crypto");
+          const newId = randomUUID();
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO "EmailCampaign" ("id", "title", "subject", "contentHtml", "status", "recipientCount", "openCount", "clickCount", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, 'DRAFT', 0, 0, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);`,
+            newId,
+            title,
+            subject,
+            contentHtml
+          );
+          campaign = {
+            id: newId,
             title,
             subject,
             contentHtml,
             status: "DRAFT",
+            recipientCount: 0,
+            openCount: 0,
+            clickCount: 0,
+            sentAt: null,
             createdById: null,
-          },
-        });
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+        }
       }
     }
 

@@ -1,19 +1,13 @@
-import { prisma } from "@/lib/prisma";
+import { ensureColumn } from "@/lib/db/ensure-column";
 
 let emailCampaignSchemaEnsured = false;
 
 /**
- * Self-healing schema guard for EmailCampaign scheduling columns.
+ * Self-healing schema guard for EmailCampaign scheduling columns (SQLite + PostgreSQL).
  */
 export async function ensureEmailCampaignsSchema() {
   if (emailCampaignSchemaEnsured) return;
-  try {
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "EmailCampaign" ADD COLUMN IF NOT EXISTS "scheduledTarget" TEXT DEFAULT 'ALL';
-      ALTER TABLE "EmailCampaign" ADD COLUMN IF NOT EXISTS "scheduledRecipients" TEXT;
-    `);
-    emailCampaignSchemaEnsured = true;
-  } catch (err) {
-    console.warn("[ensureEmailCampaignsSchema warning]:", err);
-  }
+  await ensureColumn("EmailCampaign", "scheduledTarget", "TEXT DEFAULT 'ALL'");
+  await ensureColumn("EmailCampaign", "scheduledRecipients", "TEXT");
+  emailCampaignSchemaEnsured = true;
 }

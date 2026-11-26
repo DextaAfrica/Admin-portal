@@ -1,19 +1,17 @@
-import { prisma } from "@/lib/prisma";
+import { ensureColumn } from "@/lib/db/ensure-column";
 
 let userSchemaEnsured = false;
 
 /**
- * Self-healing schema guard for User workspace isolation columns.
+ * Self-healing schema guard for User workspace isolation columns (SQLite + PostgreSQL).
  */
 export async function ensureUserWorkspaceSchema() {
   if (userSchemaEnsured) return;
-  try {
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "primaryWorkspace" TEXT NOT NULL DEFAULT 'operations';
-      ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "assignedModules" TEXT NOT NULL DEFAULT '["operations","approvals","personal"]';
-    `);
-    userSchemaEnsured = true;
-  } catch (err) {
-    console.warn("[ensureUserWorkspaceSchema warning]:", err);
-  }
+  await ensureColumn("User", "primaryWorkspace", "TEXT NOT NULL DEFAULT 'operations'");
+  await ensureColumn(
+    "User",
+    "assignedModules",
+    `TEXT NOT NULL DEFAULT '["operations","approvals","personal"]'`
+  );
+  userSchemaEnsured = true;
 }
