@@ -43,6 +43,8 @@ export default function UsersPage() {
   const [department, setDepartment] = React.useState("OPERATIONS");
   const [seniorityLevel, setSeniorityLevel] = React.useState("SENIOR");
   const [jobTitle, setJobTitle] = React.useState("");
+  const [primaryWorkspace, setPrimaryWorkspace] = React.useState("crm");
+  const [selectedModules, setSelectedModules] = React.useState<string[]>(["crm", "forms", "storage"]);
 
   const generateRandomPassword = React.useCallback(() => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*";
@@ -110,6 +112,8 @@ export default function UsersPage() {
           department,
           seniorityLevel,
           jobTitle,
+          primaryWorkspace,
+          assignedModules: selectedModules,
         }),
       });
       const data = await res.json();
@@ -414,10 +418,66 @@ export default function UsersPage() {
               onChange={(e) => setRole(e.target.value)}
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3.5 py-2.5 text-xs text-slate-900 dark:text-white"
             >
-              <option value="ADMIN">Administrator (Full Department Workspace Access)</option>
+              <option value="ADMIN">Administrator (Scoped Workspace Access)</option>
               <option value="SUPER_ADMIN">Super Administrator (Cross-Directorate Executive Access)</option>
               <option value="AUDITOR">Auditor (View-Only Compliance Access)</option>
             </select>
+          </div>
+
+          <div className="space-y-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] p-3">
+            <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+              Dedicated Isolated Dashboard (No Shared Admin View)
+            </label>
+            <select
+              value={primaryWorkspace}
+              onChange={(e) => {
+                const ws = e.target.value;
+                setPrimaryWorkspace(ws);
+                if (ws === "crm") setSelectedModules(["crm", "forms", "storage"]);
+                else if (ws === "clan") setSelectedModules(["clan", "forms", "campaigns", "storage"]);
+                else if (ws === "finance") setSelectedModules(["finance", "reports", "storage"]);
+                else if (ws === "hr") setSelectedModules(["hr", "storage"]);
+                else if (ws === "systems") setSelectedModules(["systems", "users", "forms", "storage"]);
+                else setSelectedModules(["operations", "projects", "storage"]);
+              }}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white"
+            >
+              <option value="crm">Dexta CRM Sales Desk (Isolated Client &amp; Deal Pipeline)</option>
+              <option value="clan">Dexta Clan Academy Desk (Cohorts &amp; Admissions)</option>
+              <option value="operations">Operations &amp; Projects Desk</option>
+              <option value="finance">Finance &amp; Treasury Desk</option>
+              <option value="hr">People &amp; HR Desk</option>
+              <option value="systems">Systems IT Command</option>
+            </select>
+
+            <div className="pt-2">
+              <span className="block text-[11px] font-semibold text-slate-500 mb-1.5">
+                Allowed Modules for this Account:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {["crm", "clan", "forms", "campaigns", "storage", "projects", "reports", "users"].map((mod) => {
+                  const active = selectedModules.includes(mod);
+                  return (
+                    <button
+                      key={mod}
+                      type="button"
+                      onClick={() =>
+                        setSelectedModules((prev) =>
+                          prev.includes(mod) ? prev.filter((m) => m !== mod) : [...prev, mod]
+                        )
+                      }
+                      className={`px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase border transition-colors cursor-pointer ${
+                        active
+                          ? "bg-red-600 border-red-600 text-white"
+                          : "bg-white dark:bg-[#121217] border-slate-200 dark:border-white/10 text-slate-500"
+                      }`}
+                    >
+                      {mod}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

@@ -150,6 +150,49 @@ function CampaignsPageContent() {
   const draftCampaigns = campaigns.filter((c) => c.status === "DRAFT");
   const sentCampaigns = campaigns.filter((c) => c.status === "SENT");
 
+  const [isProcessingQueue, setIsProcessingQueue] = React.useState(false);
+
+  const handleProcessScheduledQueue = React.useCallback(async (silent = false) => {
+    setIsProcessingQueue(true);
+    try {
+      const res = await fetch("/api/marketing/campaigns/process-scheduled", { method: "POST" });
+      const parsed = await safeParseJson(res);
+      if (parsed.ok && parsed.data?.processedCount > 0) {
+        if (!silent) {
+          toastSuccess(
+            "Scheduled Queue Processed",
+            `Dispatched ${parsed.data.processedCount} due campaign(s).`
+          );
+        }
+        await fetchCampaigns();
+      } else if (!silent) {
+        toastSuccess("Queue Checked", "No due scheduled campaigns ready for dispatch yet.");
+      }
+    } catch {
+      if (!silent) {
+        toastError("Queue Error", "Could not process scheduled queue.");
+      }
+    } finally {
+      setIsProcessingQueue(false);
+    }
+  }, [fetchCampaigns, toastError, toastSuccess]);
+
+  React.useEffect(() => {
+    if (scheduledCampaigns.length === 0) return;
+    const checkDue = () => {
+      const nowMs = Date.now();
+      const hasDue = scheduledCampaigns.some(
+        (c) => c.sentAt && new Date(c.sentAt).getTime() <= nowMs
+      );
+      if (hasDue) {
+        handleProcessScheduledQueue(true);
+      }
+    };
+    checkDue();
+    const timer = setInterval(checkDue, 30000);
+    return () => clearInterval(timer);
+  }, [scheduledCampaigns, handleProcessScheduledQueue]);
+
   // Save Campaign from Studio
   const handleSaveCampaign = async (payload: {
     id?: string;
@@ -626,7 +669,25 @@ function CampaignsPageContent() {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017]">
+                <div className="text-xs text-slate-600 dark:text-slate-300">
+                  <span className="font-bold text-slate-900 dark:text-white">Automated Scheduler Active:</span>{" "}
+                  Due campaigns dispatch automatically when their scheduled time arrives.
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  isLoading={isProcessingQueue}
+                  onClick={() => handleProcessScheduledQueue(false)}
+                  leftIcon={<Send className="h-3.5 w-3.5 text-[#ED2618]" />}
+                  className="text-xs font-bold"
+                >
+                  Run Due Queue Now
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {scheduledCampaigns.map((camp) => (
                 <div
                   key={camp.id}
@@ -706,6 +767,7 @@ function CampaignsPageContent() {
                   </div>
                 </div>
               ))}
+              </div>
             </div>
           )}
         </div>

@@ -40,11 +40,18 @@ import {
   Lock,
   Clock,
   GraduationCap,
+  QrCode,
+  FolderKanban,
+  Database,
+  Download,
+  Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
+import { FormQrStandeeModal } from "@/components/forms/FormQrStandeeModal";
+import { getFormPublicPath, ROUTE_PREFIX_OPTIONS } from "@/lib/forms/paths";
 
 export type CustomFieldType =
   | "text"
@@ -72,6 +79,37 @@ export interface CustomFieldDef {
   maxSizeMb?: number;
 }
 
+interface FormGroupItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  routePrefix: string;
+  color: string;
+  formsCount?: number;
+  submissionsCount?: number;
+}
+
+interface FormLogItem {
+  id: string;
+  formId: string;
+  formTitle: string;
+  formSlug: string;
+  routePath: string;
+  groupName: string;
+  groupSlug: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  company: string;
+  category: string;
+  attendanceMode: string;
+  status: string;
+  consentAcknowledged: boolean;
+  ipAddress: string;
+  createdAt: string;
+}
+
 interface FormItem {
   id: string;
   slug: string;
@@ -79,6 +117,9 @@ interface FormItem {
   description: string;
   formType: "event" | "onboarding" | "partner" | "survey";
   status: "active" | "closed" | "draft";
+  groupId?: string;
+  groupSlug?: string;
+  routePrefix?: string;
   coverImageUrl: string;
   eventDate: string | null;
   eventLocation: string;
@@ -123,6 +164,22 @@ export default function FormsManagementPage() {
   const { success: toastSuccess, error: toastError } = useToast();
 
   const [forms, setForms] = React.useState<FormItem[]>([]);
+  const [groups, setGroups] = React.useState<FormGroupItem[]>([]);
+  const [selectedGroupFilter, setSelectedGroupFilter] = React.useState<string>("ALL");
+  const [pageView, setPageView] = React.useState<"portals" | "logs">("portals");
+  const [logs, setLogs] = React.useState<FormLogItem[]>([]);
+  const [logsLoading, setLogsLoading] = React.useState(false);
+  const [logSearch, setLogSearch] = React.useState("");
+  const [logFormFilter, setLogFormFilter] = React.useState("ALL");
+
+  // Create Group Modal
+  const [isGroupModalOpen, setIsGroupModalOpen] = React.useState(false);
+  const [newGroupName, setNewGroupName] = React.useState("");
+  const [newGroupPrefix, setNewGroupPrefix] = React.useState("/f");
+  const [newGroupDesc, setNewGroupDesc] = React.useState("");
+  const [newGroupColor, setNewGroupColor] = React.useState("#dc2626");
+  const [isSavingGroup, setIsSavingGroup] = React.useState(false);
+
   const [loading, setLoading] = React.useState(true);
   const [copiedSlug, setCopiedSlug] = React.useState<string | null>(null);
 
@@ -133,12 +190,21 @@ export default function FormsManagementPage() {
 
   // Form Details
   const [formType, setFormType] = React.useState<"event" | "onboarding" | "partner" | "survey">("event");
+  const [groupId, setGroupId] = React.useState("");
+  const [groupSlug, setGroupSlug] = React.useState("events");
+  const [routePrefix, setRoutePrefix] = React.useState("/events");
   const [title, setTitle] = React.useState("");
   const [slug, setSlug] = React.useState("");
   const [description, setDescription] = React.useState("");
   const [eventDate, setEventDate] = React.useState("");
   const [eventLocation, setEventLocation] = React.useState("");
+  const [coverImageUrl, setCoverImageUrl] = React.useState("");
+  const [isUploadingCover, setIsUploadingCover] = React.useState(false);
   const [status, setStatus] = React.useState<"active" | "closed" | "draft">("active");
+  const [qrModalForm, setQrModalForm] = React.useState<FormItem | null>(null);
+  const [deleteConfirmForm, setDeleteConfirmForm] = React.useState<FormItem | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = React.useState("");
+  const [isDeletingForm, setIsDeletingForm] = React.useState(false);
 
   // Custom Fields Builder
   const [customFields, setCustomFields] = React.useState<CustomFieldDef[]>([]);
@@ -161,10 +227,18 @@ export default function FormsManagementPage() {
   const fetchForms = React.useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/forms");
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch forms");
+      const [formsRes, groupsRes] = await Promise.all([
+        fetch("/api/forms"),
+        fetch("/api/forms/groups"),
+      ]);
+      const data = await formsRes.json();
+      if (!formsRes.ok) throw new Error(data.error || "Failed to fetch forms");
       setForms(data.forms || []);
+
+      if (groupsRes.ok) {
+        const gData = await groupsRes.json();
+        setGroups(gData.groups || []);
+      }
     } catch (err: any) {
       toastError(err.message || "Failed to load forms");
     } finally {
@@ -172,26 +246,74 @@ export default function FormsManagementPage() {
     }
   }, [toastError]);
 
-  React.useEffect(() => {
-    let mounted = true;
-    async function loadInitial() {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/forms");
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to fetch forms");
-        if (mounted) setForms(data.forms || []);
-      } catch (err: any) {
-        if (mounted) toastError(err.message || "Failed to load forms");
-      } finally {
-        if (mounted) setLoading(false);
-      }
+  const fetchLogs = React.useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (selectedGroupFilter !== "ALL") params.set("groupSlug", selectedGroupFilter);
+      if (logFormFilter !== "ALL") params.set("formId", logFormFilter);
+      if (logSearch.trim()) params.set("search", logSearch.trim());
+      const res = await fetch(`/api/forms/logs?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load data logs");
+      setLogs(data.logs || []);
+    } catch (err: any) {
+      toastError(err.message || "Failed to load data logs");
+    } finally {
+      setLogsLoading(false);
     }
-    loadInitial();
-    return () => {
-      mounted = false;
-    };
-  }, [toastError]);
+  }, [selectedGroupFilter, logFormFilter, logSearch, toastError]);
+
+  React.useEffect(() => {
+    fetchForms();
+  }, [fetchForms]);
+
+  React.useEffect(() => {
+    if (pageView === "logs") {
+      fetchLogs();
+    }
+  }, [pageView, fetchLogs]);
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) {
+      toastError("Group name is required");
+      return;
+    }
+    setIsSavingGroup(true);
+    try {
+      const res = await fetch("/api/forms/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newGroupName.trim(),
+          routePrefix: newGroupPrefix,
+          description: newGroupDesc.trim(),
+          color: newGroupColor,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create group");
+      toastSuccess(`Group "${newGroupName.trim()}" created!`);
+      setIsGroupModalOpen(false);
+      setNewGroupName("");
+      setNewGroupDesc("");
+      fetchForms();
+    } catch (err: any) {
+      toastError(err.message || "Failed to create group");
+    } finally {
+      setIsSavingGroup(false);
+    }
+  };
+
+  const handleDownloadExport = (format: "xlsx" | "pdf" | "csv") => {
+    const params = new URLSearchParams({ format });
+    if (selectedGroupFilter !== "ALL") params.set("groupSlug", selectedGroupFilter);
+    if (logFormFilter !== "ALL") params.set("formId", logFormFilter);
+    if (logSearch.trim()) params.set("search", logSearch.trim());
+    window.open(`/api/forms/export?${params.toString()}`, "_blank");
+    toastSuccess(`Generating ${format.toUpperCase()} report...`);
+  };
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
@@ -206,12 +328,12 @@ export default function FormsManagementPage() {
     }
   };
 
-  const handleCopyLink = (slugToCopy: string) => {
+  const handleCopyLink = (item: FormItem) => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const url = `${origin}/register/${slugToCopy}`;
+    const url = `${origin}${getFormPublicPath(item)}`;
     navigator.clipboard.writeText(url);
-    setCopiedSlug(slugToCopy);
-    toastSuccess("Registration link copied to clipboard!");
+    setCopiedSlug(item.slug);
+    toastSuccess("Dedicated form link copied to clipboard!");
     setTimeout(() => setCopiedSlug(null), 2500);
   };
 
@@ -221,8 +343,13 @@ export default function FormsManagementPage() {
     setSlug("");
     setDescription("");
     setFormType("event");
+    const defaultGroup = groups.find((g) => g.slug === selectedGroupFilter) || groups[0];
+    setGroupId(defaultGroup?.id || "");
+    setGroupSlug(defaultGroup?.slug || "events");
+    setRoutePrefix(defaultGroup?.routePrefix || "/events");
     setEventDate("");
     setEventLocation("");
+    setCoverImageUrl("");
     setActiveFrom("");
     setActiveUntil("");
     setStatus("active");
@@ -242,8 +369,12 @@ export default function FormsManagementPage() {
     setSlug(item.slug);
     setDescription(item.description || "");
     setFormType(item.formType as any);
+    setGroupId(item.groupId || "");
+    setGroupSlug(item.groupSlug || "events");
+    setRoutePrefix(item.routePrefix || "/events");
     setEventDate(item.eventDate ? item.eventDate.split("T")[0] : "");
     setEventLocation(item.eventLocation || "");
+    setCoverImageUrl(item.coverImageUrl || "");
     setActiveFrom(item.activeFrom ? item.activeFrom.slice(0, 16) : "");
     setActiveUntil(item.activeUntil ? item.activeUntil.slice(0, 16) : "");
     setStatus(item.status);
@@ -255,6 +386,33 @@ export default function FormsManagementPage() {
     setConsentNotice(item.consentNotice || DEFAULT_CONSENT_NOTICE);
     setStudioTab("details");
     setIsStudioOpen(true);
+  };
+
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "forms-banners");
+      let res = await fetch("/api/storage/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        res = await fetch("/api/storage/local-upload", { method: "POST", body: formData });
+      }
+      const text = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(text); } catch { data = {}; }
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || "Failed to upload cover image");
+      }
+      setCoverImageUrl(data.url);
+      toastSuccess("Image attached successfully! It will appear on your form and QR standee.");
+    } catch (err: any) {
+      toastError(err?.message || "Failed to upload image");
+    } finally {
+      setIsUploadingCover(false);
+    }
   };
 
   // Add field with selected type
@@ -317,7 +475,11 @@ export default function FormsManagementPage() {
         title: title.trim(),
         slug: slug.trim(),
         formType,
+        groupId: groupId.trim(),
+        groupSlug: groupSlug.trim() || "general",
+        routePrefix: routePrefix.trim() || "/events",
         description: description.trim(),
+        coverImageUrl: coverImageUrl.trim(),
         eventDate: eventDate || null,
         eventLocation: eventLocation.trim(),
         activeFrom: activeFrom ? new Date(activeFrom).toISOString() : null,
@@ -340,10 +502,20 @@ export default function FormsManagementPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: any = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        data = { error: `Server returned status ${res.status}` };
+      }
       if (!res.ok) throw new Error(data.error || "Failed to save form");
 
-      toastSuccess(editingId ? "Form updated successfully!" : `Created registration link "/register/${slug}"`);
+      toastSuccess(
+        editingId
+          ? "Form updated successfully!"
+          : `Created dedicated link "${getFormPublicPath({ slug, routePrefix, groupSlug })}"`
+      );
       setIsStudioOpen(false);
       fetchForms();
     } catch (err: any) {
@@ -353,18 +525,31 @@ export default function FormsManagementPage() {
     }
   };
 
-  const handleDelete = async (id: string, formTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${formTitle}" and all its recorded responses?`)) return;
+  const handleDelete = (item: FormItem) => {
+    setDeleteConfirmInput("");
+    setDeleteConfirmForm(item);
+  };
 
+  const handleConfirmDeleteForm = async () => {
+    if (!deleteConfirmForm) return;
+    if (deleteConfirmInput.trim() !== deleteConfirmForm.slug && deleteConfirmInput.trim().toUpperCase() !== "DELETE") {
+      toastError(`Type "${deleteConfirmForm.slug}" or "DELETE" to confirm.`);
+      return;
+    }
+    setIsDeletingForm(true);
     try {
-      const res = await fetch(`/api/forms/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/forms/${deleteConfirmForm.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete form");
 
-      toastSuccess("Form and responses deleted");
+      toastSuccess("Form and all associated responses permanently deleted");
+      setDeleteConfirmForm(null);
+      setDeleteConfirmInput("");
       fetchForms();
     } catch (err: any) {
       toastError(err.message || "Failed to delete form");
+    } finally {
+      setIsDeletingForm(false);
     }
   };
 
@@ -446,7 +631,235 @@ export default function FormsManagementPage() {
         </Link>
       </div>
 
-      {/* Forms Grid */}
+      {/* Architecture View Switcher & Group Filter Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-[#0e131f] border border-neutral-800/80 rounded-2xl p-3">
+        <div className="flex items-center gap-1.5 bg-[#090d16] p-1 rounded-xl border border-neutral-800 shrink-0">
+          <button
+            type="button"
+            onClick={() => setPageView("portals")}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              pageView === "portals"
+                ? "bg-red-600 text-white shadow-sm"
+                : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            <FolderKanban className="w-3.5 h-3.5" />
+            <span>Portals &amp; Groups ({forms.length})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setPageView("logs")}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              pageView === "logs"
+                ? "bg-red-600 text-white shadow-sm"
+                : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>Master Data Log List</span>
+          </button>
+        </div>
+
+        {/* Group Filter Pills */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setSelectedGroupFilter("ALL")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer ${
+              selectedGroupFilter === "ALL"
+                ? "bg-white/10 border-white/30 text-white"
+                : "bg-transparent border-neutral-800 text-neutral-400 hover:text-white"
+            }`}
+          >
+            All Groups
+          </button>
+          {groups.map((grp) => (
+            <button
+              key={grp.id}
+              type="button"
+              onClick={() => setSelectedGroupFilter(grp.slug)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors cursor-pointer ${
+                selectedGroupFilter === grp.slug
+                  ? "bg-red-500/15 border-red-500/50 text-white"
+                  : "bg-transparent border-neutral-800 text-neutral-400 hover:text-white"
+              }`}
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: grp.color || "#dc2626" }}
+              />
+              <span>{grp.name}</span>
+              <span className="text-[10px] font-mono opacity-60">
+                ({forms.filter((f) => f.groupSlug === grp.slug || f.groupId === grp.id).length})
+              </span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setIsGroupModalOpen(true)}
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold border border-dashed border-neutral-700 text-neutral-300 hover:border-red-500 hover:text-white transition-colors cursor-pointer"
+          >
+            <Plus className="w-3 h-3 text-red-400" />
+            <span>New Group</span>
+          </button>
+        </div>
+      </div>
+
+      {/* VIEW 1: MASTER DATA LOG LIST */}
+      {pageView === "logs" ? (
+        <div className="space-y-4">
+          {/* Log Toolbar + Excel & PDF Export */}
+          <div className="p-4 rounded-2xl bg-[#0e131f] border border-neutral-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative min-w-[230px]">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Search name, email, company, form..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#111624] border border-neutral-800 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <select
+                value={logFormFilter}
+                onChange={(e) => setLogFormFilter(e.target.value)}
+                className="px-3 py-1.5 rounded-xl bg-[#111624] border border-neutral-800 text-xs font-semibold text-neutral-200 focus:outline-none focus:border-red-500"
+              >
+                <option value="ALL">All Form Links</option>
+                {forms.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.title} ({getFormPublicPath(f)})
+                  </option>
+                ))}
+              </select>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={fetchLogs}
+                disabled={logsLoading}
+                className="border-neutral-800 text-neutral-300 hover:bg-neutral-800 text-xs h-8"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${logsLoading ? "animate-spin" : ""}`} />
+                Refresh Logs
+              </Button>
+            </div>
+
+            {/* Excel (.xlsx), PDF, CSV Exports */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleDownloadExport("xlsx")}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
+                Export Excel (.xlsx)
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => handleDownloadExport("pdf")}
+                className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs h-8"
+              >
+                <Download className="w-3.5 h-3.5 mr-1.5" />
+                Download PDF Report
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => handleDownloadExport("csv")}
+                className="border-neutral-800 text-neutral-300 hover:bg-neutral-800 text-xs h-8"
+              >
+                CSV
+              </Button>
+            </div>
+          </div>
+
+          {/* Master Data Log Table */}
+          <div className="rounded-2xl border border-neutral-800 bg-[#0e131f] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-neutral-800 bg-[#111624] text-neutral-400 font-bold uppercase tracking-wider text-[10px]">
+                    <th className="py-3 px-4">Timestamp</th>
+                    <th className="py-3 px-4">Group</th>
+                    <th className="py-3 px-4">Form &amp; Dedicated Route</th>
+                    <th className="py-3 px-4">Participant / Visitor</th>
+                    <th className="py-3 px-4">Organization</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">NDPR</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/60">
+                  {logsLoading ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-neutral-400">
+                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-red-500" />
+                        Loading submission data logs...
+                      </td>
+                    </tr>
+                  ) : logs.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-neutral-500">
+                        No submission records match the selected filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    logs.map((log) => (
+                      <tr key={log.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="py-3 px-4 font-mono text-[11px] text-neutral-400 whitespace-nowrap">
+                          {new Date(log.createdAt).toLocaleString()}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded bg-neutral-800 text-neutral-200 text-[10px] font-semibold">
+                            {log.groupName}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Link
+                            href={`/forms/${log.formId}`}
+                            className="font-semibold text-white hover:text-red-400 transition-colors block"
+                          >
+                            {log.formTitle}
+                          </Link>
+                          <span className="font-mono text-[10px] text-neutral-500">
+                            {log.routePath}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-neutral-100">{log.fullName}</div>
+                          <div className="text-[11px] text-neutral-400">
+                            {log.email} {log.phone ? `• ${log.phone}` : ""}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-neutral-300">
+                          {log.company || "—"}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            {log.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="text-[11px] font-mono text-emerald-400">
+                            {log.consentAcknowledged ? "Verified" : "Pending"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+      /* VIEW 2: FORMS GRID */
       <div>
         {loading && forms.length === 0 ? (
           <div className="p-12 text-center rounded-2xl bg-[#0f1420] border border-neutral-800 text-neutral-400">
@@ -473,11 +886,20 @@ export default function FormsManagementPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {forms.map((item) => {
+            {forms
+              .filter(
+                (item) =>
+                  selectedGroupFilter === "ALL" ||
+                  item.groupSlug === selectedGroupFilter ||
+                  item.groupId === `grp-${selectedGroupFilter}`
+              )
+              .map((item) => {
               const hasCustomFields = Array.isArray(item.fields) && item.fields.length > 0;
               const hasUploads = Array.isArray(item.fields) && item.fields.some((f) => f.type === "file" || f.type === "image");
               const hasEmailReceipt = item.sendConfirmationEmail !== false;
               const hasConsent = item.requireConsent !== false;
+              const dedicatedPath = getFormPublicPath(item);
+              const matchedGroup = groups.find((g) => g.id === item.groupId || g.slug === item.groupSlug);
 
               return (
                 <div
@@ -487,9 +909,19 @@ export default function FormsManagementPage() {
                   <div className="space-y-3">
                     {/* Header line */}
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-neutral-800 text-neutral-300">
-                        {item.formType}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-neutral-800 text-neutral-300">
+                          {item.formType}
+                        </span>
+                        {matchedGroup && (
+                          <span
+                            className="text-[10px] font-semibold px-2 py-0.5 rounded border border-white/10 text-white"
+                            style={{ backgroundColor: `${matchedGroup.color}25` }}
+                          >
+                            {matchedGroup.name}
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5">
                         <span
                           className={`w-2 h-2 rounded-full ${
@@ -519,10 +951,10 @@ export default function FormsManagementPage() {
                     {/* Link Copy Box */}
                     <div className="flex items-center justify-between bg-[#141a29] border border-neutral-800 rounded-lg p-2 text-xs">
                       <span className="font-mono text-neutral-300 truncate max-w-[200px]">
-                        /register/{item.slug}
+                        {dedicatedPath}
                       </span>
                       <button
-                        onClick={() => handleCopyLink(item.slug)}
+                        onClick={() => handleCopyLink(item)}
                         className="inline-flex items-center gap-1 text-[11px] font-medium text-red-400 hover:text-red-300 px-2 py-0.5 rounded hover:bg-red-500/10 transition-colors"
                       >
                         {copiedSlug === item.slug ? (
@@ -605,13 +1037,23 @@ export default function FormsManagementPage() {
                   <div className="pt-4 mt-3 border-t border-neutral-800/80 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Link
-                        href={`/register/${item.slug}`}
+                        href={dedicatedPath}
                         target="_blank"
                         className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
                       >
                         <ExternalLink className="w-3.5 h-3.5" />
                         <span>Public Link</span>
                       </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => setQrModalForm(item)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                        title="Generate QR Code & Visitor Tap-In Standee"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>QR &amp; Standee</span>
+                      </button>
 
                       <button
                         onClick={() => openEditModal(item)}
@@ -623,7 +1065,7 @@ export default function FormsManagementPage() {
                       </button>
 
                       <button
-                        onClick={() => handleDelete(item.id, item.title)}
+                        onClick={() => handleDelete(item)}
                         className="p-1 text-neutral-400 hover:text-red-400 transition-colors"
                         title="Delete registration portal"
                       >
@@ -645,6 +1087,7 @@ export default function FormsManagementPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* Modern High-End Form Studio Workspace (5XL Modern Width) */}
       <Modal
@@ -760,6 +1203,51 @@ export default function FormsManagementPage() {
                 </div>
               </div>
 
+              {/* Group & Dedicated Routing Architecture */}
+              <div className="p-4 rounded-xl bg-[#0f1422] border border-neutral-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-semibold text-neutral-300 mb-1.5">
+                    Assign to Portal Group *
+                  </label>
+                  <select
+                    value={groupSlug}
+                    onChange={(e) => {
+                      const chosen = groups.find((g) => g.slug === e.target.value);
+                      setGroupSlug(e.target.value);
+                      setGroupId(chosen?.id || "");
+                      if (!editingId && chosen?.routePrefix) {
+                        setRoutePrefix(chosen.routePrefix);
+                      }
+                    }}
+                    className="w-full px-3 py-2.5 bg-[#111624] border border-neutral-800 rounded-xl text-xs font-semibold text-neutral-100 focus:outline-none focus:border-red-500"
+                  >
+                    <option value="general">General / Ungrouped</option>
+                    {groups.map((grp) => (
+                      <option key={grp.id} value={grp.slug}>
+                        {grp.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-neutral-300 mb-1.5">
+                    Dedicated Route Path (Non-Generic) *
+                  </label>
+                  <select
+                    value={routePrefix}
+                    onChange={(e) => setRoutePrefix(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-[#111624] border border-neutral-800 rounded-xl text-xs font-mono font-semibold text-neutral-100 focus:outline-none focus:border-red-500"
+                  >
+                    {ROUTE_PREFIX_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label} — {opt.desc}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               {/* Title & Live Clean URL */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -781,7 +1269,9 @@ export default function FormsManagementPage() {
                     Live URL Identifier (Slug) *
                   </label>
                   <div className="flex items-center bg-[#111624] border border-neutral-800 rounded-xl px-3 py-2 text-sm focus-within:border-red-500 transition-colors">
-                    <span className="text-neutral-500 font-mono text-xs select-none shrink-0 whitespace-nowrap pr-1.5">/register/</span>
+                    <span className="text-neutral-500 font-mono text-xs select-none shrink-0 whitespace-nowrap pr-1.5">
+                      {routePrefix === "/f" ? `/f/${groupSlug || "general"}/` : `${routePrefix}/`}
+                    </span>
                     <input
                       type="text"
                       required
@@ -792,7 +1282,7 @@ export default function FormsManagementPage() {
                     />
                   </div>
                   <p className="text-[10px] text-neutral-500 mt-1 font-mono">
-                    Public Endpoint: https://dextaafrica.com/register/{slug || "slug-id"}
+                    Dedicated URL: https://admin.dextaafrica.com{getFormPublicPath({ slug: slug || "slug-id", routePrefix, groupSlug })}
                   </p>
                 </div>
               </div>
@@ -846,6 +1336,58 @@ export default function FormsManagementPage() {
                     <option value="draft">Draft (Admin Access Only)</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Attach Cover / Brand Image (Used on Public Form & QR Tap-In Standee) */}
+              <div className="p-4 rounded-xl bg-[#0f1422] border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-red-400" />
+                    <span className="text-xs font-semibold text-white">Attach Brand / Event Image (Banner &amp; QR Standee)</span>
+                  </div>
+                  {coverImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setCoverImageUrl("")}
+                      className="text-[11px] text-red-400 hover:underline cursor-pointer"
+                    >
+                      Remove Image
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  Upload a flyer, company logo, or welcome graphic. It will appear at the top of the public form and inside your printable Visitor Tap-In QR Standee.
+                </p>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-xs cursor-pointer transition-colors shrink-0">
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>{isUploadingCover ? "Uploading..." : "Upload Image"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploadingCover}
+                      onChange={handleCoverImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="Or paste image URL (https://...)"
+                    value={coverImageUrl}
+                    onChange={(e) => setCoverImageUrl(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500 text-xs"
+                  />
+                </div>
+                {coverImageUrl && (
+                  <div className="pt-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={coverImageUrl}
+                      alt="Attached form banner"
+                      className="max-h-36 rounded-xl border border-neutral-800 object-contain bg-black/30"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Active Timeline & Automated Scheduling */}
@@ -1426,6 +1968,154 @@ export default function FormsManagementPage() {
             </div>
           </div>
         </form>
+      </Modal>
+
+      <FormQrStandeeModal
+        isOpen={Boolean(qrModalForm)}
+        onClose={() => setQrModalForm(null)}
+        form={qrModalForm}
+      />
+
+      {/* Create Form Group Modal */}
+      <Modal
+        isOpen={isGroupModalOpen}
+        onClose={() => setIsGroupModalOpen(false)}
+        title="Create Form Group & Dedicated Route"
+        description="Organize your links into structured departments or campaigns with a default route prefix."
+        maxWidth="md"
+      >
+        <form onSubmit={handleCreateGroup} className="space-y-4 pt-2 text-xs">
+          <div>
+            <label className="block font-semibold text-neutral-300 mb-1">Group Name *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Lagos Reception Check-In"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-white focus:outline-none focus:border-red-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-neutral-300 mb-1">Default Route Prefix</label>
+              <select
+                value={newGroupPrefix}
+                onChange={(e) => setNewGroupPrefix(e.target.value)}
+                className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-white font-mono"
+              >
+                {ROUTE_PREFIX_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block font-semibold text-neutral-300 mb-1">Group Badge Color</label>
+              <input
+                type="color"
+                value={newGroupColor}
+                onChange={(e) => setNewGroupColor(e.target.value)}
+                className="w-full h-9 rounded-xl bg-[#111624] border border-neutral-800 p-1 cursor-pointer"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-neutral-300 mb-1">Description</label>
+            <textarea
+              rows={2}
+              placeholder="What links belong in this group?"
+              value={newGroupDesc}
+              onChange={(e) => setNewGroupDesc(e.target.value)}
+              className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-white resize-none"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-neutral-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setIsGroupModalOpen(false)}
+              className="border-neutral-800 text-neutral-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              size="sm"
+              isLoading={isSavingGroup}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold"
+            >
+              Create Group
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Danger-Zone Typed Confirmation Modal for Form Deletion */}
+      <Modal
+        isOpen={Boolean(deleteConfirmForm)}
+        onClose={() => !isDeletingForm && setDeleteConfirmForm(null)}
+        title="Permanently Delete Registration Form"
+        description="This action cannot be undone. All submitted responses and analytics for this link will be permanently purged."
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-2 text-xs">
+          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 space-y-1">
+            <div className="font-bold text-red-400">
+              Target Form: {deleteConfirmForm?.title}
+            </div>
+            <div className="font-mono text-[11px] text-neutral-300">
+              Slug: {deleteConfirmForm?.slug} • {deleteConfirmForm?.submissionsCount || 0} recorded submission(s)
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-neutral-300 mb-1.5">
+              Type <span className="font-mono text-red-400">{deleteConfirmForm?.slug}</span> or{" "}
+              <span className="font-mono text-red-400">DELETE</span> to authorize deletion:
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder={deleteConfirmForm?.slug || "DELETE"}
+              className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-white font-mono focus:outline-none focus:border-red-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-neutral-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isDeletingForm}
+              onClick={() => setDeleteConfirmForm(null)}
+              className="border-neutral-800 text-neutral-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              isLoading={isDeletingForm}
+              disabled={
+                !deleteConfirmForm ||
+                (deleteConfirmInput.trim() !== deleteConfirmForm.slug &&
+                  deleteConfirmInput.trim().toUpperCase() !== "DELETE")
+              }
+              onClick={handleConfirmDeleteForm}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold"
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+            >
+              Permanently Delete Form
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

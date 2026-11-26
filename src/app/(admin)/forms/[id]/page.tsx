@@ -566,10 +566,29 @@ export default function FormDemographicsPage({
           <Button
             variant="outline"
             size="sm"
+            onClick={() => window.open(`/api/forms/export?formId=${formId}&format=xlsx`, "_blank")}
+            className="border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-xs h-8 font-semibold"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
+            <span>Excel (.xlsx)</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/api/forms/export?formId=${formId}&format=pdf`, "_blank")}
+            className="border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs h-8 font-semibold"
+          >
+            <Download className="w-3.5 h-3.5 mr-1.5" />
+            <span>PDF Report</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleExportCSV}
             className="border-neutral-800 text-neutral-300 hover:bg-neutral-800 text-xs h-8"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-400" />
             <span>CSV</span>
           </Button>
 
@@ -579,7 +598,7 @@ export default function FormDemographicsPage({
             className="bg-neutral-800 hover:bg-neutral-700 text-white text-xs h-8"
           >
             <Printer className="w-3.5 h-3.5 mr-1.5" />
-            <span>PDF</span>
+            <span>Print</span>
           </Button>
         </div>
       </div>

@@ -540,6 +540,16 @@ export default function PublicRegistrationPage({
         ) : (
           /* Registration Form Card */
           <div className="bg-[#0e131f]/95 border border-neutral-800/80 rounded-3xl shadow-2xl backdrop-blur-xl overflow-hidden">
+            {form.coverImageUrl && (
+              <div className="w-full bg-black/40 border-b border-neutral-800/80">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={form.coverImageUrl}
+                  alt={form.title}
+                  className="w-full max-h-72 object-contain mx-auto block"
+                />
+              </div>
+            )}
             {/* Form Banner & Intro */}
             <div className="p-6 sm:p-10 border-b border-neutral-800/80 bg-gradient-to-b from-neutral-900/50 to-transparent">
               <div className="flex items-center justify-between gap-3 mb-4">

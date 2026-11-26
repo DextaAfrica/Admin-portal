@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { ensureCustomFormsSchema } from "@/lib/forms/schema";
+
+export const dynamic = "force-dynamic";
 
 function sanitizeSlug(slug: string): string {
   return slug
@@ -11,10 +14,27 @@ function sanitizeSlug(slug: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export async function GET(req: NextRequest) {
+function parseSafeDate(value: unknown): Date | null {
+  if (!value) return null;
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function safeJsonParse<T>(raw: unknown, fallback: T): T {
+  if (typeof raw !== "string") return (raw as T) ?? fallback;
+  try {
+    return JSON.parse(raw || "null") ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export async function GET() {
   try {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    await ensureCustomFormsSchema();
 
     const forms = await prisma.customForm.findMany({
       orderBy: { createdAt: "desc" },
@@ -32,13 +52,16 @@ export async function GET(req: NextRequest) {
       description: f.description || "",
       formType: f.formType,
       status: f.status,
+      groupId: f.groupId || "",
+      groupSlug: f.groupSlug || "general",
+      routePrefix: f.routePrefix || "/events",
       coverImageUrl: f.coverImageUrl || "",
       eventDate: f.eventDate ? f.eventDate.toISOString() : null,
       eventLocation: f.eventLocation || "",
       activeFrom: f.activeFrom ? f.activeFrom.toISOString() : null,
       activeUntil: f.activeUntil ? f.activeUntil.toISOString() : null,
-      fields: JSON.parse(f.fields || "[]"),
-      metadata: JSON.parse(f.metadata || "{}"),
+      fields: safeJsonParse(f.fields, []),
+      metadata: safeJsonParse(f.metadata, {}),
       sendConfirmationEmail: f.sendConfirmationEmail,
       confirmationSubject: f.confirmationSubject || "",
       confirmationMessage: f.confirmationMessage || "",
@@ -52,7 +75,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ forms: formatted });
   } catch (err: any) {
     console.error("Forms list error:", err);
-    return NextResponse.json({ forms: [] });
+    return NextResponse.json({ forms: [], error: err?.message || "Failed to list forms" });
   }
 }
 
@@ -60,6 +83,8 @@ export async function POST(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    await ensureCustomFormsSchema();
 
     const body = await req.json();
     let rawSlug = body.slug ? String(body.slug) : "";
@@ -90,11 +115,14 @@ export async function POST(req: NextRequest) {
         description: body.description?.trim() || "",
         formType: body.formType || "event",
         status: body.status || "active",
+        groupId: body.groupId?.trim() || "",
+        groupSlug: body.groupSlug?.trim() || "general",
+        routePrefix: body.routePrefix?.trim() || "/events",
         coverImageUrl: body.coverImageUrl?.trim() || "",
-        eventDate: body.eventDate ? new Date(body.eventDate) : null,
+        eventDate: parseSafeDate(body.eventDate),
         eventLocation: body.eventLocation?.trim() || "",
-        activeFrom: body.activeFrom ? new Date(body.activeFrom) : null,
-        activeUntil: body.activeUntil ? new Date(body.activeUntil) : null,
+        activeFrom: parseSafeDate(body.activeFrom),
+        activeUntil: parseSafeDate(body.activeUntil),
         fields: typeof body.fields === "string" ? body.fields : JSON.stringify(body.fields || []),
         metadata: typeof body.metadata === "string" ? body.metadata : JSON.stringify(body.metadata || {}),
         sendConfirmationEmail: body.sendConfirmationEmail !== undefined ? Boolean(body.sendConfirmationEmail) : true,
@@ -112,11 +140,18 @@ export async function POST(req: NextRequest) {
       form: {
         ...newForm,
         eventDate: newForm.eventDate?.toISOString() || null,
+        activeFrom: newForm.activeFrom?.toISOString() || null,
+        activeUntil: newForm.activeUntil?.toISOString() || null,
+        fields: safeJsonParse(newForm.fields, []),
+        metadata: safeJsonParse(newForm.metadata, {}),
         submissionsCount: 0,
       },
     });
   } catch (err: any) {
     console.error("Form creation error:", err);
-    return NextResponse.json({ error: err.message || "Failed to create registration link" }, { status: 500 });
+    return NextResponse.json(
+      { error: err?.message || "Failed to create registration link" },
+      { status: 500 }
+    );
   }
 }

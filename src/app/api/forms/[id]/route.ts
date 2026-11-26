@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { ensureCustomFormsSchema } from "@/lib/forms/schema";
+
+function parseSafeDate(value: unknown): Date | null {
+  if (!value) return null;
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 function sanitizeSlug(slug: string): string {
   return slug
@@ -19,6 +26,7 @@ export async function GET(
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    await ensureCustomFormsSchema();
     const { id } = await params;
     const form = await prisma.customForm.findUnique({
       where: { id },
@@ -55,6 +63,7 @@ export async function PUT(
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    await ensureCustomFormsSchema();
     const { id } = await params;
     const body = await req.json();
 
@@ -80,11 +89,14 @@ export async function PUT(
         description: body.description !== undefined ? body.description : existing.description,
         formType: body.formType || existing.formType,
         status: body.status || existing.status,
+        groupId: body.groupId !== undefined ? body.groupId : existing.groupId,
+        groupSlug: body.groupSlug !== undefined ? body.groupSlug : existing.groupSlug,
+        routePrefix: body.routePrefix !== undefined ? body.routePrefix : existing.routePrefix,
         coverImageUrl: body.coverImageUrl !== undefined ? body.coverImageUrl : existing.coverImageUrl,
-        eventDate: body.eventDate ? new Date(body.eventDate) : body.eventDate === null ? null : existing.eventDate,
+        eventDate: body.eventDate !== undefined ? parseSafeDate(body.eventDate) : existing.eventDate,
         eventLocation: body.eventLocation !== undefined ? body.eventLocation : existing.eventLocation,
-        activeFrom: body.activeFrom ? new Date(body.activeFrom) : body.activeFrom === null ? null : existing.activeFrom,
-        activeUntil: body.activeUntil ? new Date(body.activeUntil) : body.activeUntil === null ? null : existing.activeUntil,
+        activeFrom: body.activeFrom !== undefined ? parseSafeDate(body.activeFrom) : existing.activeFrom,
+        activeUntil: body.activeUntil !== undefined ? parseSafeDate(body.activeUntil) : existing.activeUntil,
         fields: body.fields !== undefined ? (typeof body.fields === "string" ? body.fields : JSON.stringify(body.fields)) : existing.fields,
         metadata: body.metadata !== undefined ? (typeof body.metadata === "string" ? body.metadata : JSON.stringify(body.metadata)) : existing.metadata,
         sendConfirmationEmail: body.sendConfirmationEmail !== undefined ? Boolean(body.sendConfirmationEmail) : existing.sendConfirmationEmail,
@@ -110,10 +122,56 @@ export async function DELETE(
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const userRole = (user.role || "").toUpperCase();
+    const userDept = (user.department || "").toUpperCase();
+    const canDeleteForm =
+      userRole === "SUPER_ADMIN" ||
+      userRole === "ADMIN" ||
+      userRole === "IT_ADMIN" ||
+      userDept === "IT" ||
+      userDept === "EXECUTIVE";
+
+    if (!canDeleteForm) {
+      return NextResponse.json(
+        { error: "Forbidden: Only authorized Administrators can permanently delete registration forms." },
+        { status: 403 }
+      );
+    }
+
+    await ensureCustomFormsSchema();
     const { id } = await params;
+
+    const existing = await prisma.customForm.findUnique({
+      where: { id },
+      include: { _count: { select: { submissions: true } } },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
+
     await prisma.customForm.delete({ where: { id } });
 
-    return NextResponse.json({ success: true, message: "Form deleted" });
+    try {
+      const { logAuditEvent } = await import("@/lib/auth/audit");
+      await logAuditEvent({
+        actorId: user.id,
+        actorEmail: user.email,
+        action: "FORM_DELETED",
+        entity: "CustomForm",
+        entityId: id,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent"),
+        metadata: {
+          title: existing.title,
+          slug: existing.slug,
+          submissionsCount: existing._count.submissions,
+        },
+      });
+    } catch (auditErr) {
+      console.warn("[Form Delete Audit Warning]:", auditErr);
+    }
+
+    return NextResponse.json({ success: true, message: "Form and associated submissions permanently deleted" });
   } catch (err: any) {
     console.error("Form delete error:", err);
     return NextResponse.json({ error: "Failed to delete form" }, { status: 500 });

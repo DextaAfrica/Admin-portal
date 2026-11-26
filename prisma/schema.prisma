@@ -25,6 +25,7 @@ model User {
   mustChangePassword  Boolean                  @default(false)
   activationKey       String?
   lastLoginAt         DateTime?
+  primaryWorkspace    String                   @default("operations")
   assignedModules     String                   @default("[\"operations\",\"approvals\",\"personal\"]")
   signatureUrl        String?
   createdAt           DateTime                 @default(now())
@@ -114,10 +115,12 @@ model EmailCampaign {
   contentHtml    String
   status         String    @default("DRAFT") // DRAFT, SCHEDULED, SENDING, SENT, FAILED
   recipientCount Int       @default(0)
-  openCount      Int       @default(0)
-  clickCount     Int       @default(0)
-  sentAt         DateTime?
-  createdById    String?
+  openCount           Int       @default(0)
+  clickCount          Int       @default(0)
+  sentAt              DateTime?
+  scheduledTarget     String?   @default("ALL")
+  scheduledRecipients String?
+  createdById         String?
   creator        User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -334,6 +337,8 @@ model CrmClient {
   estimatedValue Float         @default(0)
   currency       String        @default("USD")
   assignedTo     String?
+  assignedToUserId String?
+  leadSource     String        @default("DIRECT") // "DIRECT", "FORM", "CLAN", "REFERRAL"
   location       String?       @default("Lagos, Nigeria")
   tags           String        @default("[]") // JSON string list
   notes          String?
@@ -355,6 +360,7 @@ model CrmDeal {
   currency           String    @default("USD")
   stage              String    @default("PROPOSAL") // "PROPOSAL", "DUE_DILIGENCE", "CLOSING", "WON", "LOST"
   probability        Int       @default(60)
+  ownerUserId        String?
   expectedCloseDate  DateTime?
   notes              String?
   createdAt          DateTime  @default(now())
@@ -643,6 +649,19 @@ model CareerInquiry {
 // CUSTOM FORMS, ONBOARDING & EVENT REGISTRATION PORTALS
 // =============================================================================
 
+model CustomFormGroup {
+  id          String       @id @default(uuid())
+  name        String
+  slug        String       @unique
+  description String?      @default("")
+  routePrefix String       @default("/events")
+  color       String       @default("#dc2626")
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([slug])
+}
+
 model CustomForm {
   id                      String           @id @default(uuid())
   slug                    String           @unique
@@ -650,6 +669,9 @@ model CustomForm {
   description             String?          @default("")
   formType                String           @default("event") // "event", "onboarding", "partner", "survey"
   status                  String           @default("active") // "active", "closed", "draft"
+  groupId                 String?          @default("")
+  groupSlug               String?          @default("general")
+  routePrefix             String           @default("/events") // "/visit", "/academy", "/events", "/onboarding", "/f"
   coverImageUrl           String?          @default("")
   eventDate               DateTime?
   eventLocation           String?          @default("")

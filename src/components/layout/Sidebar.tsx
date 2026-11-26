@@ -43,7 +43,7 @@ import {
 import { cn } from "@/lib/utils";
 import { DextaLogo } from "@/components/ui/DextaLogo";
 
-export type PortalType = "operations" | "systems" | "executive" | "hr" | "finance";
+export type PortalType = "operations" | "systems" | "executive" | "hr" | "finance" | "crm" | "clan";
 
 interface NavItem {
   title: string;
@@ -219,6 +219,29 @@ const FINANCE_NAV: NavSection[] = [
   },
 ];
 
+const CRM_NAV: NavSection[] = [
+  {
+    label: "CRM Sales & Account Desk",
+    items: [
+      { title: "My CRM Pipeline", href: "/crm", icon: Briefcase, badge: "Isolated" },
+      { title: "Forms & Lead Intake", href: "/forms", icon: Link2 },
+      { title: "My Cloud Storage", href: "/storage", icon: HardDrive },
+    ],
+  },
+];
+
+const CLAN_NAV: NavSection[] = [
+  {
+    label: "Dexta Clan Academy Desk",
+    items: [
+      { title: "Dexta Clan Cohorts", href: "/clan", icon: GraduationCap, badge: "Academy" },
+      { title: "Registration Forms", href: "/forms", icon: Link2 },
+      { title: "Email Campaigns", href: "/marketing/campaigns", icon: Send },
+      { title: "My Cloud Storage", href: "/storage", icon: HardDrive },
+    ],
+  },
+];
+
 const PORTALS: Record<PortalType, PortalConfig> = {
   operations: {
     id: "operations",
@@ -270,6 +293,26 @@ const PORTALS: Record<PortalType, PortalConfig> = {
     icon: Landmark,
     sections: FINANCE_NAV,
   },
+  crm: {
+    id: "crm",
+    title: "Dexta CRM Sales Desk",
+    shortTitle: "CRM Desk",
+    badge: "CRM",
+    subdomain: "admin.dextaafrica.com",
+    description: "Dedicated client pipeline, deal stages, and personal account management",
+    icon: Briefcase,
+    sections: CRM_NAV,
+  },
+  clan: {
+    id: "clan",
+    title: "Dexta Clan Academy Desk",
+    shortTitle: "Clan Academy",
+    badge: "Academy",
+    subdomain: "admin.dextaafrica.com",
+    description: "Cohort lifecycle, candidate admissions, and certification reports",
+    icon: GraduationCap,
+    sections: CLAN_NAV,
+  },
 };
 
 export function Sidebar({
@@ -282,6 +325,8 @@ export function Sidebar({
     department?: string;
     seniorityLevel?: string;
     jobTitle?: string | null;
+    primaryWorkspace?: string | null;
+    assignedModules?: string | null;
   };
 }) {
   const pathname = usePathname();
@@ -293,23 +338,26 @@ export function Sidebar({
   // Zero dropdown switcher; zero localStorage manipulation.
   const dept = (user?.department || "").toUpperCase();
   const role = (user?.role || "").toUpperCase();
+  const workspace = (user?.primaryWorkspace || "").toLowerCase();
 
   const activePortal: PortalType = React.useMemo(() => {
     if (role === "SUPER_ADMIN" || dept === "EXECUTIVE") {
       return "executive";
     }
-    if (dept === "FINANCE" || dept === "ACCOUNTING" || dept === "ACCOUNTS") {
+    if (workspace === "crm") return "crm";
+    if (workspace === "clan") return "clan";
+    if (dept === "FINANCE" || dept === "ACCOUNTING" || dept === "ACCOUNTS" || workspace === "finance") {
       return "finance";
     }
-    if (dept === "IT") {
+    if (dept === "IT" || workspace === "systems") {
       return "systems";
     }
-    if (dept === "HR") {
+    if (dept === "HR" || workspace === "hr") {
       return "hr";
     }
     // Operations Manager & Operations Fleet
     return "operations";
-  }, [dept, role]);
+  }, [dept, role, workspace]);
 
   // Sync activeTab from URL search parameters (?tab=...)
   React.useEffect(() => {
