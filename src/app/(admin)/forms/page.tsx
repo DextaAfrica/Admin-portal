@@ -40,11 +40,13 @@ import {
   Lock,
   Clock,
   GraduationCap,
+  QrCode,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
+import { FormQrStandeeModal } from "@/components/forms/FormQrStandeeModal";
 
 export type CustomFieldType =
   | "text"
@@ -138,7 +140,10 @@ export default function FormsManagementPage() {
   const [description, setDescription] = React.useState("");
   const [eventDate, setEventDate] = React.useState("");
   const [eventLocation, setEventLocation] = React.useState("");
+  const [coverImageUrl, setCoverImageUrl] = React.useState("");
+  const [isUploadingCover, setIsUploadingCover] = React.useState(false);
   const [status, setStatus] = React.useState<"active" | "closed" | "draft">("active");
+  const [qrModalForm, setQrModalForm] = React.useState<FormItem | null>(null);
 
   // Custom Fields Builder
   const [customFields, setCustomFields] = React.useState<CustomFieldDef[]>([]);
@@ -223,6 +228,7 @@ export default function FormsManagementPage() {
     setFormType("event");
     setEventDate("");
     setEventLocation("");
+    setCoverImageUrl("");
     setActiveFrom("");
     setActiveUntil("");
     setStatus("active");
@@ -244,6 +250,7 @@ export default function FormsManagementPage() {
     setFormType(item.formType as any);
     setEventDate(item.eventDate ? item.eventDate.split("T")[0] : "");
     setEventLocation(item.eventLocation || "");
+    setCoverImageUrl(item.coverImageUrl || "");
     setActiveFrom(item.activeFrom ? item.activeFrom.slice(0, 16) : "");
     setActiveUntil(item.activeUntil ? item.activeUntil.slice(0, 16) : "");
     setStatus(item.status);
@@ -255,6 +262,33 @@ export default function FormsManagementPage() {
     setConsentNotice(item.consentNotice || DEFAULT_CONSENT_NOTICE);
     setStudioTab("details");
     setIsStudioOpen(true);
+  };
+
+  const handleCoverImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "forms-banners");
+      let res = await fetch("/api/storage/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        res = await fetch("/api/storage/local-upload", { method: "POST", body: formData });
+      }
+      const text = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(text); } catch { data = {}; }
+      if (!res.ok || !data?.url) {
+        throw new Error(data?.error || "Failed to upload cover image");
+      }
+      setCoverImageUrl(data.url);
+      toastSuccess("Image attached successfully! It will appear on your form and QR standee.");
+    } catch (err: any) {
+      toastError(err?.message || "Failed to upload image");
+    } finally {
+      setIsUploadingCover(false);
+    }
   };
 
   // Add field with selected type
@@ -318,6 +352,7 @@ export default function FormsManagementPage() {
         slug: slug.trim(),
         formType,
         description: description.trim(),
+        coverImageUrl: coverImageUrl.trim(),
         eventDate: eventDate || null,
         eventLocation: eventLocation.trim(),
         activeFrom: activeFrom ? new Date(activeFrom).toISOString() : null,
@@ -340,7 +375,13 @@ export default function FormsManagementPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: any = {};
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        data = { error: `Server returned status ${res.status}` };
+      }
       if (!res.ok) throw new Error(data.error || "Failed to save form");
 
       toastSuccess(editingId ? "Form updated successfully!" : `Created registration link "/register/${slug}"`);
@@ -614,6 +655,16 @@ export default function FormsManagementPage() {
                       </Link>
 
                       <button
+                        type="button"
+                        onClick={() => setQrModalForm(item)}
+                        className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer"
+                        title="Generate QR Code & Visitor Tap-In Standee"
+                      >
+                        <QrCode className="w-3.5 h-3.5" />
+                        <span>QR &amp; Standee</span>
+                      </button>
+
+                      <button
                         onClick={() => openEditModal(item)}
                         className="inline-flex items-center gap-1 text-xs text-neutral-400 hover:text-white transition-colors"
                         title="Configure form fields, emails, and consent"
@@ -846,6 +897,58 @@ export default function FormsManagementPage() {
                     <option value="draft">Draft (Admin Access Only)</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Attach Cover / Brand Image (Used on Public Form & QR Tap-In Standee) */}
+              <div className="p-4 rounded-xl bg-[#0f1422] border border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-red-400" />
+                    <span className="text-xs font-semibold text-white">Attach Brand / Event Image (Banner &amp; QR Standee)</span>
+                  </div>
+                  {coverImageUrl && (
+                    <button
+                      type="button"
+                      onClick={() => setCoverImageUrl("")}
+                      className="text-[11px] text-red-400 hover:underline cursor-pointer"
+                    >
+                      Remove Image
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  Upload a flyer, company logo, or welcome graphic. It will appear at the top of the public form and inside your printable Visitor Tap-In QR Standee.
+                </p>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <label className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold text-xs cursor-pointer transition-colors shrink-0">
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>{isUploadingCover ? "Uploading..." : "Upload Image"}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploadingCover}
+                      onChange={handleCoverImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="Or paste image URL (https://...)"
+                    value={coverImageUrl}
+                    onChange={(e) => setCoverImageUrl(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-red-500 text-xs"
+                  />
+                </div>
+                {coverImageUrl && (
+                  <div className="pt-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={coverImageUrl}
+                      alt="Attached form banner"
+                      className="max-h-36 rounded-xl border border-neutral-800 object-contain bg-black/30"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Active Timeline & Automated Scheduling */}
@@ -1427,6 +1530,12 @@ export default function FormsManagementPage() {
           </div>
         </form>
       </Modal>
+
+      <FormQrStandeeModal
+        isOpen={Boolean(qrModalForm)}
+        onClose={() => setQrModalForm(null)}
+        form={qrModalForm}
+      />
     </div>
   );
 }

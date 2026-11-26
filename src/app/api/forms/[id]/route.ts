@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
+import { ensureCustomFormsSchema } from "@/lib/forms/schema";
+
+function parseSafeDate(value: unknown): Date | null {
+  if (!value) return null;
+  const d = new Date(String(value));
+  return Number.isNaN(d.getTime()) ? null : d;
+}
 
 function sanitizeSlug(slug: string): string {
   return slug
@@ -19,6 +26,7 @@ export async function GET(
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    await ensureCustomFormsSchema();
     const { id } = await params;
     const form = await prisma.customForm.findUnique({
       where: { id },
@@ -55,6 +63,7 @@ export async function PUT(
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    await ensureCustomFormsSchema();
     const { id } = await params;
     const body = await req.json();
 
@@ -81,10 +90,10 @@ export async function PUT(
         formType: body.formType || existing.formType,
         status: body.status || existing.status,
         coverImageUrl: body.coverImageUrl !== undefined ? body.coverImageUrl : existing.coverImageUrl,
-        eventDate: body.eventDate ? new Date(body.eventDate) : body.eventDate === null ? null : existing.eventDate,
+        eventDate: body.eventDate !== undefined ? parseSafeDate(body.eventDate) : existing.eventDate,
         eventLocation: body.eventLocation !== undefined ? body.eventLocation : existing.eventLocation,
-        activeFrom: body.activeFrom ? new Date(body.activeFrom) : body.activeFrom === null ? null : existing.activeFrom,
-        activeUntil: body.activeUntil ? new Date(body.activeUntil) : body.activeUntil === null ? null : existing.activeUntil,
+        activeFrom: body.activeFrom !== undefined ? parseSafeDate(body.activeFrom) : existing.activeFrom,
+        activeUntil: body.activeUntil !== undefined ? parseSafeDate(body.activeUntil) : existing.activeUntil,
         fields: body.fields !== undefined ? (typeof body.fields === "string" ? body.fields : JSON.stringify(body.fields)) : existing.fields,
         metadata: body.metadata !== undefined ? (typeof body.metadata === "string" ? body.metadata : JSON.stringify(body.metadata)) : existing.metadata,
         sendConfirmationEmail: body.sendConfirmationEmail !== undefined ? Boolean(body.sendConfirmationEmail) : existing.sendConfirmationEmail,
@@ -110,6 +119,7 @@ export async function DELETE(
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    await ensureCustomFormsSchema();
     const { id } = await params;
     await prisma.customForm.delete({ where: { id } });
 
