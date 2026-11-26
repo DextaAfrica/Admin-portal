@@ -25,6 +25,7 @@ model User {
   mustChangePassword  Boolean                  @default(false)
   activationKey       String?
   lastLoginAt         DateTime?
+  primaryWorkspace    String                   @default("operations")
   assignedModules     String                   @default("[\"operations\",\"approvals\",\"personal\"]")
   signatureUrl        String?
   createdAt           DateTime                 @default(now())
@@ -336,6 +337,8 @@ model CrmClient {
   estimatedValue Float         @default(0)
   currency       String        @default("USD")
   assignedTo     String?
+  assignedToUserId String?
+  leadSource     String        @default("DIRECT") // "DIRECT", "FORM", "CLAN", "REFERRAL"
   location       String?       @default("Lagos, Nigeria")
   tags           String        @default("[]") // JSON string list
   notes          String?
@@ -357,6 +360,7 @@ model CrmDeal {
   currency           String    @default("USD")
   stage              String    @default("PROPOSAL") // "PROPOSAL", "DUE_DILIGENCE", "CLOSING", "WON", "LOST"
   probability        Int       @default(60)
+  ownerUserId        String?
   expectedCloseDate  DateTime?
   notes              String?
   createdAt          DateTime  @default(now())

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { CreateCrmClientSchema, formatZodError } from "@/lib/validation/schemas";
+import { ensureCrmSchema } from "@/lib/crm/schema";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    await ensureCrmSchema();
+
+    const userRole = (user.role || "").toUpperCase();
+    const userDept = (user.department || "").toUpperCase();
+    const isExecutiveOrSuper = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
+
     const { searchParams } = new URL(req.url);
     const stage = searchParams.get("stage");
     const category = searchParams.get("category");
     const search = searchParams.get("search")?.toLowerCase().trim();
 
     const where: any = {};
+    if (!isExecutiveOrSuper) {
+      where.AND = [
+        {
+          OR: [
+            { assignedToUserId: user.id },
+            { assignedTo: user.fullName },
+          ],
+        },
+      ];
+    }
     if (stage && stage !== "ALL") {
       where.stage = stage;
     }
@@ -134,7 +151,9 @@ export async function POST(req: NextRequest) {
         location,
         tags: JSON.stringify(tags),
         notes,
-        assignedTo: user.fullName,
+        assignedTo: body.assignedTo || user.fullName,
+        assignedToUserId: body.assignedToUserId || user.id,
+        leadSource: body.leadSource || "DIRECT",
       },
     });
 

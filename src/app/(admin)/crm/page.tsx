@@ -28,6 +28,9 @@ import {
   Layers,
   Sparkles,
   ShieldCheck,
+  FileSpreadsheet,
+  Download,
+  UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -115,7 +118,9 @@ export default function CrmDashboardPage() {
   });
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // Filters
+  // Filters & View Mode
+  const [viewMode, setViewMode] = React.useState<"directory" | "kanban">("directory");
+  const [isImportingLeads, setIsImportingLeads] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedStage, setSelectedStage] = React.useState("ALL");
   const [selectedCategory, setSelectedCategory] = React.useState("ALL");
@@ -423,14 +428,75 @@ export default function CrmDashboardPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-          <a
-            href="/crm-portal"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 text-xs font-semibold transition-colors"
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+          <div className="flex rounded-xl border border-slate-200 dark:border-white/10 p-0.5 bg-slate-100 dark:bg-white/[0.04]">
+            <button
+              type="button"
+              onClick={() => setViewMode("directory")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                viewMode === "directory"
+                  ? "bg-white dark:bg-[#1a1c24] text-slate-900 dark:text-white shadow-2xs"
+                  : "text-slate-500"
+              }`}
+            >
+              Directory
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("kanban")}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                viewMode === "kanban"
+                  ? "bg-white dark:bg-[#1a1c24] text-slate-900 dark:text-white shadow-2xs"
+                  : "text-slate-500"
+              }`}
+            >
+              Kanban Pipeline
+            </button>
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isImportingLeads}
+            onClick={async () => {
+              setIsImportingLeads(true);
+              try {
+                const res = await fetch("/api/crm/import-leads", { method: "POST" });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Failed to import leads");
+                toastSuccess(data.message || "Leads imported from Forms!");
+                fetchClients();
+              } catch (err: any) {
+                toastError(err?.message || "Lead import failed");
+              } finally {
+                setIsImportingLeads(false);
+              }
+            }}
+            className="flex items-center gap-1.5 border-slate-200 dark:border-white/10 text-xs"
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Executive CRM Portal</span>
-          </a>
+            <UploadCloud className="h-3.5 w-3.5 text-red-500" />
+            <span>{isImportingLeads ? "Importing..." : "Import Form Leads"}</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open("/api/crm/export?format=xlsx", "_blank")}
+            className="flex items-center gap-1.5 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs"
+          >
+            <FileSpreadsheet className="h-3.5 w-3.5" />
+            <span>Excel</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open("/api/crm/export?format=pdf", "_blank")}
+            className="flex items-center gap-1.5 border-red-500/30 text-red-600 dark:text-red-400 text-xs"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>PDF</span>
+          </Button>
 
           <Button
             variant="outline"
@@ -439,7 +505,7 @@ export default function CrmDashboardPage() {
             className="flex items-center gap-2 border-slate-200 dark:border-white/10"
           >
             <RefreshCw className="h-4 w-4" />
-            <span>Refresh CRM</span>
+            <span>Refresh</span>
           </Button>
 
           <Button
@@ -448,7 +514,7 @@ export default function CrmDashboardPage() {
             className="flex items-center gap-2 bg-[#ED2618] hover:bg-[#d02013] text-white shadow-sm"
           >
             <Plus className="h-4 w-4" />
-            <span>Onboard Client / Partner</span>
+            <span>Onboard Client</span>
           </Button>
         </div>
       </div>
@@ -571,7 +637,81 @@ export default function CrmDashboardPage() {
         </div>
       </div>
 
-      {/* Clients & Deal Pipeline Table */}
+      {/* Kanban Pipeline Board OR Clients Directory Table */}
+      {viewMode === "kanban" ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3.5">
+          {STAGES.filter((s) => s.id !== "ALL").map((stageObj, stageIdx, arr) => {
+            const stageClients = filteredClients.filter((c) => c.stage === stageObj.id);
+            const stageValue = stageClients.reduce((sum, c) => sum + Number(c.estimatedValue || 0), 0);
+            const nextStage = arr[stageIdx + 1]?.id;
+
+            return (
+              <div
+                key={stageObj.id}
+                className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/70 dark:bg-[#0c0d12] p-3 flex flex-col gap-3 min-h-[360px]"
+              >
+                <div className="flex items-center justify-between border-b border-slate-200/70 dark:border-white/[0.06] pb-2">
+                  <div>
+                    <div className="text-[11px] font-extrabold uppercase tracking-wider text-slate-900 dark:text-white">
+                      {stageObj.label}
+                    </div>
+                    <div className="text-[10px] font-mono text-slate-500">
+                      {formatMoney(stageValue)}
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-white dark:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10">
+                    {stageClients.length}
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 flex-1">
+                  {stageClients.length === 0 ? (
+                    <div className="text-[11px] text-slate-400 text-center py-8 border border-dashed border-slate-200 dark:border-white/10 rounded-xl">
+                      No accounts
+                    </div>
+                  ) : (
+                    stageClients.map((client) => (
+                      <div
+                        key={client.id}
+                        className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#13151d] p-3 shadow-2xs space-y-2 hover:border-red-500/40 transition-colors"
+                      >
+                        <div
+                          onClick={() => setSelectedClient(client)}
+                          className="cursor-pointer"
+                        >
+                          <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                            {client.name}
+                          </div>
+                          <div className="text-[11px] text-slate-500 truncate">
+                            {client.company || client.email}
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-100 dark:border-white/[0.05]">
+                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatMoney(client.estimatedValue)}
+                          </span>
+                          {nextStage && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStage(client.id, nextStage)}
+                              className="inline-flex items-center gap-0.5 text-[10px] font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                              title={`Advance to ${nextStage.replace(/_/g, " ")}`}
+                            >
+                              <span>Advance</span>
+                              <ArrowRight className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+      /* Clients & Deal Pipeline Table */
       <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0c0d12] overflow-hidden shadow-sm">
         {isLoading ? (
           <div className="p-12 text-center">
@@ -697,6 +837,7 @@ export default function CrmDashboardPage() {
           </div>
         )}
       </div>
+      )}
 
       {/* MODAL 1: Onboard Client / Partner */}
       <Modal

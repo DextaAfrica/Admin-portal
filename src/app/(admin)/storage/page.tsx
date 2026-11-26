@@ -74,7 +74,22 @@ export default function StoragePage() {
   const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
   const [selectedAsset, setSelectedAsset] = React.useState<StorageAsset | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
+  const [selectedAssetIds, setSelectedAssetIds] = React.useState<string[]>([]);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const toggleAssetSelect = (id: string) => {
+    setSelectedAssetIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const selectedReclaimBytes = React.useMemo(() => {
+    const idSet = new Set(selectedAssetIds);
+    return assets
+      .filter((a) => idSet.has(a.id))
+      .reduce((sum, a) => sum + Number(a.fileSize || 0), 0);
+  }, [assets, selectedAssetIds]);
 
   const fetchAssets = React.useCallback(async () => {
     setIsLoading(true);
@@ -148,6 +163,36 @@ export default function StoragePage() {
         fetchAssets();
       } else {
         toastError("Purge Notice", data.error || "Could not remove this file.");
+      }
+    } catch {
+      toastError("Connection Issue", "Please verify network connection and try again.");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedAssetIds.length === 0) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch("/api/storage/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assetIds: selectedAssetIds }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toastSuccess(
+          "Storage Space Reclaimed",
+          `Purged ${data.deletedCount || selectedAssetIds.length} file(s) and freed ${formatBytes(
+            data.reclaimedBytes || selectedReclaimBytes
+          )}.`
+        );
+        setSelectedAssetIds([]);
+        setIsBulkDeleteOpen(false);
+        fetchAssets();
+      } else {
+        toastError("Authorization Notice", data.error || "Could not delete selected files.");
       }
     } catch {
       toastError("Connection Issue", "Please verify network connection and try again.");
@@ -386,6 +431,38 @@ export default function StoragePage() {
         </div>
       </div>
 
+      {/* Bulk Selection Cleanup Bar */}
+      {selectedAssetIds.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50/90 dark:bg-red-950/20 px-4 py-3 text-xs">
+          <div className="flex items-center gap-2 font-bold text-red-700 dark:text-red-300">
+            <Trash2 className="h-4 w-4" />
+            <span>
+              {selectedAssetIds.length} file(s) selected ({formatBytes(selectedReclaimBytes)} reclaimable)
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() => setSelectedAssetIds([])}
+              className="text-xs"
+            >
+              Clear Selection
+            </Button>
+            <Button
+              type="button"
+              size="xs"
+              variant="danger"
+              onClick={() => setIsBulkDeleteOpen(true)}
+              leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+            >
+              Delete Selected &amp; Free Space
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* 5. Files Display (Grid vs List) */}
       {assets.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 dark:border-white/10 p-12 text-center bg-white dark:bg-[#121318]">
@@ -406,8 +483,19 @@ export default function StoragePage() {
             return (
               <div
                 key={asset.id}
-                className="group relative flex flex-col rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-[#121318] overflow-hidden hover:border-red-500/40 hover:shadow-md transition-all"
+                className={`group relative flex flex-col rounded-2xl border bg-white dark:bg-[#121318] overflow-hidden hover:border-red-500/40 hover:shadow-md transition-all ${
+                  selectedAssetIds.includes(asset.id)
+                    ? "border-red-500 ring-2 ring-red-500/20"
+                    : "border-slate-200/80 dark:border-white/10"
+                }`}
               >
+                <input
+                  type="checkbox"
+                  checked={selectedAssetIds.includes(asset.id)}
+                  onChange={() => toggleAssetSelect(asset.id)}
+                  title="Select file for bulk cleanup"
+                  className="absolute top-2.5 left-2.5 z-10 h-4 w-4 rounded border-slate-300 accent-red-600 cursor-pointer"
+                />
                 {/* Thumbnail Preview Area */}
                 <div
                   onClick={() => setSelectedAsset(asset)}
@@ -718,6 +806,42 @@ export default function StoragePage() {
       >
         <p className="text-xs text-slate-600 dark:text-slate-400">
           Are you sure you want to delete this file? This will permanently erase the object from Cloudflare R2 / S3 storage and cannot be undone.
+        </p>
+      </Modal>
+
+      {/* Bulk Delete & Space Reclamation Modal */}
+      <Modal
+        isOpen={isBulkDeleteOpen}
+        onClose={() => !isDeleting && setIsBulkDeleteOpen(false)}
+        title={`Delete ${selectedAssetIds.length} Selected File(s)?`}
+        description={`Reclaim ${formatBytes(selectedReclaimBytes)} from your Cloudflare R2 / S3 storage vault`}
+        maxWidth="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2.5">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={isDeleting}
+              onClick={() => setIsBulkDeleteOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              isLoading={isDeleting}
+              onClick={handleBulkDelete}
+              leftIcon={<Trash2 className="h-4 w-4" />}
+            >
+              Purge &amp; Reclaim Space
+            </Button>
+          </div>
+        }
+      >
+        <p className="text-xs text-slate-600 dark:text-slate-400">
+          Only files you uploaded (or all files if you are an Administrator) will be deleted. Unauthorized deletion attempts are blocked and logged.
         </p>
       </Modal>
     </div>

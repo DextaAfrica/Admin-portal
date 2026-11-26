@@ -268,21 +268,35 @@ export async function getPresignedDownloadUrl({
 }
 
 export async function deleteS3Asset(key: string): Promise<boolean> {
-  const cleanKey = key.replace(/^\/+/, "");
+  const cleanKey = key.replace(/^\/+/, "").replace(/\.\./g, "");
+  if (!cleanKey) return false;
 
   if (s3Client) {
-    const command = new DeleteObjectCommand({
-      Bucket: activeBucketName,
-      Key: cleanKey,
-    });
-    await s3Client.send(command);
-    return true;
+    try {
+      const command = new DeleteObjectCommand({
+        Bucket: activeBucketName,
+        Key: cleanKey,
+      });
+      await s3Client.send(command);
+    } catch (err) {
+      console.warn("[deleteS3Asset R2/S3 warning]:", err);
+    }
   }
 
-  // Delete local file if exists
-  const localPath = path.join(process.cwd(), "public", "uploads", cleanKey);
-  if (fs.existsSync(localPath)) {
-    fs.unlinkSync(localPath);
+  // Also clean up any local fallback files in public/uploads or uploads
+  const candidateRoots = [
+    path.join(process.cwd(), "public", "uploads"),
+    path.join(process.cwd(), "uploads"),
+  ];
+  for (const root of candidateRoots) {
+    const resolved = path.resolve(root, cleanKey);
+    if (resolved.startsWith(root + path.sep) && fs.existsSync(resolved)) {
+      try {
+        fs.unlinkSync(resolved);
+      } catch (e) {
+        console.warn("[deleteS3Asset local unlink warning]:", e);
+      }
+    }
   }
   return true;
 }

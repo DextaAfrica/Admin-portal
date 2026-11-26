@@ -202,6 +202,9 @@ export default function FormsManagementPage() {
   const [isUploadingCover, setIsUploadingCover] = React.useState(false);
   const [status, setStatus] = React.useState<"active" | "closed" | "draft">("active");
   const [qrModalForm, setQrModalForm] = React.useState<FormItem | null>(null);
+  const [deleteConfirmForm, setDeleteConfirmForm] = React.useState<FormItem | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = React.useState("");
+  const [isDeletingForm, setIsDeletingForm] = React.useState(false);
 
   // Custom Fields Builder
   const [customFields, setCustomFields] = React.useState<CustomFieldDef[]>([]);
@@ -522,18 +525,31 @@ export default function FormsManagementPage() {
     }
   };
 
-  const handleDelete = async (id: string, formTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${formTitle}" and all its recorded responses?`)) return;
+  const handleDelete = (item: FormItem) => {
+    setDeleteConfirmInput("");
+    setDeleteConfirmForm(item);
+  };
 
+  const handleConfirmDeleteForm = async () => {
+    if (!deleteConfirmForm) return;
+    if (deleteConfirmInput.trim() !== deleteConfirmForm.slug && deleteConfirmInput.trim().toUpperCase() !== "DELETE") {
+      toastError(`Type "${deleteConfirmForm.slug}" or "DELETE" to confirm.`);
+      return;
+    }
+    setIsDeletingForm(true);
     try {
-      const res = await fetch(`/api/forms/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/forms/${deleteConfirmForm.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete form");
 
-      toastSuccess("Form and responses deleted");
+      toastSuccess("Form and all associated responses permanently deleted");
+      setDeleteConfirmForm(null);
+      setDeleteConfirmInput("");
       fetchForms();
     } catch (err: any) {
       toastError(err.message || "Failed to delete form");
+    } finally {
+      setIsDeletingForm(false);
     }
   };
 
@@ -1049,7 +1065,7 @@ export default function FormsManagementPage() {
                       </button>
 
                       <button
-                        onClick={() => handleDelete(item.id, item.title)}
+                        onClick={() => handleDelete(item)}
                         className="p-1 text-neutral-400 hover:text-red-400 transition-colors"
                         title="Delete registration portal"
                       >
@@ -2038,6 +2054,68 @@ export default function FormsManagementPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Danger-Zone Typed Confirmation Modal for Form Deletion */}
+      <Modal
+        isOpen={Boolean(deleteConfirmForm)}
+        onClose={() => !isDeletingForm && setDeleteConfirmForm(null)}
+        title="Permanently Delete Registration Form"
+        description="This action cannot be undone. All submitted responses and analytics for this link will be permanently purged."
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-2 text-xs">
+          <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 space-y-1">
+            <div className="font-bold text-red-400">
+              Target Form: {deleteConfirmForm?.title}
+            </div>
+            <div className="font-mono text-[11px] text-neutral-300">
+              Slug: {deleteConfirmForm?.slug} • {deleteConfirmForm?.submissionsCount || 0} recorded submission(s)
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-neutral-300 mb-1.5">
+              Type <span className="font-mono text-red-400">{deleteConfirmForm?.slug}</span> or{" "}
+              <span className="font-mono text-red-400">DELETE</span> to authorize deletion:
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder={deleteConfirmForm?.slug || "DELETE"}
+              className="w-full px-3 py-2 bg-[#111624] border border-neutral-800 rounded-xl text-white font-mono focus:outline-none focus:border-red-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-neutral-800">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isDeletingForm}
+              onClick={() => setDeleteConfirmForm(null)}
+              className="border-neutral-800 text-neutral-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              isLoading={isDeletingForm}
+              disabled={
+                !deleteConfirmForm ||
+                (deleteConfirmInput.trim() !== deleteConfirmForm.slug &&
+                  deleteConfirmInput.trim().toUpperCase() !== "DELETE")
+              }
+              onClick={handleConfirmDeleteForm}
+              className="bg-red-600 hover:bg-red-500 text-white font-bold"
+              leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+            >
+              Permanently Delete Form
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

@@ -162,6 +162,7 @@ export interface SessionUser {
   jobTitle?: string | null;
   status: string;
   twoFactorEnabled: boolean;
+  primaryWorkspace?: string | null;
   assignedModules?: string | null;
   signatureUrl?: string | null;
 }
@@ -218,6 +219,7 @@ export async function getCurrentSession(): Promise<{
             department: true,
             jobTitle: true,
             seniorityLevel: true,
+            primaryWorkspace: true,
             assignedModules: true,
             signatureUrl: true,
             status: true,

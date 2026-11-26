@@ -39,6 +39,20 @@ export default async function DashboardPage() {
   const userDept = (user?.department || "").toUpperCase();
   const userRole = (user?.role || "").toUpperCase();
   const isSuperAdmin = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
+  const primaryWorkspace = ((user as any)?.primaryWorkspace || "").toLowerCase();
+
+  // STRICT PER-USER ISOLATED WORKSPACE ROUTING (No Shared Dashboard)
+  if (!isSuperAdmin) {
+    if (primaryWorkspace === "crm") {
+      redirect("/crm");
+    }
+    if (primaryWorkspace === "clan") {
+      redirect("/clan");
+    }
+    if (primaryWorkspace === "forms") {
+      redirect("/forms");
+    }
+  }
 
   // STRICT DOMAIN ISOLATION ARCHITECTURE:
   // Non-IT, non-executive users (Operations, Finance, HR) accessing admin.* must be routed to ops.* via SSO ticket

@@ -4,11 +4,14 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { validateCorporateEmail, validatePhoneNumber } from "@/lib/validation/contact";
+import { ensureUserWorkspaceSchema } from "@/lib/auth/user-schema";
 
 export async function GET() {
   try {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    await ensureUserWorkspaceSchema();
 
     const userRole = (user.role || "").toUpperCase();
     const userDept = (user.department || "").toUpperCase();
@@ -31,6 +34,8 @@ export async function GET() {
         department: true,
         jobTitle: true,
         status: true,
+        primaryWorkspace: true,
+        assignedModules: true,
         twoFactorEnabled: true,
         lastLoginAt: true,
         createdAt: true,
@@ -62,7 +67,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const { email, fullName, password, role, department, seniorityLevel, jobTitle, phone } = await req.json();
+    await ensureUserWorkspaceSchema();
+    const {
+      email,
+      fullName,
+      password,
+      role,
+      department,
+      seniorityLevel,
+      jobTitle,
+      phone,
+      primaryWorkspace,
+      assignedModules,
+    } = await req.json();
 
     if (!email || !fullName || !password) {
       return NextResponse.json(
@@ -113,6 +130,12 @@ export async function POST(req: NextRequest) {
         department: (department || "OPERATIONS").toUpperCase(),
         seniorityLevel: (seniorityLevel || "SENIOR").toUpperCase(),
         jobTitle: jobTitle || null,
+        primaryWorkspace: primaryWorkspace || "operations",
+        assignedModules: Array.isArray(assignedModules)
+          ? JSON.stringify(assignedModules)
+          : typeof assignedModules === "string"
+          ? assignedModules
+          : JSON.stringify([primaryWorkspace || "operations", "storage", "personal"]),
         status: "ACTIVE",
         twoFactorEnabled: false,
       },

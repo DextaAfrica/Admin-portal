@@ -122,11 +122,56 @@ export async function DELETE(
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const userRole = (user.role || "").toUpperCase();
+    const userDept = (user.department || "").toUpperCase();
+    const canDeleteForm =
+      userRole === "SUPER_ADMIN" ||
+      userRole === "ADMIN" ||
+      userRole === "IT_ADMIN" ||
+      userDept === "IT" ||
+      userDept === "EXECUTIVE";
+
+    if (!canDeleteForm) {
+      return NextResponse.json(
+        { error: "Forbidden: Only authorized Administrators can permanently delete registration forms." },
+        { status: 403 }
+      );
+    }
+
     await ensureCustomFormsSchema();
     const { id } = await params;
+
+    const existing = await prisma.customForm.findUnique({
+      where: { id },
+      include: { _count: { select: { submissions: true } } },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
+
     await prisma.customForm.delete({ where: { id } });
 
-    return NextResponse.json({ success: true, message: "Form deleted" });
+    try {
+      const { logAuditEvent } = await import("@/lib/auth/audit");
+      await logAuditEvent({
+        actorId: user.id,
+        actorEmail: user.email,
+        action: "FORM_DELETED",
+        entity: "CustomForm",
+        entityId: id,
+        ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
+        userAgent: req.headers.get("user-agent"),
+        metadata: {
+          title: existing.title,
+          slug: existing.slug,
+          submissionsCount: existing._count.submissions,
+        },
+      });
+    } catch (auditErr) {
+      console.warn("[Form Delete Audit Warning]:", auditErr);
+    }
+
+    return NextResponse.json({ success: true, message: "Form and associated submissions permanently deleted" });
   } catch (err: any) {
     console.error("Form delete error:", err);
     return NextResponse.json({ error: "Failed to delete form" }, { status: 500 });
