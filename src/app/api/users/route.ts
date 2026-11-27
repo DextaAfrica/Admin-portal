@@ -119,6 +119,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const workspaceKey = String(primaryWorkspace || "operations").toLowerCase();
+    let resolvedDepartment = (department || "OPERATIONS").toUpperCase();
+    if (workspaceKey === "crm" || workspaceKey === "clan" || workspaceKey === "operations") {
+      if (resolvedDepartment === "IT") resolvedDepartment = "OPERATIONS";
+    } else if (workspaceKey === "finance") {
+      resolvedDepartment = "FINANCE";
+    } else if (workspaceKey === "hr") {
+      resolvedDepartment = "HR";
+    } else if (workspaceKey === "systems") {
+      resolvedDepartment = "IT";
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const newUser = await prisma.user.create({
       data: {
@@ -127,15 +139,15 @@ export async function POST(req: NextRequest) {
         passwordHash,
         phone: sanitizedPhone,
         role: role || "ADMIN",
-        department: (department || "OPERATIONS").toUpperCase(),
+        department: resolvedDepartment,
         seniorityLevel: (seniorityLevel || "SENIOR").toUpperCase(),
         jobTitle: jobTitle || null,
-        primaryWorkspace: primaryWorkspace || "operations",
+        primaryWorkspace: workspaceKey,
         assignedModules: Array.isArray(assignedModules)
           ? JSON.stringify(assignedModules)
           : typeof assignedModules === "string"
           ? assignedModules
-          : JSON.stringify([primaryWorkspace || "operations", "storage", "personal"]),
+          : JSON.stringify([workspaceKey, "storage", "personal"]),
         status: "ACTIVE",
         twoFactorEnabled: false,
       },
