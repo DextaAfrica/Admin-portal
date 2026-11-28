@@ -417,6 +417,32 @@ export const backendApi = {
       backendFetch<{ data: any }>("/admin/visitors/analytics", {
         timeoutMs: 6000,
       }),
+    getReportSchedule: () =>
+      backendFetch<{ data: any }>("/admin/visitors/report-schedule", {
+        timeoutMs: 5000,
+      }),
+    updateReportSchedule: (payload: Record<string, any>, adminEmail?: string) =>
+      backendFetch<{ data: any }>("/admin/visitors/report-schedule", {
+        method: "PUT",
+        body: JSON.stringify(payload),
+        adminEmail,
+        timeoutMs: 6000,
+      }),
+    triggerReport: (adminEmail?: string) =>
+      backendFetch<{ data: any }>("/admin/visitors/report-schedule/trigger", {
+        method: "POST",
+        adminEmail,
+        timeoutMs: 10000,
+      }),
+    listReportDeliveries: (params: { page?: number; perPage?: number } = {}) => {
+      const sp = new URLSearchParams();
+      if (params.page) sp.set("page", String(params.page));
+      if (params.perPage) sp.set("perPage", String(params.perPage));
+      const qs = sp.toString() ? `?${sp.toString()}` : "";
+      return backendFetch<PaginatedResponse<any>>(`/admin/visitors/report-deliveries${qs}`, {
+        timeoutMs: 6000,
+      });
+    },
   },
 
   forms: {
