@@ -754,4 +754,63 @@ model ProductionReleaseRequest {
   @@index([createdAt])
 }
 
+// =============================================================================
+// EXECUTIVE DIRECTIVES & GM OPERATIONAL TASK COMMAND (STEALTH MD OVERSIGHT)
+// =============================================================================
+
+model ExecutiveDirective {
+  id               String    @id @default(uuid())
+  reference        String    @unique // e.g. "DIR-2026-4812"
+  title            String
+  instruction      String
+  targetDepartment String    // "FINANCE", "OPERATIONS", "HR", "IT", "EXECUTIVE", "ALL"
+  targetUserId     String?
+  targetUserName   String?
+  priority         String    @default("HIGH") // "CRITICAL", "HIGH", "NORMAL"
+  status           String    @default("ISSUED") // "ISSUED", "ACKNOWLEDGED", "IN_PROGRESS", "COMPLETED"
+  dueDate          DateTime?
+  issuedById       String
+  issuedByName     String
+  issuedByEmail    String
+  acknowledgedBy   String?
+  acknowledgedAt   DateTime?
+  completionNotes  String?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([targetDepartment])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model DepartmentTask {
+  id               String    @id @default(uuid())
+  reference        String    @unique // e.g. "TSK-2026-3091"
+  title            String
+  description      String
+  department       String    // "OPERATIONS", "FINANCE", "HR", "IT", "CRM", "CLAN"
+  assigneeId       String?
+  assigneeName     String?
+  assigneeEmail    String?
+  assignedById     String
+  assignedByName   String
+  assignedByRole   String    // "GM", "MD", "EXECUTIVE", "ADMIN"
+  priority         String    @default("NORMAL") // "URGENT", "HIGH", "NORMAL", "LOW"
+  status           String    @default("PENDING") // "PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"
+  dueDate          DateTime?
+  completionNotes  String?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([department])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([assignedByRole])
+  @@index([createdAt])
+}
+
+
 

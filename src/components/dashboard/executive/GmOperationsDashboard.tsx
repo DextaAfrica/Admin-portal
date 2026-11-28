@@ -30,7 +30,22 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
+
+export interface GmTaskItem {
+  id: string;
+  reference: string;
+  title: string;
+  description: string;
+  department: string;
+  assigneeName: string;
+  assignedByName: string;
+  priority: string;
+  status: string;
+  dueDate: string | null;
+  createdAt: string;
+}
 
 export interface GmOperationsDashboardProps {
   currentUser: {
@@ -42,9 +57,9 @@ export interface GmOperationsDashboardProps {
     jobTitle?: string | null;
   };
   metrics: {
-    slaComplianceRate: number; // e.g. 96.4%
+    slaComplianceRate: number;
     totalClearancesPending: number;
-    bottlenecksCount: number; // requests pending > 24h
+    bottlenecksCount: number;
     avgResolutionHours: number;
     workforceOnDuty: number;
     activeLeavesCount: number;
@@ -56,7 +71,7 @@ export interface GmOperationsDashboardProps {
       toDepartment: string;
       requesterName: string;
       amount?: number | null;
-      priority: string; // URGENT, HIGH, MEDIUM, LOW
+      priority: string;
       createdAt: string;
       hoursPending: number;
       isBottleneck: boolean;
@@ -80,6 +95,13 @@ export interface GmOperationsDashboardProps {
       leadEngineer?: string | null;
     }[];
     systemHealthScore: number;
+    tasks?: GmTaskItem[];
+    assignableStaff?: {
+      id: string;
+      fullName: string;
+      department: string;
+      jobTitle?: string | null;
+    }[];
   };
 }
 
@@ -91,6 +113,67 @@ export function GmOperationsDashboard({
   const [activeFilter, setActiveFilter] = React.useState<"ALL" | "BOTTLENECKS" | "URGENT">("ALL");
   const [clearingId, setClearingId] = React.useState<string | null>(null);
   const [clearedIds, setClearedIds] = React.useState<Set<string>>(new Set());
+
+  // GM Operational Task Assignment State
+  const [tasksList, setTasksList] = React.useState<GmTaskItem[]>(metrics.tasks || []);
+  const [taskModalOpen, setTaskModalOpen] = React.useState(false);
+  const [isAssigningTask, setIsAssigningTask] = React.useState(false);
+  const [taskForm, setTaskForm] = React.useState({
+    title: "",
+    description: "",
+    department: "OPERATIONS",
+    assigneeId: "",
+    priority: "HIGH",
+    dueDate: "",
+  });
+
+  const handleAssignTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!taskForm.title.trim() || !taskForm.description.trim()) {
+      toastError("Task title and description are required.");
+      return;
+    }
+
+    setIsAssigningTask(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(taskForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to assign task");
+
+      const created: GmTaskItem = {
+        id: data.task.id,
+        reference: data.task.reference,
+        title: data.task.title,
+        description: data.task.description,
+        department: data.task.department,
+        assigneeName: data.task.assigneeName || `${data.task.department} Team`,
+        assignedByName: data.task.assignedByName,
+        priority: data.task.priority,
+        status: data.task.status,
+        dueDate: data.task.dueDate || null,
+        createdAt: data.task.createdAt,
+      };
+      setTasksList((prev) => [created, ...prev]);
+      setTaskModalOpen(false);
+      setTaskForm({
+        title: "",
+        description: "",
+        department: "OPERATIONS",
+        assigneeId: "",
+        priority: "HIGH",
+        dueDate: "",
+      });
+      toastSuccess("Operational Task Assigned", `${created.reference} dispatched to ${created.assigneeName}.`);
+    } catch (err: any) {
+      toastError(err.message || "Error assigning task");
+    } finally {
+      setIsAssigningTask(false);
+    }
+  };
 
   const handleInstantClear = async (clearanceId: string, action: "APPROVE" | "REJECT") => {
     setClearingId(clearanceId);
@@ -158,8 +241,16 @@ export function GmOperationsDashboard({
               {metrics.slaComplianceRate.toFixed(1)}% On-Time
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setTaskModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white font-semibold text-xs transition-all shadow-lg shadow-red-600/20 cursor-pointer"
+          >
+            <Zap className="w-4 h-4" />
+            <span>Assign Task</span>
+          </button>
           <Link
-            href="/clearances"
+            href="/dashboard?tab=approvals"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-lg shadow-blue-600/20 hover:scale-[1.02]"
           >
             <span>Clearance Desk</span>
@@ -409,6 +500,68 @@ export function GmOperationsDashboard({
             )}
           </div>
 
+          {/* Operational Task Delegation Board */}
+          <div className="p-6 rounded-2xl bg-[#0c101d] border border-neutral-800 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-blue-400" />
+                  <span>GM Task Delegation &amp; Execution Board</span>
+                </h3>
+                <p className="text-xs text-neutral-400 mt-0.5">
+                  Operational tasks assigned to staff and departments with SLA tracking.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTaskModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                + Assign Task
+              </button>
+            </div>
+
+            {tasksList.length === 0 ? (
+              <div className="p-6 text-center rounded-xl bg-[#111728] border border-neutral-800/80 text-xs text-neutral-400">
+                No operational tasks assigned yet. Click &ldquo;+ Assign Task&rdquo; to delegate work to a staff member or department.
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {tasksList.slice(0, 8).map((t) => (
+                  <div
+                    key={t.id}
+                    className="p-3.5 rounded-xl bg-[#111728] border border-neutral-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-800 text-neutral-300 font-bold">
+                          {t.reference}
+                        </span>
+                        <span className="text-xs font-bold text-white truncate">{t.title}</span>
+                      </div>
+                      <div className="text-[11px] text-neutral-400">
+                        Assigned to <strong className="text-neutral-200">{t.assigneeName}</strong> ({t.department}) &bull; Priority: {t.priority}
+                      </div>
+                    </div>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded self-start sm:self-center ${
+                        t.status === "COMPLETED"
+                          ? "bg-emerald-500/15 text-emerald-400"
+                          : t.status === "OVERDUE"
+                          ? "bg-red-500/15 text-red-400"
+                          : t.status === "IN_PROGRESS"
+                          ? "bg-blue-500/15 text-blue-400"
+                          : "bg-amber-500/15 text-amber-400"
+                      }`}
+                    >
+                      {t.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Infrastructure Concession Operational Milestones */}
           <div className="p-6 rounded-2xl bg-[#0c101d] border border-neutral-800 shadow-xl">
             <div className="flex items-center justify-between mb-4">
@@ -537,7 +690,7 @@ export function GmOperationsDashboard({
             </p>
             <div className="pt-2 flex flex-col gap-2">
               <Link
-                href="/audit"
+                href="/audit-logs"
                 className="w-full text-center py-2 rounded-xl bg-neutral-800/80 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold transition-all"
               >
                 Inspect Operations Audit Trail
@@ -546,6 +699,117 @@ export function GmOperationsDashboard({
           </div>
         </div>
       </div>
+
+      {/* Assign Operational Task Modal */}
+      <Modal
+        isOpen={taskModalOpen}
+        onClose={() => setTaskModalOpen(false)}
+        title="Assign Operational Task"
+        description="Delegate a tracked operational task to a specific staff member or department."
+      >
+        <form onSubmit={handleAssignTask} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Department
+              </label>
+              <select
+                value={taskForm.department}
+                onChange={(e) => setTaskForm({ ...taskForm, department: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121622] px-3 py-2 text-xs font-semibold"
+              >
+                <option value="OPERATIONS">Operations</option>
+                <option value="FINANCE">Finance</option>
+                <option value="HR">People &amp; HR</option>
+                <option value="CRM">CRM / Sales</option>
+                <option value="CLAN">Clan Academy</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Priority
+              </label>
+              <select
+                value={taskForm.priority}
+                onChange={(e) => setTaskForm({ ...taskForm, priority: e.target.value })}
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121622] px-3 py-2 text-xs font-semibold"
+              >
+                <option value="URGENT">URGENT</option>
+                <option value="HIGH">HIGH</option>
+                <option value="NORMAL">NORMAL</option>
+                <option value="LOW">LOW</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Assign To Staff Member (Optional)
+            </label>
+            <select
+              value={taskForm.assigneeId}
+              onChange={(e) => setTaskForm({ ...taskForm, assigneeId: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121622] px-3 py-2 text-xs"
+            >
+              <option value="">Entire Selected Department</option>
+              {(metrics.assignableStaff || []).map((staff) => (
+                <option key={staff.id} value={staff.id}>
+                  {staff.fullName} ({staff.department}{staff.jobTitle ? ` • ${staff.jobTitle}` : ""})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Task Title
+            </label>
+            <input
+              type="text"
+              required
+              placeholder="e.g., Complete Lekki Phase 2 Site Inspection"
+              value={taskForm.title}
+              onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121622] px-3 py-2 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Task Instructions
+            </label>
+            <textarea
+              required
+              rows={3}
+              placeholder="Provide clear deliverables and expectations..."
+              value={taskForm.description}
+              onChange={(e) => setTaskForm({ ...taskForm, description: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121622] px-3 py-2 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Due Date (Optional)
+            </label>
+            <input
+              type="date"
+              value={taskForm.dueDate}
+              onChange={(e) => setTaskForm({ ...taskForm, dueDate: e.target.value })}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#121622] px-3 py-2 text-xs"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" size="sm" onClick={() => setTaskModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={isAssigningTask} className="bg-[#ED2618] hover:bg-[#d01f12] text-white font-bold">
+              {isAssigningTask ? "Assigning..." : "Assign Operational Task"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

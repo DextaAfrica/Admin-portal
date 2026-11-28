@@ -41,6 +41,19 @@ export default async function DashboardPage() {
   const isSuperAdmin = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
   const primaryWorkspace = ((user as any)?.primaryWorkspace || "").toLowerCase();
 
+  // ─── PRIVACY CLEARANCE ────────────────────────────────────────────────────
+  // Only SUPER_ADMIN with EXECUTIVE department, OR users with "users" module,
+  // may see org-wide headcount and staff profiles.
+  const assignedModulesList: string[] = (() => {
+    try {
+      const raw = (user as any)?.assignedModules;
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  })();
+  const hasUsersModule = assignedModulesList.includes("users");
+  const canViewTeamData =
+    (isSuperAdmin && userDept === "EXECUTIVE") || hasUsersModule;
+
   // STRICT PER-USER ISOLATED WORKSPACE ROUTING (No Shared Dashboard)
   if (!isSuperAdmin) {
     if (primaryWorkspace === "crm") {
@@ -163,8 +176,14 @@ export default async function DashboardPage() {
       disbAgg,
       subCount,
     ] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { twoFactorEnabled: true } }),
+      // User count: only for Executive SUPER_ADMIN or users with "users" module
+      canViewTeamData
+        ? prisma.user.count()
+        : Promise.resolve(0),
+      // MFA count: same gate
+      canViewTeamData
+        ? prisma.user.count({ where: { twoFactorEnabled: true } })
+        : Promise.resolve(0),
       prisma.storageAsset.aggregate({
         _sum: { fileSize: true },
         _count: { id: true },
@@ -406,6 +425,7 @@ export default async function DashboardPage() {
       {/* Unified Executive & Operations Command Workspace */}
       <DepartmentDashboardView
         currentUser={currentUser}
+        canViewTeamData={canViewTeamData}
         initialPlatform={initialPlatform}
         initialTab={initialTab}
         portfolioItems={portfolioItems}

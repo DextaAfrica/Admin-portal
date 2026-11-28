@@ -18,6 +18,10 @@ export async function GET() {
     const isSuperAdmin = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
     const isIT = userDept === "IT";
 
+    // Privacy gate: IT admins without EXECUTIVE clearance may provision accounts
+    // but cannot see personal staff data (email, phone, login history)
+    const isExecutiveSuperAdmin = isSuperAdmin && userDept === "EXECUTIVE";
+
     if (!isSuperAdmin && !isIT) {
       return NextResponse.json(
         { error: "Access Denied: Team Member Management is restricted to Systems IT Governance and Executive Directorate." },
@@ -46,9 +50,27 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    // Privacy: strip / mask personal data based on clearance level
+    // Executive SUPER_ADMIN → full data. IT Admin → masked email, no timestamps.
     const safeUsers = users.map((u: any) => ({
-      ...u,
+      id: u.id,
+      fullName: u.fullName,
+      role: u.role,
+      department: u.department,
+      jobTitle: u.jobTitle,
+      status: u.status,
+      primaryWorkspace: u.primaryWorkspace,
+      assignedModules: u.assignedModules,
+      twoFactorEnabled: u.twoFactorEnabled,
       seniorityLevel: u.seniorityLevel || "SENIOR",
+      _count: u._count,
+      email: isExecutiveSuperAdmin
+        ? u.email
+        : u.email
+        ? `${u.email.charAt(0)}***@${u.email.split("@")[1] || "dextaafrica.com"}`
+        : null,
+      lastLoginAt: isExecutiveSuperAdmin ? u.lastLoginAt : null,
+      createdAt: isExecutiveSuperAdmin ? u.createdAt : null,
     }));
 
     return NextResponse.json({ users: safeUsers });

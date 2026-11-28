@@ -43,6 +43,20 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const userRole = (user.role || "").toUpperCase();
+    const userDept = (user.department || "").toUpperCase();
+    const isAuthorized =
+      userDept === "IT" ||
+      userDept === "EXECUTIVE" ||
+      userRole === "SUPER_ADMIN";
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: "Forbidden: Account recovery & credential tickets are restricted to Systems IT & Executive." },
+        { status: 403 }
+      );
+    }
+
     await ensureInitialEnterpriseData();
 
     const status = searchParams.get("status");
@@ -172,6 +186,20 @@ export async function PATCH(req: NextRequest) {
     const { user } = await getCurrentSession();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userRole = (user.role || "").toUpperCase();
+    const userDept = (user.department || "").toUpperCase();
+    const isAuthorized =
+      userDept === "IT" ||
+      userDept === "EXECUTIVE" ||
+      userRole === "SUPER_ADMIN";
+
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: "Forbidden: Account recovery & credential tickets are restricted to Systems IT & Executive." },
+        { status: 403 }
+      );
     }
 
     const { id, status, itNotes, newPassword } = await req.json();

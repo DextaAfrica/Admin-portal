@@ -333,6 +333,14 @@ export function Sidebar({
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [activeTabSearch, setActiveTabSearch] = React.useState<string>("");
+  // Track current hostname for SUPER_ADMIN portal routing
+  const [currentHost, setCurrentHost] = React.useState<string>("");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentHost(window.location.hostname.toLowerCase());
+    }
+  }, []);
 
   // Determine portal STRICTLY from authenticated account department & role
   // Zero dropdown switcher; zero localStorage manipulation.
@@ -341,8 +349,15 @@ export function Sidebar({
   const workspace = (user?.primaryWorkspace || "").toLowerCase();
 
   const activePortal: PortalType = React.useMemo(() => {
+    const isAdminHost =
+      currentHost.startsWith("admin.") ||
+      currentHost.includes("admin.dextaafrica") ||
+      currentHost.includes("admin.localhost");
+
     if (role === "SUPER_ADMIN" || dept === "EXECUTIVE") {
-      return "executive";
+      // SUPER_ADMIN on admin.* → Systems IT portal (not Executive cockpit)
+      // SUPER_ADMIN on ops.* or root → Executive cockpit
+      return isAdminHost ? "systems" : "executive";
     }
     if (workspace === "crm") return "crm";
     if (workspace === "clan") return "clan";
@@ -357,7 +372,7 @@ export function Sidebar({
     }
     // Operations Manager & Operations Fleet
     return "operations";
-  }, [dept, role, workspace]);
+  }, [dept, role, workspace, currentHost]);
 
   // Sync activeTab from URL search parameters (?tab=...)
   React.useEffect(() => {
