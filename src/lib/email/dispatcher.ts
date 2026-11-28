@@ -25,11 +25,19 @@ export const emailTransporter = isEmailConfigured
         port: smtpPort,
         secure: false,
         ignoreTLS: true,
+        pool: true,
+        maxConnections: 3,
+        maxMessages: 50,
       })
     : nodemailer.createTransport({
         host: smtpHost,
         port: smtpPort,
         secure: smtpPort === 465,
+        pool: true,
+        maxConnections: 3,
+        maxMessages: 50,
+        rateDelta: 1000,
+        rateLimit: 5,
         auth: {
           user: smtpUser,
           pass: smtpPass,
@@ -67,10 +75,12 @@ export async function sendEmail({
   to,
   subject,
   html,
+  unsubscribeUrl,
 }: {
   to: string | string[];
   subject: string;
   html: string;
+  unsubscribeUrl?: string;
 }): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const recipients = Array.isArray(to) ? to.join(", ") : to;
 
@@ -82,11 +92,17 @@ export async function sendEmail({
 
   try {
     const finalHtml = ensureAbsoluteEmailUrls(html);
+    const headers: Record<string, string> = {};
+    if (unsubscribeUrl) {
+      headers["List-Unsubscribe"] = `<${unsubscribeUrl}>`;
+      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+    }
     const info = await emailTransporter.sendMail({
       from: emailFrom,
       to: recipients,
       subject,
       html: finalHtml,
+      headers,
     });
     console.log(`[Email Dispatcher] Dispatched email to "${recipients}" via SMTP on ${smtpHost}:${smtpPort} (Message ID: ${info.messageId})`);
     return { success: true, messageId: info.messageId };

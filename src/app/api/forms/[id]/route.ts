@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
+import { logAuditEvent } from "@/lib/auth/audit";
+import { backendApi } from "@/lib/backend-api";
 import { prisma } from "@/lib/prisma";
 import { ensureCustomFormsSchema } from "@/lib/forms/schema";
 
@@ -64,6 +66,12 @@ export async function PUT(
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     await ensureCustomFormsSchema();
+    if (user.role === "AUDITOR") {
+      return NextResponse.json(
+        { error: "Reviewer (AUDITOR) role has read-only permissions." },
+        { status: 403 }
+      );
+    }
     const { id } = await params;
     const body = await req.json();
 
@@ -107,6 +115,37 @@ export async function PUT(
       },
     });
 
+    backendApi.forms
+      .update(
+        updated.id,
+        {
+          slug: updated.slug,
+          title: updated.title,
+          description: updated.description,
+          formType: updated.formType,
+          status: updated.status,
+          coverImageUrl: updated.coverImageUrl,
+          eventDate: updated.eventDate?.toISOString() || null,
+          eventLocation: updated.eventLocation,
+          activeFrom: updated.activeFrom?.toISOString() || null,
+          activeUntil: updated.activeUntil?.toISOString() || null,
+          fields: JSON.parse(updated.fields || "[]"),
+          metadata: JSON.parse(updated.metadata || "{}"),
+        },
+        user.id,
+        user.email
+      )
+      .catch((err) => console.warn("[Forms Update] Go Backend sync deferred:", err?.message));
+
+    await logAuditEvent({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "FORM_PORTAL_UPDATED",
+      entity: "CustomForm",
+      entityId: updated.id,
+      metadata: { slug: updated.slug, status: updated.status },
+    });
+
     return NextResponse.json({ success: true, form: updated });
   } catch (err: any) {
     console.error("Form update error:", err);
@@ -139,6 +178,12 @@ export async function DELETE(
     }
 
     await ensureCustomFormsSchema();
+    if (user.role === "AUDITOR") {
+      return NextResponse.json(
+        { error: "Reviewer (AUDITOR) role has read-only permissions." },
+        { status: 403 }
+      );
+    }
     const { id } = await params;
 
     const existing = await prisma.customForm.findUnique({

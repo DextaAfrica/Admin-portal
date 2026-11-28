@@ -418,5 +418,37 @@ export const backendApi = {
         timeoutMs: 6000,
       }),
   },
+
+  forms: {
+    create: (payload: Record<string, any>, adminId?: string, adminEmail?: string) =>
+      backendFetch<{ data: any }>("/admin/forms", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        adminId,
+        adminEmail,
+        timeoutMs: 5000,
+      }),
+    update: (id: string, payload: Record<string, any>, adminId?: string, adminEmail?: string) =>
+      backendFetch<{ data: any }>(`/admin/forms/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+        adminId,
+        adminEmail,
+        timeoutMs: 5000,
+      }),
+    delete: (id: string, adminId?: string, adminEmail?: string) =>
+      backendFetch<void>(`/admin/forms/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        adminId,
+        adminEmail,
+        timeoutMs: 5000,
+      }),
+    submitPublic: (slug: string, payload: Record<string, any>) =>
+      backendFetch<{ data: any }>(`/forms/${encodeURIComponent(slug)}/submit`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        timeoutMs: 5000,
+      }),
+  },
 };
 

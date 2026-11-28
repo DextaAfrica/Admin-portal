@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
 import { prisma } from "@/lib/prisma";
-import { dispatchCampaign } from "@/lib/email/dispatcher";
 import { ensureEmailCampaignsSchema } from "@/lib/email/campaign-schema";
+import {
+  processAllDueCampaignBatches,
+  startBatchedCampaign,
+} from "@/lib/email/batch-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -51,12 +54,13 @@ export async function POST(req: NextRequest) {
             ? campaign.scheduledTarget
             : "ALL";
 
-        const dispatched = await dispatchCampaign(
+        const dispatched = await startBatchedCampaign(
           campaign.id,
           targetCategory,
-          customRecipients
+          customRecipients,
+          campaign.batchConfig ? JSON.parse(campaign.batchConfig) : undefined
         );
-        results.push({ id: campaign.id, title: campaign.title, success: true, count: dispatched.recipientCount });
+        results.push({ id: campaign.id, title: campaign.title, success: true, count: dispatched.campaign.recipientCount });
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : "Dispatch failed";
         await prisma.emailCampaign.update({
@@ -72,9 +76,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const batchResults = await processAllDueCampaignBatches();
+
     return NextResponse.json({
       success: true,
-      processedCount: dueCampaigns.length,
+      processedCount: dueCampaigns.length + batchResults.length,
+      batchesProcessed: batchResults.length,
       results,
     });
   } catch (err: unknown) {

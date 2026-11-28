@@ -14,11 +14,17 @@ export async function POST(
   try {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.role === "AUDITOR") {
+      return NextResponse.json(
+        { error: "Reviewer (AUDITOR) role has read-only permissions." },
+        { status: 403 }
+      );
+    }
 
     await ensureEmailCampaignsSchema();
 
     const { id: campaignId } = await params;
-    const { scheduledAt, targetCategory, customRecipients } = await req.json();
+    const { scheduledAt, targetCategory, customRecipients, batchConfig } = await req.json();
 
     if (!scheduledAt) {
       return NextResponse.json(
@@ -79,6 +85,7 @@ export async function POST(
         recipientCount,
         scheduledTarget: cleanTarget,
         scheduledRecipients: hasCustomList ? JSON.stringify(customRecipients) : null,
+        batchConfig: batchConfig ? JSON.stringify(batchConfig) : null,
       },
     });
 
