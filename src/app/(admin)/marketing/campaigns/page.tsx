@@ -20,6 +20,10 @@ import {
   ChevronRight,
   ArrowRight,
   Sparkles,
+  Layers,
+  Pause,
+  Play,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -37,13 +41,30 @@ interface EmailCampaign {
   title: string;
   subject: string;
   contentHtml: string;
-  status: "DRAFT" | "SCHEDULED" | "SENDING" | "SENT" | "FAILED";
+  status: "DRAFT" | "SCHEDULED" | "SENDING" | "PAUSED" | "PARTIAL" | "SENT" | "FAILED";
   recipientCount: number;
+  totalBatches?: number;
+  completedBatches?: number;
+  sentCount?: number;
+  failedCount?: number;
   openCount: number;
   clickCount: number;
   sentAt?: string | null;
   createdAt: string;
   creator?: { fullName: string; email: string };
+}
+
+interface CampaignBatchRecord {
+  id: string;
+  batchNumber: number;
+  status: string;
+  totalCount: number;
+  sentCount: number;
+  failedCount: number;
+  scheduledFor: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  lastError: string | null;
 }
 
 // Production Safe JSON Parser to prevent Unexpected token '<' crashes on server error HTML
@@ -114,6 +135,16 @@ function CampaignsPageContent() {
   const [dispatchingId, setDispatchingId] = React.useState<string | null>(null);
   const [isDeleting, setIsDeleting] = React.useState(false);
 
+  // Batch Delivery Config & Live Monitor State
+  const [batchMode, setBatchMode] = React.useState<"count" | "size">("count");
+  const [batchCount, setBatchCount] = React.useState<number>(3);
+  const [batchSize, setBatchSize] = React.useState<number>(50);
+  const [batchDelaySeconds, setBatchDelaySeconds] = React.useState<number>(30);
+  const [batchManualStep, setBatchManualStep] = React.useState<boolean>(false);
+  const [batchMonitorCampaign, setBatchMonitorCampaign] = React.useState<EmailCampaign | null>(null);
+  const [batchRecords, setBatchRecords] = React.useState<CampaignBatchRecord[]>([]);
+  const [batchActionLoading, setBatchActionLoading] = React.useState<string | null>(null);
+
   const fetchCampaigns = React.useCallback(async () => {
     setIsLoading(true);
     try {
@@ -148,7 +179,9 @@ function CampaignsPageContent() {
   // Derived Campaign Groups
   const scheduledCampaigns = campaigns.filter((c) => c.status === "SCHEDULED");
   const draftCampaigns = campaigns.filter((c) => c.status === "DRAFT");
-  const sentCampaigns = campaigns.filter((c) => c.status === "SENT");
+  const sentCampaigns = campaigns.filter((c) =>
+    ["SENT", "SENDING", "PAUSED", "PARTIAL", "FAILED"].includes(c.status)
+  );
 
   const [isProcessingQueue, setIsProcessingQueue] = React.useState(false);
 
@@ -419,23 +452,100 @@ function CampaignsPageContent() {
     }
   };
 
-  // Dispatch Immediately via SMTP
+  const fetchBatchStatus = React.useCallback(async (campaignId: string) => {
+    try {
+      const res = await fetch(`/api/marketing/campaigns/${campaignId}/batches`, {
+        cache: "no-store",
+      });
+      const parsed = await safeParseJson(res);
+      if (parsed.ok && parsed.data) {
+        setBatchRecords(parsed.data.batches || []);
+        if (parsed.data.campaign) {
+          setBatchMonitorCampaign(parsed.data.campaign);
+        }
+        await fetchCampaigns();
+      }
+    } catch {
+      // silent poll error
+    }
+  }, [fetchCampaigns]);
+
+  React.useEffect(() => {
+    if (!batchMonitorCampaign) return;
+    if (batchMonitorCampaign.status !== "SENDING") return;
+    const timer = setInterval(() => {
+      fetchBatchStatus(batchMonitorCampaign.id);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [batchMonitorCampaign, fetchBatchStatus]);
+
+  const handleBatchAction = async (
+    campaignId: string,
+    action: "send_next" | "pause" | "resume" | "retry_failed"
+  ) => {
+    setBatchActionLoading(action);
+    try {
+      const res = await fetch(`/api/marketing/campaigns/${campaignId}/batches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const parsed = await safeParseJson(res);
+      if (parsed.ok && parsed.data) {
+        setBatchRecords(parsed.data.batches || []);
+        if (parsed.data.campaign) {
+          setBatchMonitorCampaign(parsed.data.campaign);
+        }
+        toastSuccess("Batch Queue Updated", `Action "${action.replace("_", " ")}" completed.`);
+        await fetchCampaigns();
+      } else {
+        toastError("Batch Error", parsed.error || "Could not update batch queue.");
+      }
+    } catch {
+      toastError("Connection Error", "Failed to reach batch engine.");
+    } finally {
+      setBatchActionLoading(null);
+    }
+  };
+
+  // Dispatch Immediately via Batch SMTP Engine
   const handleDispatchNow = async (campaignId: string) => {
     setDispatchingId(campaignId);
     try {
       const res = await fetch(`/api/marketing/campaigns/${campaignId}/dispatch`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ targetCategory: targetAudienceCategory }),
+        body: JSON.stringify({
+          targetCategory: targetAudienceCategory,
+          batchConfig: {
+            mode: batchMode,
+            batchCount,
+            batchSize,
+            delaySeconds: batchDelaySeconds,
+            manualStep: batchManualStep,
+          },
+        }),
       });
 
-      if (res.ok) {
-        toastSuccess("Email Broadcast Dispatched", "Delivered to target audience contacts via corporate SMTP.");
+      const parsed = await safeParseJson(res);
+      if (parsed.ok && parsed.data) {
+        const camp = parsed.data.campaign as EmailCampaign;
+        const batches = (parsed.data.batches || []) as CampaignBatchRecord[];
+        toastSuccess(
+          batches.length > 1 ? "Batch Delivery Started" : "Email Broadcast Dispatched",
+          batches.length > 1
+            ? `Batch 1 of ${batches.length} sent. Monitoring remaining batches.`
+            : "Delivered to target audience contacts via corporate SMTP."
+        );
         setSendConfirmCampaign(null);
         await fetchCampaigns();
         setActiveTab("sent");
+        if (batches.length > 1 || camp.status === "SENDING") {
+          setBatchRecords(batches);
+          setBatchMonitorCampaign(camp);
+        }
       } else {
-        toastError("Dispatch Error", "Could not dispatch campaign.");
+        toastError("Dispatch Error", parsed.error || "Could not dispatch campaign.");
       }
     } catch {
       toastError("Connection Error", "Could not reach email delivery daemon.");
@@ -920,24 +1030,67 @@ function CampaignsPageContent() {
                           {camp.sentAt ? formatDate(camp.sentAt) : "Delivered"}
                         </td>
                         <td className="px-5 py-3.5 font-bold text-slate-900 dark:text-white">
-                          {camp.recipientCount || subscribersCount} contacts
+                          <div>{camp.sentCount || camp.recipientCount || subscribersCount} contacts</div>
+                          {(camp.totalBatches ?? 0) > 1 && (
+                            <div className="text-[10px] font-mono text-slate-400">
+                              Batch {camp.completedBatches ?? 0}/{camp.totalBatches}
+                            </div>
+                          )}
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                            <CheckCircle2 className="h-3 w-3" />
-                            Delivered via SMTP
-                          </span>
+                          {camp.status === "SENDING" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                              Sending Batches
+                            </span>
+                          ) : camp.status === "PAUSED" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                              <Pause className="h-3 w-3" />
+                              Paused
+                            </span>
+                          ) : camp.status === "PARTIAL" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                              <AlertCircle className="h-3 w-3" />
+                              Partial ({camp.failedCount || 0} failed)
+                            </span>
+                          ) : camp.status === "FAILED" ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                              <AlertCircle className="h-3 w-3" />
+                              Delivery Failed
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Delivered via SMTP
+                            </span>
+                          )}
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setPreviewCampaign(camp)}
-                            leftIcon={<Eye className="h-3.5 w-3.5" />}
-                            className="text-xs"
-                          >
-                            View HTML
-                          </Button>
+                          <div className="inline-flex items-center gap-1.5">
+                            {(camp.totalBatches ?? 0) > 0 && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setBatchMonitorCampaign(camp);
+                                  fetchBatchStatus(camp.id);
+                                }}
+                                leftIcon={<Layers className="h-3.5 w-3.5 text-[#ED2618]" />}
+                                className="text-xs"
+                              >
+                                Batches
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setPreviewCampaign(camp)}
+                              leftIcon={<Eye className="h-3.5 w-3.5" />}
+                              className="text-xs"
+                            >
+                              View HTML
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1071,13 +1224,13 @@ function CampaignsPageContent() {
         )}
       </Modal>
 
-      {/* MODAL 2: SEND NOW CONFIRMATION */}
+      {/* MODAL 2: ENTERPRISE BATCH DELIVERY PLANNER */}
       <Modal
         isOpen={Boolean(sendConfirmCampaign)}
         onClose={() => setSendConfirmCampaign(null)}
-        title="Dispatch Immediate Email Broadcast?"
-        description="Deliver campaign to all active subscribers via SMTP"
-        maxWidth="sm"
+        title="Batch Email Delivery Planner"
+        description="Structure your broadcast in controlled batches to prevent provider throttling & spam flags"
+        maxWidth="lg"
         footer={
           <div className="flex items-center justify-end gap-3 w-full">
             <Button
@@ -1104,62 +1257,235 @@ function CampaignsPageContent() {
               leftIcon={<Send className="h-4 w-4" />}
               className="bg-[#ED2618] hover:bg-[#c91e12] text-xs font-bold disabled:opacity-50"
             >
-              {dispatchingId ? "Transmitting..." : "Yes, Dispatch Now"}
+              {dispatchingId ? "Launching Batch 1..." : "Start Batched Broadcast"}
             </Button>
           </div>
         }
       >
-        {sendConfirmCampaign && (
-          <div className="space-y-4 pt-1 text-xs text-slate-600 dark:text-slate-400">
-            <p>
-              Are you sure you want to send <strong>{sendConfirmCampaign.title}</strong> right now?
-            </p>
+        {sendConfirmCampaign && (() => {
+          const totalTarget =
+            targetAudienceCategory === "ALL"
+              ? subscribersCount
+              : (categoryCounts[targetAudienceCategory] ?? 0);
 
-            {/* Recipient Target Group Selector */}
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                Recipient Target Group
-              </label>
-              <select
-                value={targetAudienceCategory}
-                onChange={(e) => setTargetAudienceCategory(e.target.value)}
-                className="w-full h-9 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#ED2618]"
-              >
-                <option value="ALL">All Active Contacts ({subscribersCount})</option>
-                <option value="CLIENT">Clients Only ({categoryCounts.CLIENT ?? 0})</option>
-                <option value="LEAD">Prospective Leads Only ({categoryCounts.LEAD ?? 0})</option>
-                <option value="INVESTOR">Investors &amp; Capital Partners ({categoryCounts.INVESTOR ?? 0})</option>
-                <option value="PARTNER">Strategic Partners ({categoryCounts.PARTNER ?? 0})</option>
-                <option value="CONTRACTOR">Contractors &amp; Engineers ({categoryCounts.CONTRACTOR ?? 0})</option>
-                <option value="NEWSLETTER">Newsletter Subscribers ({categoryCounts.NEWSLETTER ?? 0})</option>
-              </select>
-            </div>
+          const previewSizes: number[] = [];
+          if (totalTarget > 0) {
+            if (batchMode === "size") {
+              const sz = Math.max(1, batchSize);
+              for (let rem = totalTarget; rem > 0; rem -= sz) {
+                previewSizes.push(Math.min(sz, rem));
+              }
+            } else {
+              const cnt = Math.max(1, Math.min(totalTarget, batchCount));
+              const base = Math.floor(totalTarget / cnt);
+              const extra = totalTarget % cnt;
+              for (let i = 0; i < cnt; i++) {
+                previewSizes.push(base + (i < extra ? 1 : 0));
+              }
+            }
+          }
 
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] flex items-center justify-between">
-              <span>Recipients in selected group: </span>
-              <strong className="text-slate-900 dark:text-white font-mono text-sm">
-                {targetAudienceCategory === "ALL" ? subscribersCount : (categoryCounts[targetAudienceCategory] ?? 0)} Contacts
-              </strong>
-            </div>
+          return (
+            <div className="space-y-4 pt-1 text-xs text-slate-600 dark:text-slate-400">
+              <p>
+                Preparing broadcast for <strong>{sendConfirmCampaign.title}</strong>.
+              </p>
 
-            {(targetAudienceCategory === "ALL" ? subscribersCount === 0 : (categoryCounts[targetAudienceCategory] ?? 0) === 0) && (
-              <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
-                <span>
-                  No subscribers found in this segment. Please select &quot;All Active Contacts&quot;, or add contacts to this segment in your Audience Directory before broadcasting.
-                </span>
+              {/* Recipient Target Group Selector */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Recipient Target Group
+                </label>
+                <select
+                  value={targetAudienceCategory}
+                  onChange={(e) => setTargetAudienceCategory(e.target.value)}
+                  className="w-full h-9 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-[#ED2618]"
+                >
+                  <option value="ALL">All Active Contacts ({subscribersCount})</option>
+                  <option value="CLIENT">Clients Only ({categoryCounts.CLIENT ?? 0})</option>
+                  <option value="LEAD">Prospective Leads Only ({categoryCounts.LEAD ?? 0})</option>
+                  <option value="INVESTOR">Investors &amp; Capital Partners ({categoryCounts.INVESTOR ?? 0})</option>
+                  <option value="PARTNER">Strategic Partners ({categoryCounts.PARTNER ?? 0})</option>
+                  <option value="CONTRACTOR">Contractors &amp; Engineers ({categoryCounts.CONTRACTOR ?? 0})</option>
+                  <option value="NEWSLETTER">Newsletter Subscribers ({categoryCounts.NEWSLETTER ?? 0})</option>
+                </select>
               </div>
-            )}
 
-            <div className="flex justify-between items-center text-[11px] pt-1 text-slate-400">
-              <span>Need to collect more contacts first?</span>
-              <Link href="/marketing/audience" className="text-[#ED2618] hover:underline font-semibold flex items-center gap-1">
-                <span>Audience Directory</span>
-                <ArrowRight className="h-3 w-3" />
-              </Link>
+              {/* Batch Strategy Configuration */}
+              <div className="rounded-2xl border border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] p-4 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                    <Layers className="h-3.5 w-3.5 text-[#ED2618]" />
+                    <span>Batch Splitting Strategy</span>
+                  </span>
+                  <span className="font-mono font-bold text-slate-900 dark:text-white">
+                    {totalTarget} Recipients
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBatchMode("count")}
+                    className={`h-9 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      batchMode === "count"
+                        ? "border-[#ED2618] bg-[#ED2618]/10 text-[#ED2618]"
+                        : "border-slate-200 dark:border-white/10 text-slate-500"
+                    }`}
+                  >
+                    Split into N Batches
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBatchMode("size")}
+                    className={`h-9 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      batchMode === "size"
+                        ? "border-[#ED2618] bg-[#ED2618]/10 text-[#ED2618]"
+                        : "border-slate-200 dark:border-white/10 text-slate-500"
+                    }`}
+                  >
+                    Max Emails per Batch
+                  </button>
+                </div>
+
+                {batchMode === "count" ? (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[1, 2, 3, 4, 5, 10].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setBatchCount(n)}
+                          className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer ${
+                            batchCount === n
+                              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent"
+                              : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300"
+                          }`}
+                        >
+                          {n === 1 ? "1 (Single)" : `${n} Batches`}
+                        </button>
+                      ))}
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={batchCount}
+                        onChange={(e) => setBatchCount(Math.max(1, Number(e.target.value) || 1))}
+                        className="w-16 h-8 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-black/40 px-2 text-xs font-mono text-center"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[25, 50, 100, 150, 200].map((sz) => (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => setBatchSize(sz)}
+                          className={`px-3 py-1.5 rounded-lg border text-[11px] font-bold cursor-pointer ${
+                            batchSize === sz
+                              ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent"
+                              : "border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300"
+                          }`}
+                        >
+                          {sz} / batch
+                        </button>
+                      ))}
+                      <input
+                        type="number"
+                        min={5}
+                        max={500}
+                        value={batchSize}
+                        onChange={(e) => setBatchSize(Math.max(1, Number(e.target.value) || 25))}
+                        className="w-20 h-8 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-black/40 px-2 text-xs font-mono text-center"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Cooldown Interval */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                    Interval Between Batches
+                  </label>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { label: "15s", val: 15, manual: false },
+                      { label: "30s", val: 30, manual: false },
+                      { label: "1 min", val: 60, manual: false },
+                      { label: "2 min", val: 120, manual: false },
+                      { label: "5 min", val: 300, manual: false },
+                      { label: "Manual Step-by-Step", val: 0, manual: true },
+                    ].map((opt) => {
+                      const active = opt.manual
+                        ? batchManualStep
+                        : !batchManualStep && batchDelaySeconds === opt.val;
+                      return (
+                        <button
+                          key={opt.label}
+                          type="button"
+                          onClick={() => {
+                            setBatchManualStep(opt.manual);
+                            if (!opt.manual) setBatchDelaySeconds(opt.val);
+                          }}
+                          className={`px-2.5 py-1 rounded-lg border text-[11px] font-semibold cursor-pointer ${
+                            active
+                              ? "border-[#ED2618] bg-[#ED2618]/10 text-[#ED2618]"
+                              : "border-slate-200 dark:border-white/10 text-slate-500"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Live Batch Breakdown Preview */}
+                {previewSizes.length > 0 && (
+                  <div className="pt-2 border-t border-slate-200/70 dark:border-white/10 space-y-1.5">
+                    <span className="text-[11px] font-semibold text-slate-500 block">
+                      Batch Execution Plan ({previewSizes.length} {previewSizes.length === 1 ? "batch" : "batches"}):
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {previewSizes.slice(0, 8).map((cnt, idx) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 rounded-md bg-white dark:bg-black/40 border border-slate-200 dark:border-white/10 text-[10px] font-mono font-bold text-slate-700 dark:text-slate-300"
+                        >
+                          B{idx + 1}: {cnt}
+                        </span>
+                      ))}
+                      {previewSizes.length > 8 && (
+                        <span className="text-[10px] text-slate-400 self-center">
+                          +{previewSizes.length - 8} more
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {totalTarget === 0 && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
+                  <span>
+                    No subscribers found in this segment. Please select &quot;All Active Contacts&quot;, or add contacts in Audience Directory.
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center text-[11px] pt-1 text-slate-400">
+                <span>Need to collect more contacts first?</span>
+                <Link href="/marketing/audience" className="text-[#ED2618] hover:underline font-semibold flex items-center gap-1">
+                  <span>Audience Directory</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </Modal>
 
       {/* MODAL 3: HTML PREVIEW MODAL */}
@@ -1216,6 +1542,156 @@ function CampaignsPageContent() {
         <p className="text-xs text-slate-600 dark:text-slate-400">
           Are you sure you want to delete <strong>{deleteConfirmCampaign?.title}</strong>?
         </p>
+      </Modal>
+      {/* MODAL 5: LIVE BATCH DELIVERY MONITOR */}
+      <Modal
+        isOpen={Boolean(batchMonitorCampaign)}
+        onClose={() => setBatchMonitorCampaign(null)}
+        title={batchMonitorCampaign ? `Batch Delivery • ${batchMonitorCampaign.title}` : "Batch Delivery"}
+        description="Real-time batch execution progress, throttling controls, and failure recovery"
+        maxWidth="2xl"
+      >
+        {batchMonitorCampaign && (
+          <div className="space-y-4 pt-1 text-xs">
+            {/* Summary Bar */}
+            <div className="grid grid-cols-3 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10">
+              <div>
+                <span className="text-slate-400 block">Status</span>
+                <span className="font-bold text-slate-900 dark:text-white text-sm">
+                  {batchMonitorCampaign.status}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Batches Completed</span>
+                <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                  {batchMonitorCampaign.completedBatches ?? 0} / {batchMonitorCampaign.totalBatches ?? batchRecords.length}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Delivered / Failed</span>
+                <span className="font-mono font-bold text-sm">
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {batchMonitorCampaign.sentCount ?? 0}
+                  </span>{" "}
+                  /{" "}
+                  <span className="text-red-500">
+                    {batchMonitorCampaign.failedCount ?? 0}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            {/* Control Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              {batchRecords.some((b) => b.status === "PENDING") && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  isLoading={batchActionLoading === "send_next"}
+                  onClick={() => handleBatchAction(batchMonitorCampaign.id, "send_next")}
+                  leftIcon={<Send className="h-3.5 w-3.5" />}
+                  className="bg-[#ED2618] hover:bg-[#c91e12] text-xs font-bold"
+                >
+                  Send Next Batch Now
+                </Button>
+              )}
+
+              {batchMonitorCampaign.status === "SENDING" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isLoading={batchActionLoading === "pause"}
+                  onClick={() => handleBatchAction(batchMonitorCampaign.id, "pause")}
+                  leftIcon={<Pause className="h-3.5 w-3.5" />}
+                  className="text-xs font-bold"
+                >
+                  Pause Remaining
+                </Button>
+              )}
+
+              {batchMonitorCampaign.status === "PAUSED" && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  isLoading={batchActionLoading === "resume"}
+                  onClick={() => handleBatchAction(batchMonitorCampaign.id, "resume")}
+                  leftIcon={<Play className="h-3.5 w-3.5" />}
+                  className="text-xs font-bold"
+                >
+                  Resume Delivery
+                </Button>
+              )}
+
+              {(batchMonitorCampaign.failedCount ?? 0) > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  isLoading={batchActionLoading === "retry_failed"}
+                  onClick={() => handleBatchAction(batchMonitorCampaign.id, "retry_failed")}
+                  leftIcon={<RotateCcw className="h-3.5 w-3.5 text-[#ED2618]" />}
+                  className="text-xs font-bold"
+                >
+                  Retry Failed ({batchMonitorCampaign.failedCount})
+                </Button>
+              )}
+
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => fetchBatchStatus(batchMonitorCampaign.id)}
+                leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+                className="text-xs ml-auto"
+              >
+                Refresh
+              </Button>
+            </div>
+
+            {/* Batch Cards */}
+            <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              {batchRecords.map((b) => (
+                <div
+                  key={b.id}
+                  className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-white dark:bg-black/30 flex items-center justify-between gap-3"
+                >
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">
+                        Batch #{b.batchNumber}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          b.status === "COMPLETED"
+                            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                            : b.status === "SENDING"
+                            ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+                            : b.status === "PAUSED"
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                            : b.status === "FAILED" || b.status === "PARTIAL"
+                            ? "bg-red-500/15 text-red-600 dark:text-red-400"
+                            : "bg-slate-100 dark:bg-white/10 text-slate-500"
+                        }`}
+                      >
+                        {b.status}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {b.sentCount}/{b.totalCount} delivered
+                      {b.failedCount > 0 ? ` • ${b.failedCount} failed` : ""}
+                      {b.scheduledFor && b.status === "PENDING"
+                        ? ` • Scheduled ${new Date(b.scheduledFor).toLocaleTimeString()}`
+                        : ""}
+                    </p>
+                  </div>
+                  {b.lastError && (
+                    <span className="text-[10px] text-red-400 max-w-[200px] truncate" title={b.lastError}>
+                      {b.lastError}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
