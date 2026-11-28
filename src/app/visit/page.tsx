@@ -47,6 +47,7 @@ interface VisitorPass {
 
 export default function PublicVisitorPortalPage() {
   const [mode, setMode] = React.useState<"checkin" | "checkout">("checkin");
+  const [formStep, setFormStep] = React.useState<1 | 2>(1);
   const [nowClock, setNowClock] = React.useState<Date>(() => new Date());
 
   // Section 1: Visitor Information
@@ -181,7 +182,7 @@ export default function PublicVisitorPortalPage() {
     e.preventDefault();
     setCheckoutError("");
     if (!checkoutIdentifier.trim()) {
-      setCheckoutError("Enter your Visitor Pass Code, Email Address, or Phone Number.");
+      setCheckoutError("Enter the Pass Code shown on your digital visitor pass.");
       return;
     }
     setCheckoutSubmitting(true);
@@ -209,6 +210,7 @@ export default function PublicVisitorPortalPage() {
   };
 
   const resetForNewVisitor = () => {
+    setFormStep(1);
     setActivePass(null);
     setCheckedOutPass(null);
     setFullName("");
@@ -267,7 +269,7 @@ export default function PublicVisitorPortalPage() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 py-8 sm:py-10 space-y-6">
+      <main className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-6">
         {/* Mode Switcher: Check In vs Check Out */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -277,7 +279,7 @@ export default function PublicVisitorPortalPage() {
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
               {mode === "checkin"
                 ? "Welcome to Dexta Africa. Please complete your registration to receive your Digital Visitor Pass."
-                : "Departing the premises? Record your departure time using your Pass Code, Email, or Phone Number."}
+                : "Departing the premises? Record your departure time using the Pass Code on your digital visitor pass."}
             </p>
           </div>
 
@@ -427,8 +429,21 @@ export default function PublicVisitorPortalPage() {
         {/* ================================================================ */}
         {mode === "checkin" && !activePass && (
           <form onSubmit={handleCheckIn} className="space-y-6">
+            <div className="rounded-2xl border border-white/10 bg-[#0E131D]/80 p-4 sm:p-5">
+              <div className="mb-3 flex items-center justify-between text-xs">
+                <span className="font-semibold text-white">Registration progress</span>
+                <span className="text-slate-400">Step {formStep} of 2</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-valuenow={formStep} aria-valuemin={1} aria-valuemax={2} aria-label="Registration progress">
+                <div className={cn("h-full rounded-full bg-gradient-to-r from-[#ED2618] to-orange-400 transition-all duration-500", formStep === 1 ? "w-1/2" : "w-full")} />
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] sm:text-xs">
+                <span className={formStep === 1 ? "font-bold text-white" : "text-emerald-400"}>01 · Your details</span>
+                <span className={formStep === 2 ? "text-right font-bold text-white" : "text-right text-slate-500"}>02 · Visit &amp; declaration</span>
+              </div>
+            </div>
             {/* Section 1: Visitor Information */}
-            <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-6 sm:p-8 shadow-xl space-y-5">
+            {formStep === 1 && <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-5 sm:p-8 shadow-xl space-y-5 animate-fade-in">
               <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
                 <span className="h-8 w-8 rounded-xl bg-[#ED2618]/15 text-[#ED2618] flex items-center justify-center text-xs font-black">
                   01
@@ -529,8 +544,19 @@ export default function PublicVisitorPortalPage() {
                   </div>
                 </div>
               </div>
-            </section>
+              <button type="button" onClick={(event) => {
+                const form = event.currentTarget.closest("form");
+                const firstStepFields = form?.querySelectorAll< HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement >("section:first-of-type input, section:first-of-type select, section:first-of-type textarea");
+                const invalidField = Array.from(firstStepFields || []).find((field) => !field.checkValidity());
+                if (invalidField) { invalidField.reportValidity(); invalidField.focus(); return; }
+                setErrorMsg(""); setFormStep(2); window.scrollTo({ top: 0, behavior: "smooth" });
+              }} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ED2618] to-[#c81e12] text-sm font-bold text-white shadow-lg shadow-red-500/20 transition hover:brightness-110">
+                Continue to visit details <ArrowRight className="h-4 w-4" />
+              </button>
+            </section>}
 
+            {formStep === 2 && <div className="space-y-6 animate-fade-in">
+            <button type="button" onClick={() => { setFormStep(1); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/[0.08]">← Back to your details</button>
             {/* Section 2: Purpose of Visit */}
             <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-6 sm:p-8 shadow-xl space-y-5">
               <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
@@ -808,6 +834,7 @@ export default function PublicVisitorPortalPage() {
                 <ArrowRight className="h-4 w-4" />
               </button>
             </section>
+            </div>}
           </form>
         )}
 
@@ -888,14 +915,16 @@ export default function PublicVisitorPortalPage() {
               <form onSubmit={handleSelfCheckOut} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Visitor Pass Code, Email Address, or Phone Number *
+                    Visitor Pass Code *
                   </label>
                   <input
                     type="text"
                     required
                     value={checkoutIdentifier}
                     onChange={(e) => setCheckoutIdentifier(e.target.value)}
-                    placeholder="e.g. DXV-8K92PA or name@company.com"
+                    placeholder="e.g. DXV-8K92PA"
+                    autoCapitalize="characters"
+                    autoComplete="off"
                     className="w-full h-12 rounded-xl bg-black/40 border border-white/10 px-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#ED2618]"
                   />
                 </div>
