@@ -211,20 +211,21 @@ function CampaignsPageContent() {
   }, [fetchCampaigns, toastError, toastSuccess]);
 
   React.useEffect(() => {
-    if (scheduledCampaigns.length === 0) return;
+    const hasSending = campaigns.some((c) => c.status === "SENDING");
+    if (scheduledCampaigns.length === 0 && !hasSending) return;
     const checkDue = () => {
       const nowMs = Date.now();
-      const hasDue = scheduledCampaigns.some(
+      const hasDueScheduled = scheduledCampaigns.some(
         (c) => c.sentAt && new Date(c.sentAt).getTime() <= nowMs
       );
-      if (hasDue) {
+      if (hasDueScheduled || hasSending) {
         handleProcessScheduledQueue(true);
       }
     };
     checkDue();
-    const timer = setInterval(checkDue, 30000);
+    const timer = setInterval(checkDue, 15000);
     return () => clearInterval(timer);
-  }, [scheduledCampaigns, handleProcessScheduledQueue]);
+  }, [campaigns, scheduledCampaigns, handleProcessScheduledQueue]);
 
   // Save Campaign from Studio
   const handleSaveCampaign = async (payload: {
@@ -418,7 +419,17 @@ function CampaignsPageContent() {
       const res = await fetch(`/api/marketing/campaigns/${schedulingCampaign.id}/schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scheduledAt: new Date(scheduledDateTime).toISOString() }),
+        body: JSON.stringify({
+          scheduledAt: new Date(scheduledDateTime).toISOString(),
+          targetCategory: targetAudienceCategory,
+          batchConfig: {
+            mode: batchMode,
+            batchCount,
+            batchSize,
+            delaySeconds: batchDelaySeconds,
+            manualStep: batchManualStep,
+          },
+        }),
       });
 
       const parsed = await safeParseJson(res);

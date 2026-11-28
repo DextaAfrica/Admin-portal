@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { backendApi } from "@/lib/backend-api";
 import { sendEmail } from "@/lib/email/dispatcher";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +195,21 @@ export async function POST(
       },
     });
 
+    // 1b. Forward submission to Go Core Backend (non-blocking)
+    backendApi.forms
+      .submitPublic(cleanSlug, {
+        fullName,
+        email,
+        phone,
+        company,
+        jobTitle,
+        category,
+        attendanceMode,
+        answers: body.answers || {},
+        notes,
+      })
+      .catch((err) => console.warn("[Forms Public Submit] Go Backend sync deferred:", err?.message));
+
     // 2. Seamlessly upsert into Audience Directory so lead is immediately contactable
     try {
       const nameParts = fullName.trim().split(/\s+/);
@@ -253,30 +278,30 @@ export async function POST(
             </div>
             
             <div style="padding: 32px 28px;">
-              <h2 style="color: #0f172a; font-size: 18px; font-weight: 700; margin-top: 0; margin-bottom: 8px;">Hello ${fullName},</h2>
+              <h2 style="color: #0f172a; font-size: 18px; font-weight: 700; margin-top: 0; margin-bottom: 8px;">Hello ${escapeHtml(fullName)},</h2>
               <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
-                ${customMsg}
+                ${escapeHtml(customMsg)}
               </p>
               
               <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
                   <tr>
                     <td style="padding: 6px 0; color: #64748b; width: 140px;">Registration Portal:</td>
-                    <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${form.title}</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${escapeHtml(form.title)}</td>
                   </tr>
                   ${eventDateStr ? `
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Event Date:</td>
-                    <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${eventDateStr}</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${escapeHtml(eventDateStr)}</td>
                   </tr>` : ""}
                   ${form.eventLocation ? `
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Location / Mode:</td>
-                    <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${form.eventLocation} (${attendanceMode})</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${escapeHtml(form.eventLocation)} (${escapeHtml(attendanceMode)})</td>
                   </tr>` : ""}
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Attendee Category:</td>
-                    <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${category}</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 600;">${escapeHtml(category)}</td>
                   </tr>
                   <tr>
                     <td style="padding: 6px 0; color: #64748b;">Reference ID:</td>

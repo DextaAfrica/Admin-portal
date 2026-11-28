@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
+import { logAuditEvent } from "@/lib/auth/audit";
+import { backendApi } from "@/lib/backend-api";
 import { prisma } from "@/lib/prisma";
 import { ensureCustomFormsSchema } from "@/lib/forms/schema";
 
@@ -83,6 +85,12 @@ export async function POST(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.role === "AUDITOR") {
+      return NextResponse.json(
+        { error: "Reviewer (AUDITOR) role has read-only permissions." },
+        { status: 403 }
+      );
+    }
 
     await ensureCustomFormsSchema();
 
@@ -133,6 +141,37 @@ export async function POST(req: NextRequest) {
           "I hereby consent to Dexta Africa collecting, storing, and processing my personal data strictly in accordance with NDPR & GDPR regulatory standards. I acknowledge this information will only be used for official enterprise communications and event coordination.",
         requireConsent: body.requireConsent !== undefined ? Boolean(body.requireConsent) : true,
       },
+    });
+
+    // Sync to Go Core Backend (non-blocking resilient dual-write)
+    backendApi.forms
+      .create(
+        {
+          slug: newForm.slug,
+          title: newForm.title,
+          description: newForm.description,
+          formType: newForm.formType,
+          status: newForm.status,
+          coverImageUrl: newForm.coverImageUrl,
+          eventDate: newForm.eventDate?.toISOString() || null,
+          eventLocation: newForm.eventLocation,
+          activeFrom: newForm.activeFrom?.toISOString() || null,
+          activeUntil: newForm.activeUntil?.toISOString() || null,
+          fields: safeJsonParse(newForm.fields, []),
+          metadata: safeJsonParse(newForm.metadata, {}),
+        },
+        user.id,
+        user.email
+      )
+      .catch((err) => console.warn("[Forms] Go Backend sync deferred:", err?.message));
+
+    await logAuditEvent({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "FORM_PORTAL_CREATED",
+      entity: "CustomForm",
+      entityId: newForm.id,
+      metadata: { slug: newForm.slug, formType: newForm.formType, routePrefix: newForm.routePrefix },
     });
 
     return NextResponse.json({
