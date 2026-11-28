@@ -269,7 +269,46 @@ async function ensureSchema() {
     `);
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "ProductionReleaseRequest_ticketNumber_key" ON "ProductionReleaseRequest"("ticketNumber");`);
 
-    // 14. Initial Admin Provisioning if database has zero users
+    // 14. VisitorLog Table (required by the public reception check-in API)
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "VisitorLog" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "passCode" TEXT NOT NULL,
+        "fullName" TEXT NOT NULL,
+        "phone" TEXT NOT NULL,
+        "email" TEXT NOT NULL,
+        "company" TEXT NOT NULL DEFAULT '',
+        "position" TEXT NOT NULL DEFAULT '',
+        "purpose" TEXT NOT NULL,
+        "purposeOther" TEXT NOT NULL DEFAULT '',
+        "hostName" TEXT NOT NULL,
+        "department" TEXT NOT NULL,
+        "hasAppointment" BOOLEAN NOT NULL DEFAULT false,
+        "invitedBy" TEXT NOT NULL DEFAULT '',
+        "visitDescription" TEXT NOT NULL DEFAULT '',
+        "visitDate" TEXT NOT NULL,
+        "checkInAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "checkOutAt" DATETIME,
+        "status" TEXT NOT NULL DEFAULT 'checked_in',
+        "agreedGuidelines" BOOLEAN NOT NULL DEFAULT false,
+        "consentedData" BOOLEAN NOT NULL DEFAULT false,
+        "declaredAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "ipAddress" TEXT NOT NULL DEFAULT '',
+        "userAgent" TEXT NOT NULL DEFAULT '',
+        "checkedOutBy" TEXT NOT NULL DEFAULT '',
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "VisitorLog_passCode_key" ON "VisitorLog"("passCode");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "VisitorLog_status_idx" ON "VisitorLog"("status");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "VisitorLog_visitDate_idx" ON "VisitorLog"("visitDate");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "VisitorLog_department_idx" ON "VisitorLog"("department");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "VisitorLog_email_idx" ON "VisitorLog"("email");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "VisitorLog_phone_idx" ON "VisitorLog"("phone");`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "VisitorLog_checkInAt_idx" ON "VisitorLog"("checkInAt");`);
+
+    // 15. Initial Admin Provisioning if database has zero users
     const userCount = await prisma.user.count();
     if (userCount === 0) {
       const defaultHash = "$2a$10$tmASOhlWEzRPF55G2msYQ.b2zIacNFO3D9A/Su4pqgks5/rrxHZ7q"; // Admin@Dexta2026!
