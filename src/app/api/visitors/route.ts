@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
+import { logAuditEvent } from "@/lib/auth/audit";
 import { validateVisitorPayload } from "@/lib/visitors/constants";
 import { checkInVisitor, listVisitors } from "@/lib/visitors/service";
 
@@ -33,6 +34,12 @@ export async function POST(req: NextRequest) {
   try {
     const { user } = await getCurrentSession();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (user.role === "AUDITOR") {
+      return NextResponse.json(
+        { error: "Reviewer (AUDITOR) role has read-only permissions." },
+        { status: 403 }
+      );
+    }
 
     const body = await req.json();
     const validationError = validateVisitorPayload(body);
@@ -43,6 +50,15 @@ export async function POST(req: NextRequest) {
     const visitor = await checkInVisitor(body, {
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: `assisted-by:${user.email}`,
+    });
+
+    await logAuditEvent({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "VISITOR_CHECKED_IN_ASSISTED",
+      entity: "VisitorLog",
+      entityId: visitor.id,
+      metadata: { passCode: visitor.passCode, department: visitor.department },
     });
 
     return NextResponse.json({ visitor }, { status: 201 });

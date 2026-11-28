@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentSession } from "@/lib/auth/session";
+import { logAuditEvent } from "@/lib/auth/audit";
+import { sanitizeCsvCell } from "@/lib/visitors/constants";
 import { listVisitors } from "@/lib/visitors/service";
 
 export const dynamic = "force-dynamic";
-
-function csvCell(val: unknown): string {
-  const s = String(val ?? "");
-  if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
-  return s;
-}
 
 export async function GET(req: NextRequest) {
   try {
@@ -71,8 +65,16 @@ export async function GET(req: NextRequest) {
     ]);
 
     const csv = [headers, ...rows]
-      .map((row) => row.map(csvCell).join(","))
+      .map((row) => row.map(sanitizeCsvCell).join(","))
       .join("\n");
+
+    await logAuditEvent({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "VISITOR_EXPORT_CSV",
+      entity: "VisitorLog",
+      metadata: { exportedCount: visitors.length },
+    });
 
     const filename = `dexta-visitors-${new Date().toISOString().slice(0, 10)}.csv`;
 

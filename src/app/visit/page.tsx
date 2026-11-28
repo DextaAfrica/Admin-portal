@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import QRCode from "qrcode";
 import {
   User,
   Phone,
@@ -78,11 +79,37 @@ export default function PublicVisitorPortalPage() {
   const [checkoutSubmitting, setCheckoutSubmitting] = React.useState(false);
   const [checkoutError, setCheckoutError] = React.useState("");
   const [checkedOutPass, setCheckedOutPass] = React.useState<VisitorPass | null>(null);
+  const [passQrUrl, setPassQrUrl] = React.useState<string>("");
 
   React.useEffect(() => {
     const timer = setInterval(() => setNowClock(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("checkout");
+    if (code) {
+      setMode("checkout");
+      setCheckoutIdentifier(code.trim().toUpperCase());
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!activePass?.passCode || typeof window === "undefined") {
+      setPassQrUrl("");
+      return;
+    }
+    const checkoutUrl = `${window.location.origin}/visit?checkout=${encodeURIComponent(activePass.passCode)}`;
+    QRCode.toDataURL(checkoutUrl, {
+      width: 220,
+      margin: 1,
+      color: { dark: "#070A0F", light: "#FFFFFF" },
+    })
+      .then(setPassQrUrl)
+      .catch(() => setPassQrUrl(""));
+  }, [activePass]);
 
   const formattedDate = nowClock.toLocaleDateString("en-GB", {
     weekday: "short",
@@ -308,13 +335,28 @@ export default function PublicVisitorPortalPage() {
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-white/15 bg-black/40 px-5 py-3 text-center">
-                <span className="block text-[10px] uppercase tracking-widest text-slate-400 font-bold">
-                  Visitor Pass Code
-                </span>
-                <span className="block text-2xl font-mono font-black tracking-wider text-white mt-0.5">
-                  {activePass.passCode}
-                </span>
+              <div className="flex items-center gap-4">
+                {passQrUrl && (
+                  <div className="rounded-2xl bg-white p-2 shadow-lg shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={passQrUrl}
+                      alt={`QR Code for ${activePass.passCode}`}
+                      className="h-20 w-20"
+                    />
+                  </div>
+                )}
+                <div className="rounded-2xl border border-white/15 bg-black/40 px-5 py-3 text-center">
+                  <span className="block text-[10px] uppercase tracking-widest text-slate-400 font-bold">
+                    Visitor Pass Code
+                  </span>
+                  <span className="block text-2xl font-mono font-black tracking-wider text-white mt-0.5">
+                    {activePass.passCode}
+                  </span>
+                  <span className="block text-[10px] text-slate-400 mt-0.5">
+                    Scan QR to self check-out
+                  </span>
+                </div>
               </div>
             </div>
 

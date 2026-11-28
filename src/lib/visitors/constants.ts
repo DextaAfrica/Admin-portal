@@ -54,7 +54,28 @@ export function generateVisitorPassCode(): string {
 }
 
 export function todayISODate(): string {
-  return new Date().toISOString().slice(0, 10);
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: process.env.APP_TIMEZONE || "Africa/Lagos",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
+export function sanitizeCsvCell(val: unknown): string {
+  let s = String(val ?? "");
+  // Prevent CSV formula injection in Excel/Sheets while keeping phone numbers (+234...) intact
+  if (/^[=@\t\r]/.test(s) || (/^[+-]/.test(s) && !/^\+\d[\d\s()-]+$/.test(s))) {
+    s = `'${s}`;
+  }
+  if (s.includes(",") || s.includes('"') || s.includes("\n") || s.includes("\r")) {
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  return s;
 }
 
 export function validateVisitorPayload(body: Partial<VisitorPayload>): string | null {

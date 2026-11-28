@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import QRCode from "qrcode";
 import {
   UserCheck,
   Users,
@@ -22,6 +23,7 @@ import {
   ShieldCheck,
   BarChart3,
   CheckCircle2,
+  QrCode,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -70,6 +72,16 @@ interface VisitorAnalytics {
   hourlyArrivals: CountItem[];
 }
 
+function formatDuration(checkInAt: string, checkOutAt: string | null): string {
+  const start = new Date(checkInAt).getTime();
+  const end = checkOutAt ? new Date(checkOutAt).getTime() : Date.now();
+  const mins = Math.max(0, Math.floor((end - start) / 60000));
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  const rem = mins % 60;
+  return rem > 0 ? `${hrs}h ${rem}m` : `${hrs}h`;
+}
+
 export default function AdminVisitorsPage() {
   const { success: toastSuccess, error: toastError } = useToast();
 
@@ -85,6 +97,22 @@ export default function AdminVisitorsPage() {
 
   const [selectedVisitor, setSelectedVisitor] = React.useState<VisitorRecord | null>(null);
   const [checkingOutId, setCheckingOutId] = React.useState<string | null>(null);
+
+  // Reception QR Poster Modal
+  const [qrModalOpen, setQrModalOpen] = React.useState(false);
+  const [kioskQrUrl, setKioskQrUrl] = React.useState("");
+
+  React.useEffect(() => {
+    if (!qrModalOpen || typeof window === "undefined") return;
+    const visitUrl = `${window.location.origin}/visit`;
+    QRCode.toDataURL(visitUrl, {
+      width: 480,
+      margin: 2,
+      color: { dark: "#070A0F", light: "#FFFFFF" },
+    })
+      .then(setKioskQrUrl)
+      .catch(() => setKioskQrUrl(""));
+  }, [qrModalOpen]);
 
   // Assisted Front-Desk Check-In Modal
   const [addModalOpen, setAddModalOpen] = React.useState(false);
@@ -227,6 +255,10 @@ export default function AdminVisitorsPage() {
     1,
     ...(analytics?.byPurpose.map((p) => p.count) || [1])
   );
+  const maxHourCount = Math.max(
+    1,
+    ...(analytics?.hourlyArrivals?.map((h) => h.count) || [1])
+  );
 
   return (
     <div className="space-y-6 pb-12">
@@ -263,6 +295,15 @@ export default function AdminVisitorsPage() {
             <ExternalLink className="h-3.5 w-3.5 text-[#ED2618]" />
             <span>Open Kiosk</span>
           </Link>
+
+          <button
+            type="button"
+            onClick={() => setQrModalOpen(true)}
+            className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#111520] text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <QrCode className="h-3.5 w-3.5 text-[#ED2618]" />
+            <span>Reception QR</span>
+          </button>
 
           <a
             href={exportCsvUrl}
@@ -368,7 +409,7 @@ export default function AdminVisitorsPage() {
 
       {/* Analytics Visuals */}
       {analytics && (analytics.byDepartment.length > 0 || analytics.byPurpose.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -429,6 +470,42 @@ export default function AdminVisitorsPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-500" />
+                <span>Peak Arrival Hours</span>
+              </h2>
+              <span className="text-[11px] text-slate-400 font-mono">Hourly</span>
+            </div>
+            {analytics.hourlyArrivals && analytics.hourlyArrivals.length > 0 ? (
+              <div className="space-y-3">
+                {analytics.hourlyArrivals.slice(0, 6).map((item) => (
+                  <div key={item.label} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono font-medium text-slate-700 dark:text-slate-300">
+                        {item.label}
+                      </span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white">
+                        {item.count}
+                      </span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 dark:bg-white/[0.06] overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-400"
+                        style={{ width: `${Math.round((item.count / maxHourCount) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-400 py-6 text-center">
+                Hourly arrival trends will appear as guests check in.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -580,6 +657,9 @@ export default function AdminVisitorsPage() {
                           })}
                         </div>
                       )}
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Duration: {formatDuration(v.checkInAt, v.checkOutAt)}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">
                       {v.status === "checked_in" ? (
@@ -801,13 +881,47 @@ export default function AdminVisitorsPage() {
                 ))}
               </select>
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <label className="block font-semibold mb-1">Who are they here to see? *</label>
               <input
                 type="text"
                 required
                 value={formState.hostName}
                 onChange={(e) => setFormState({ ...formState, hostName: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Scheduled Appointment?</label>
+              <select
+                value={formState.hasAppointment ? "yes" : "no"}
+                onChange={(e) =>
+                  setFormState({ ...formState, hasAppointment: e.target.value === "yes" })
+                }
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              >
+                <option value="yes">Yes (Scheduled)</option>
+                <option value="no">No (Walk-In)</option>
+              </select>
+            </div>
+            {formState.purpose === "Other" && (
+              <div className="sm:col-span-2">
+                <label className="block font-semibold mb-1">Specify Purpose *</label>
+                <input
+                  type="text"
+                  required
+                  value={formState.purposeOther}
+                  onChange={(e) => setFormState({ ...formState, purposeOther: e.target.value })}
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+                />
+              </div>
+            )}
+            <div className="sm:col-span-2">
+              <label className="block font-semibold mb-1">Invited / Scheduled By (optional)</label>
+              <input
+                type="text"
+                value={formState.invitedBy}
+                onChange={(e) => setFormState({ ...formState, invitedBy: e.target.value })}
                 className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
               />
             </div>
@@ -822,6 +936,50 @@ export default function AdminVisitorsPage() {
             <span>{addSubmitting ? "Checking In..." : "Check In Visitor"}</span>
           </button>
         </form>
+      </Modal>
+
+      {/* Reception QR Standee Modal */}
+      <Modal
+        isOpen={qrModalOpen}
+        onClose={() => setQrModalOpen(false)}
+        title="Reception Desk QR Check-In"
+      >
+        <div className="space-y-4 text-center p-2">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Visitors can scan this QR code at the reception desk to check in or check out on their phone.
+          </p>
+          {kioskQrUrl ? (
+            <div className="inline-block rounded-3xl bg-white p-5 border border-slate-200 shadow-lg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={kioskQrUrl} alt="Reception Check-In QR" className="h-56 w-56 mx-auto" />
+              <p className="mt-3 text-xs font-extrabold tracking-wide text-slate-900 uppercase">
+                Dexta Africa Reception
+              </p>
+              <p className="text-[11px] text-slate-500">Scan to Check In / Check Out</p>
+            </div>
+          ) : (
+            <div className="py-10 text-xs text-slate-400">Generating QR Code...</div>
+          )}
+          <div className="flex items-center justify-center gap-3 pt-2">
+            {kioskQrUrl && (
+              <a
+                href={kioskQrUrl}
+                download="dexta-reception-qr.png"
+                className="px-4 py-2.5 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold flex items-center gap-1.5 shadow-md"
+              >
+                <Download className="h-3.5 w-3.5" />
+                <span>Download QR PNG</span>
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={handleCopyKioskLink}
+              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer"
+            >
+              Copy Kiosk Link
+            </button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

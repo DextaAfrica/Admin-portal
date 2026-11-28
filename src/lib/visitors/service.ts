@@ -77,6 +77,15 @@ function toDTO(row: any): VisitorDTO {
   };
 }
 
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 async function sendVisitorPassEmail(visitor: VisitorDTO) {
   if (!isEmailConfigured || !emailTransporter || !visitor.email) return;
   try {
@@ -84,12 +93,22 @@ async function sendVisitorPassEmail(visitor: VisitorDTO) {
       hour: "2-digit",
       minute: "2-digit",
     });
+    const safeName = escapeHtml(visitor.fullName);
+    const safePass = escapeHtml(visitor.passCode);
+    const safeHost = escapeHtml(visitor.hostName);
+    const safeDept = escapeHtml(visitor.department);
+    const safePurpose = escapeHtml(
+      visitor.purpose === "Other" && visitor.purposeOther
+        ? visitor.purposeOther
+        : visitor.purpose
+    );
+    const safeDate = escapeHtml(visitor.visitDate);
     const fromAddr =
       process.env.EMAIL_FROM || "Dexta Africa Reception <operations@dextaafrica.com>";
     await emailTransporter.sendMail({
       from: fromAddr,
       to: visitor.email,
-      subject: `Dexta Africa Visitor Pass: ${visitor.passCode}`,
+      subject: `Dexta Africa Visitor Pass: ${safePass}`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; background: #0d1017; color: #f8fafc; border-radius: 16px; overflow: hidden; border: 1px solid #1e293b;">
           <div style="background: linear-gradient(135deg, #ED2618 0%, #991b1b 100%); padding: 24px 28px;">
@@ -97,16 +116,16 @@ async function sendVisitorPassEmail(visitor: VisitorDTO) {
             <h1 style="margin: 6px 0 0; font-size: 22px; color: #ffffff;">Digital Visitor Pass</h1>
           </div>
           <div style="padding: 28px;">
-            <p style="margin: 0 0 16px; color: #cbd5e1; font-size: 14px;">Welcome, <strong style="color: #ffffff;">${visitor.fullName}</strong>. Your check-in has been recorded.</p>
+            <p style="margin: 0 0 16px; color: #cbd5e1; font-size: 14px;">Welcome, <strong style="color: #ffffff;">${safeName}</strong>. Your check-in has been recorded.</p>
             <div style="background: #141923; border: 1px solid #263042; border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 20px;">
               <span style="display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.14em; color: #94a3b8;">Visitor Pass Code</span>
-              <span style="display: block; font-size: 26px; font-weight: 800; letter-spacing: 0.1em; color: #ffffff; margin-top: 4px; font-family: monospace;">${visitor.passCode}</span>
+              <span style="display: block; font-size: 26px; font-weight: 800; letter-spacing: 0.1em; color: #ffffff; margin-top: 4px; font-family: monospace;">${safePass}</span>
             </div>
             <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #cbd5e1;">
-              <tr><td style="padding: 6px 0; color: #94a3b8;">Host</td><td style="padding: 6px 0; text-align: right; font-weight: 600; color: #ffffff;">${visitor.hostName}</td></tr>
-              <tr><td style="padding: 6px 0; color: #94a3b8;">Department</td><td style="padding: 6px 0; text-align: right; font-weight: 600; color: #ffffff;">${visitor.department}</td></tr>
-              <tr><td style="padding: 6px 0; color: #94a3b8;">Purpose</td><td style="padding: 6px 0; text-align: right; font-weight: 600; color: #ffffff;">${visitor.purpose}</td></tr>
-              <tr><td style="padding: 6px 0; color: #94a3b8;">Date &amp; Arrival</td><td style="padding: 6px 0; text-align: right; font-weight: 600; color: #ffffff;">${visitor.visitDate} • ${arrivalTime}</td></tr>
+              <tr><td style="padding: 6px 0; color: #94a3b8;">Host</td><td style="padding: 6px 0; text-align: right; font-weight: 600; color: #ffffff;">${safeHost}</td></tr>
+              <tr><td style="padding: 6px 0; color: #94a3b8;">Department</td><td style="padding: 6px 0; text-align: right; font-weight: 600; color: #ffffff;">${safeDept}</td></tr>
+              <tr><td style="padding: 6px 0; color: #94a3b8;">Purpose</td><td style="padding: 6px 0; text-align: right; font-weight: 600; color: #ffffff;">${safePurpose}</td></tr>
+              <tr><td style="padding: 6px 0; color: #94a3b8;">Date &amp; Arrival</td><td style="padding: 6px 0; text-align: right; font-weight: 600; color: #ffffff;">${safeDate} • ${arrivalTime}</td></tr>
             </table>
             <p style="margin: 20px 0 0; font-size: 12px; color: #94a3b8; border-top: 1px solid #1e293b; padding-top: 16px;">Please keep this Pass Code handy to check out upon departure.</p>
           </div>
@@ -165,6 +184,23 @@ export async function checkInVisitor(
   const dto = toDTO(created);
   void sendVisitorPassEmail(dto);
   return dto;
+}
+
+export async function getVisitorByPassCode(passCode: string): Promise<VisitorDTO | null> {
+  const clean = passCode.trim().toUpperCase();
+  if (!clean) return null;
+
+  try {
+    const res = await backendApi.visitors.getByPassCode(clean);
+    if (res?.data) return toDTO(res.data);
+  } catch {
+    // Fallback to Prisma
+  }
+
+  const row = await prisma.visitorLog.findUnique({
+    where: { passCode: clean },
+  });
+  return row ? toDTO(row) : null;
 }
 
 export async function selfCheckOutVisitor(identifier: string): Promise<VisitorDTO | null> {
