@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { validateCorporateEmail, validatePhoneNumber } from "@/lib/validation/contact";
 import { ensureUserWorkspaceSchema } from "@/lib/auth/user-schema";
+import { sendEmail } from "@/lib/email/dispatcher";
 
 export async function GET() {
   try {
@@ -17,6 +18,10 @@ export async function GET() {
     const userDept = (user.department || "").toUpperCase();
     const isSuperAdmin = userRole === "SUPER_ADMIN" || userDept === "EXECUTIVE";
     const isIT = userDept === "IT";
+
+    // Privacy gate: IT admins without EXECUTIVE clearance may provision accounts
+    // but cannot see personal staff data (email, phone, login history)
+    const isExecutiveSuperAdmin = isSuperAdmin && userDept === "EXECUTIVE";
 
     if (!isSuperAdmin && !isIT) {
       return NextResponse.json(
@@ -46,9 +51,27 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
+    // Privacy: strip / mask personal data based on clearance level
+    // Executive SUPER_ADMIN → full data. IT Admin → masked email, no timestamps.
     const safeUsers = users.map((u: any) => ({
-      ...u,
+      id: u.id,
+      fullName: u.fullName,
+      role: u.role,
+      department: u.department,
+      jobTitle: u.jobTitle,
+      status: u.status,
+      primaryWorkspace: u.primaryWorkspace,
+      assignedModules: u.assignedModules,
+      twoFactorEnabled: u.twoFactorEnabled,
       seniorityLevel: u.seniorityLevel || "SENIOR",
+      _count: u._count,
+      email: isExecutiveSuperAdmin
+        ? u.email
+        : u.email
+        ? `${u.email.charAt(0)}***@${u.email.split("@")[1] || "dextaafrica.com"}`
+        : null,
+      lastLoginAt: isExecutiveSuperAdmin ? u.lastLoginAt : null,
+      createdAt: isExecutiveSuperAdmin ? u.createdAt : null,
     }));
 
     return NextResponse.json({ users: safeUsers });
@@ -79,6 +102,8 @@ export async function POST(req: NextRequest) {
       phone,
       primaryWorkspace,
       assignedModules,
+      promptPasswordChoice,
+      sendWelcomeEmail,
     } = await req.json();
 
     if (!email || !fullName || !password) {
@@ -119,6 +144,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const workspaceKey = String(primaryWorkspace || "operations").toLowerCase();
+    let resolvedDepartment = (department || "OPERATIONS").toUpperCase();
+    if (workspaceKey === "crm" || workspaceKey === "clan" || workspaceKey === "operations") {
+      if (resolvedDepartment === "IT") resolvedDepartment = "OPERATIONS";
+    } else if (workspaceKey === "finance") {
+      resolvedDepartment = "FINANCE";
+    } else if (workspaceKey === "hr") {
+      resolvedDepartment = "HR";
+    } else if (workspaceKey === "systems") {
+      resolvedDepartment = "IT";
+    }
+
     const passwordHash = await bcrypt.hash(password, 10);
     const newUser = await prisma.user.create({
       data: {
@@ -127,21 +164,53 @@ export async function POST(req: NextRequest) {
         passwordHash,
         phone: sanitizedPhone,
         role: role || "ADMIN",
-        department: (department || "OPERATIONS").toUpperCase(),
+        department: resolvedDepartment,
         seniorityLevel: (seniorityLevel || "SENIOR").toUpperCase(),
         jobTitle: jobTitle || null,
-        primaryWorkspace: primaryWorkspace || "operations",
+        primaryWorkspace: workspaceKey,
         assignedModules: Array.isArray(assignedModules)
           ? JSON.stringify(assignedModules)
           : typeof assignedModules === "string"
           ? assignedModules
-          : JSON.stringify([primaryWorkspace || "operations", "storage", "personal"]),
+          : JSON.stringify([workspaceKey, "storage", "personal"]),
         status: "ACTIVE",
         twoFactorEnabled: false,
+        mustChangePassword: promptPasswordChoice !== false,
       },
     });
 
     const createdUser = newUser as any;
+
+    if (sendWelcomeEmail) {
+      const portalUrl = resolvedDepartment === "IT" || role === "SUPER_ADMIN"
+        ? "https://admin.dextaafrica.com/login"
+        : "https://ops.dextaafrica.com/login";
+      try {
+        await sendEmail({
+          to: createdUser.email,
+          subject: "Your Dexta Africa Workspace Account is Ready",
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 28px; border: 1px solid #e4e4e7; border-radius: 12px; background: #ffffff; color: #09090b;">
+              <h2 style="margin: 0 0 10px 0;">Welcome to Dexta Africa, ${fullName}</h2>
+              <p style="font-size: 14px; color: #52525b; line-height: 1.5;">
+                Your corporate profile has been provisioned by Systems Administration.
+              </p>
+              <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 14px; font-size: 13px; margin: 16px 0;">
+                <div><strong>Portal:</strong> <a href="${portalUrl}">${portalUrl}</a></div>
+                <div><strong>Email:</strong> ${createdUser.email}</div>
+                <div><strong>Department:</strong> ${resolvedDepartment} (${workspaceKey.toUpperCase()})</div>
+                <div><strong>Assigned Password:</strong> ${password}</div>
+              </div>
+              <p style="font-size: 12px; color: #71717a;">
+                On first sign-in, you may choose to keep your assigned password or set your own personal password.
+              </p>
+            </div>
+          `,
+        });
+      } catch (mailErr) {
+        console.warn("[User welcome email warning]:", mailErr);
+      }
+    }
 
     await logAuditEvent({
       actorId: user.id,

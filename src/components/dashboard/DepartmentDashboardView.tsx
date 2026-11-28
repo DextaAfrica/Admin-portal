@@ -67,6 +67,8 @@ export interface DepartmentDashboardViewProps {
     assignedModules?: string | null;
     signatureUrl?: string | null;
   };
+  /** Passed from server: true only when viewer is SUPER_ADMIN + EXECUTIVE dept, or has "users" module */
+  canViewTeamData?: boolean;
   executiveMetrics: {
     grossPipelineValue: number;
     totalDeals: number;
@@ -131,6 +133,7 @@ export interface DepartmentDashboardViewProps {
 
 export function DepartmentDashboardView({
   currentUser,
+  canViewTeamData = false,
   executiveMetrics,
   operationsMetrics,
   financeMetrics,
@@ -330,6 +333,63 @@ export function DepartmentDashboardView({
   const [emailsList, setEmailsList] = React.useState<any[]>(corporateEmails);
   const [txnFilter, setTxnFilter] = React.useState<string>("ALL");
   const [approvalFilter, setApprovalFilter] = React.useState<string>("ALL");
+
+  // Synchronized Directives & Assigned Tasks (scoped by server to user's department/id)
+  const [deptDirectives, setDeptDirectives] = React.useState<any[]>([]);
+  const [myTasks, setMyTasks] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      fetch("/api/executive/directives").then((r) => (r.ok ? r.json() : { directives: [] })).catch(() => ({ directives: [] })),
+      fetch("/api/tasks").then((r) => (r.ok ? r.json() : { tasks: [] })).catch(() => ({ tasks: [] })),
+    ]).then(([dirData, taskData]) => {
+      if (!mounted) return;
+      setDeptDirectives((dirData.directives || []).filter((d: any) => d.status !== "COMPLETED"));
+      setMyTasks((taskData.tasks || []).filter((t: any) => t.status !== "COMPLETED"));
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const handleDirectiveStatus = async (id: string, status: "ACKNOWLEDGED" | "COMPLETED") => {
+    try {
+      const res = await fetch("/api/executive/directives", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) throw new Error("Failed to update directive");
+      setDeptDirectives((prev) =>
+        status === "COMPLETED"
+          ? prev.filter((d) => d.id !== id)
+          : prev.map((d) => (d.id === id ? { ...d, status } : d))
+      );
+      toastSuccess(`Directive ${status === "COMPLETED" ? "Completed" : "Acknowledged"}`);
+    } catch {
+      toastError("Could not update directive status");
+    }
+  };
+
+  const handleTaskStatus = async (id: string, status: "IN_PROGRESS" | "COMPLETED") => {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, status }),
+      });
+      if (!res.ok) throw new Error("Failed to update task");
+      setMyTasks((prev) =>
+        status === "COMPLETED"
+          ? prev.filter((t) => t.id !== id)
+          : prev.map((t) => (t.id === id ? { ...t, status } : t))
+      );
+      toastSuccess(`Task marked ${status.replace("_", " ")}`);
+    } catch {
+      toastError("Could not update task status");
+    }
+  };
 
   // Modals state
   const [newApprovalModalOpen, setNewApprovalModalOpen] = React.useState(false);
@@ -988,6 +1048,96 @@ export function DepartmentDashboardView({
       </div>
 
       {/* ===================================================================== */}
+      {/* 1.5 SYNCHRONIZED EXECUTIVE DIRECTIVES & ASSIGNED TASKS INBOX          */}
+      {/* ===================================================================== */}
+      {(deptDirectives.length > 0 || myTasks.length > 0) && (
+        <div className="rounded-3xl border border-red-500/25 bg-white dark:bg-[#0D1017] p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-[#ED2618] animate-pulse" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                Action Required: Directives &amp; Assigned Tasks ({deptDirectives.length + myTasks.length})
+              </h3>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {deptDirectives.slice(0, 4).map((dir) => (
+              <div
+                key={dir.id}
+                className="p-3.5 rounded-2xl bg-red-500/[0.04] border border-red-500/20 flex flex-col justify-between gap-2.5"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-red-500/15 text-[#ED2618]">
+                      DIRECTIVE • {dir.reference}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-slate-500">{dir.priority}</span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">{dir.title}</h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{dir.instruction}</p>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  {dir.status === "ISSUED" && (
+                    <button
+                      type="button"
+                      onClick={() => handleDirectiveStatus(dir.id, "ACKNOWLEDGED")}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-bold hover:border-[#ED2618] cursor-pointer"
+                    >
+                      Acknowledge
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDirectiveStatus(dir.id, "COMPLETED")}
+                    className="px-2.5 py-1 rounded-lg bg-[#ED2618] text-white text-[11px] font-bold hover:bg-[#d01f12] cursor-pointer"
+                  >
+                    Mark Completed
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {myTasks.slice(0, 4).map((t) => (
+              <div
+                key={t.id}
+                className="p-3.5 rounded-2xl bg-blue-500/[0.04] border border-blue-500/20 flex flex-col justify-between gap-2.5"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-500">
+                      TASK • {t.reference}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-slate-500">{t.priority}</span>
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">{t.title}</h4>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2">{t.description}</p>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  {t.status === "PENDING" && (
+                    <button
+                      type="button"
+                      onClick={() => handleTaskStatus(t.id, "IN_PROGRESS")}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 dark:border-white/10 text-[11px] font-bold hover:border-blue-500 cursor-pointer"
+                    >
+                      Start Task
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleTaskStatus(t.id, "COMPLETED")}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-500 cursor-pointer"
+                  >
+                    Complete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
       {/* 2. TAB: EXECUTIVE OVERVIEW */}
       {/* ===================================================================== */}
       {activeTab === "overview" && (
@@ -1273,36 +1423,64 @@ export function DepartmentDashboardView({
         <div className="space-y-6">
           {/* Top 4 High-Impact Operational Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* 1. Team Members */}
+            {/* 1. Team Members — gated: only Executive SUPER_ADMIN can see headcount */}
             <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm flex flex-col justify-between space-y-4 hover:border-red-500/30 transition-all">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Team Members
+                  Team Accounts
                 </span>
                 <div className="h-9 w-9 rounded-xl bg-red-500/10 text-[#ED2618] flex items-center justify-center">
                   <Users className="h-4 w-4" />
                 </div>
               </div>
-              <div>
-                <div className="text-3xl font-black text-slate-900 dark:text-white font-mono">
-                  {itMetrics.totalUsers || 4}
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Active staff accounts across all departments
-                </p>
-              </div>
-              <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
-                <Link
-                  href="/users"
-                  className="text-xs font-bold text-[#ED2618] hover:underline flex items-center gap-1 group"
-                >
-                  <span>Manage Team</span>
-                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
-                </Link>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
-                  All Active
-                </span>
-              </div>
+              {canViewTeamData ? (
+                <>
+                  <div>
+                    <div className="text-3xl font-black text-slate-900 dark:text-white font-mono">
+                      {itMetrics.totalUsers || 0}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      Active staff accounts across all departments
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
+                    <Link
+                      href="/users"
+                      className="text-xs font-bold text-[#ED2618] hover:underline flex items-center gap-1 group"
+                    >
+                      <span>Manage Accounts</span>
+                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
+                      All Active
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="h-5 w-5 text-slate-400" />
+                      <span className="text-sm font-bold text-slate-500 dark:text-slate-400">Clearance Required</span>
+                    </div>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">
+                      Staff headcount and profiles are restricted to Executive Directorate. Contact Executive Admin for access.
+                    </p>
+                  </div>
+                  <div className="pt-3 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between">
+                    <Link
+                      href="/users"
+                      className="text-xs font-bold text-[#ED2618] hover:underline flex items-center gap-1 group"
+                    >
+                      <span>Account Provisioning</span>
+                      <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">
+                      IT Access Only
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* 2. Audience & Contacts */}
@@ -1425,7 +1603,7 @@ export function DepartmentDashboardView({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 1. Team & Access */}
+                {/* 1. Team & Access — IT provisioning gateway; visible to all IT users but content is role-gated */}
                 <Link
                   href="/users"
                   className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-slate-50/50 dark:bg-white/[0.02] hover:border-[#ED2618]/50 hover:bg-white dark:hover:bg-white/[0.04] hover:shadow-md hover:-translate-y-0.5 transition-all space-y-3 group cursor-pointer"
@@ -1438,10 +1616,12 @@ export function DepartmentDashboardView({
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-[#ED2618] transition-colors">
-                      Team &amp; Staff Accounts
+                      {canViewTeamData ? "Team & Staff Accounts" : "Account Provisioning"}
                     </h4>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
-                      Onboard new staff, assign department roles, and manage employee access.
+                      {canViewTeamData
+                        ? "Onboard new staff, assign department roles, and manage employee access."
+                        : "Create and provision new staff accounts and assign workspace access."}
                     </p>
                   </div>
                 </Link>

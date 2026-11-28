@@ -72,6 +72,80 @@ function SetupPasswordContent() {
   const [isCheckingTicket, setIsCheckingTicket] = React.useState(false);
 
   // -------------------------------------------------------------
+  // STATE 3: Authenticated First-Login Password Choice
+  // -------------------------------------------------------------
+  const [authUser, setAuthUser] = React.useState<{
+    fullName: string;
+    email: string;
+    department?: string;
+    mustChangePassword: boolean;
+  } | null>(null);
+  const [choiceMode, setChoiceMode] = React.useState<"CHOICE" | "CHANGE">("CHOICE");
+  const [isKeepingPassword, setIsKeepingPassword] = React.useState(false);
+  const [personalNewPassword, setPersonalNewPassword] = React.useState("");
+  const [personalConfirmPassword, setPersonalConfirmPassword] = React.useState("");
+  const [personalPasswordError, setPersonalPasswordError] = React.useState("");
+  const [isUpdatingPersonalPassword, setIsUpdatingPersonalPassword] = React.useState(false);
+
+  React.useEffect(() => {
+    if (tokenParam && ticketParam) return;
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.authenticated && data?.user) {
+          setAuthUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, [tokenParam, ticketParam]);
+
+  const handleKeepAssignedPassword = async () => {
+    setIsKeepingPassword(true);
+    try {
+      const res = await fetch("/api/auth/keep-password", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to confirm password");
+      toastSuccess("Password Confirmed", "Proceeding to your workspace with your assigned password.");
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      toastError(err.message || "Could not confirm password");
+      setIsKeepingPassword(false);
+    }
+  };
+
+  const handlePersonalPasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPersonalPasswordError("");
+    if (!personalNewPassword || !personalConfirmPassword) {
+      setPersonalPasswordError("Both password fields are required.");
+      return;
+    }
+    if (personalNewPassword !== personalConfirmPassword) {
+      setPersonalPasswordError("Passwords do not match.");
+      return;
+    }
+    const strength = evaluatePasswordStrength(personalNewPassword);
+    if (strength.errors.length > 0) {
+      setPersonalPasswordError(strength.errors[0]);
+      return;
+    }
+    setIsUpdatingPersonalPassword(true);
+    try {
+      const res = await fetch("/api/auth/update-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ newPassword: personalNewPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update password");
+      toastSuccess("Password Updated", "Your personal password is saved.");
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      setPersonalPasswordError(err.message || "Failed to update password");
+      setIsUpdatingPersonalPassword(false);
+    }
+  };
+
+  // -------------------------------------------------------------
   // Validate Token on Mount if present
   // -------------------------------------------------------------
   React.useEffect(() => {
@@ -549,6 +623,103 @@ function SetupPasswordContent() {
               Return to Sign In
             </Link>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------
+  // RENDER: Authenticated First-Login Password Choice (Keep vs Change)
+  // -------------------------------------------------------------
+  if (!tokenParam && authUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#070A0F] p-4 sm:p-6 text-white relative overflow-hidden select-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-red-950/20 via-black to-black" />
+        <div className="relative z-10 w-full max-w-md rounded-3xl border border-white/10 bg-[#0D1017]/95 p-6 sm:p-8 shadow-2xl backdrop-blur-2xl space-y-6">
+          <div className="flex flex-col items-center text-center space-y-3">
+            <DextaLogo className="h-9 w-auto" />
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <KeyRound className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight text-white">
+                Welcome, {authUser.fullName}
+              </h1>
+              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto leading-relaxed">
+                Your account was provisioned by IT Administration. You may continue with your assigned password or set a personal password now.
+              </p>
+            </div>
+          </div>
+
+          {choiceMode === "CHOICE" ? (
+            <div className="space-y-3">
+              <Button
+                type="button"
+                onClick={handleKeepAssignedPassword}
+                disabled={isKeepingPassword}
+                className="w-full h-11 bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold"
+              >
+                {isKeepingPassword ? "Entering Workspace..." : "Keep Assigned Password & Enter Workspace"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setChoiceMode("CHANGE")}
+                className="w-full h-11 border-white/15 bg-white/[0.04] hover:bg-white/[0.08] text-white text-xs font-bold"
+              >
+                Set My Own Personal Password
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handlePersonalPasswordUpdate} className="space-y-4">
+              {personalPasswordError && (
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-400">
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{personalPasswordError}</span>
+                </div>
+              )}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  New Personal Password
+                </label>
+                <PasswordInput
+                  value={personalNewPassword}
+                  onChange={(e) => setPersonalNewPassword(e.target.value)}
+                  placeholder="Enter strong password"
+                  required
+                />
+                {personalNewPassword && <PasswordStrengthMeter password={personalNewPassword} />}
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                  Confirm Personal Password
+                </label>
+                <PasswordInput
+                  value={personalConfirmPassword}
+                  onChange={(e) => setPersonalConfirmPassword(e.target.value)}
+                  placeholder="Repeat password"
+                  required
+                />
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setChoiceMode("CHOICE")}
+                  className="flex-1 h-11 border-white/15 text-xs font-bold"
+                >
+                  Back
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={isUpdatingPersonalPassword}
+                  className="flex-1 h-11 bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold"
+                >
+                  {isUpdatingPersonalPassword ? "Saving..." : "Save & Enter"}
+                </Button>
+              </div>
+            </form>
+          )}
         </div>
       </div>
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { UserPlus, ShieldCheck, ShieldAlert, RefreshCw } from "lucide-react";
+import { UserPlus, ShieldCheck, ShieldAlert, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input, PasswordInput } from "@/components/ui/Input";
@@ -18,6 +18,7 @@ interface UserItem {
   department?: string;
   seniorityLevel?: string;
   jobTitle?: string | null;
+  primaryWorkspace?: string | null;
   status: string;
   twoFactorEnabled: boolean;
   lastLoginAt?: string | null;
@@ -34,6 +35,9 @@ export default function UsersPage() {
   const [statusConfirmUser, setStatusConfirmUser] =
     React.useState<UserItem | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = React.useState(false);
+  const [deleteConfirmUser, setDeleteConfirmUser] = React.useState<UserItem | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = React.useState("");
+  const [isDeletingUser, setIsDeletingUser] = React.useState(false);
 
   const [email, setEmail] = React.useState("");
   const [fullName, setFullName] = React.useState("");
@@ -118,7 +122,14 @@ export default function UsersPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        toastSuccess("Team Member Invited", `${fullName} has been added to the Dexta Africa team.`);
+        const portalHint =
+          primaryWorkspace === "systems"
+            ? "admin.dextaafrica.com/login"
+            : "ops.dextaafrica.com/login";
+        toastSuccess(
+          "Staff Account Provisioned",
+          `${fullName} has been created for ${primaryWorkspace.toUpperCase()} workspace. Sign in at ${portalHint}.`
+        );
         setIsAddOpen(false);
         setEmail("");
         setFullName("");
@@ -156,6 +167,34 @@ export default function UsersPage() {
       toastError("Connection Error", "Please check your connection and try again.");
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteConfirmUser) return;
+    if (
+      deleteConfirmInput.trim().toLowerCase() !== deleteConfirmUser.email.toLowerCase() &&
+      deleteConfirmInput.trim().toUpperCase() !== "DELETE"
+    ) {
+      toastError(`Type "${deleteConfirmUser.email}" or "DELETE" to confirm.`);
+      return;
+    }
+    setIsDeletingUser(true);
+    try {
+      const res = await fetch(`/api/users/${deleteConfirmUser.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok) {
+        toastSuccess("Account Deleted", data.message || `${deleteConfirmUser.fullName} removed.`);
+        setDeleteConfirmUser(null);
+        setDeleteConfirmInput("");
+        fetchUsers();
+      } else {
+        toastError("Delete Blocked", data.error || "Could not delete this account.");
+      }
+    } catch {
+      toastError("Connection Error", "Could not delete account.");
+    } finally {
+      setIsDeletingUser(false);
     }
   };
 
@@ -249,9 +288,16 @@ export default function UsersPage() {
                   </div>
                 </td>
                 <td className="px-5 py-4">
-                  <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 uppercase">
-                    {u.department || "OPERATIONS"}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 uppercase">
+                      {u.department || "OPERATIONS"}
+                    </span>
+                    {u.primaryWorkspace && (
+                      <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 uppercase">
+                        {u.primaryWorkspace}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-5 py-4">
                   <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
@@ -291,13 +337,26 @@ export default function UsersPage() {
                 </td>
                 <td className="px-5 py-4 text-slate-500">{formatDate(u.lastLoginAt)}</td>
                 <td className="px-5 py-4 text-right">
-                  <Button
-                    size="xs"
-                    variant={u.status === "ACTIVE" ? "ghost" : "primary"}
-                    onClick={() => setStatusConfirmUser(u)}
-                  >
-                    {u.status === "ACTIVE" ? "Pause Access" : "Restore Access"}
-                  </Button>
+                  <div className="inline-flex items-center gap-1.5">
+                    <Button
+                      size="xs"
+                      variant={u.status === "ACTIVE" ? "ghost" : "primary"}
+                      onClick={() => setStatusConfirmUser(u)}
+                    >
+                      {u.status === "ACTIVE" ? "Pause Access" : "Restore Access"}
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDeleteConfirmInput("");
+                        setDeleteConfirmUser(u);
+                      }}
+                      title="Permanently Delete Account"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -433,12 +492,25 @@ export default function UsersPage() {
               onChange={(e) => {
                 const ws = e.target.value;
                 setPrimaryWorkspace(ws);
-                if (ws === "crm") setSelectedModules(["crm", "forms", "storage"]);
-                else if (ws === "clan") setSelectedModules(["clan", "forms", "campaigns", "storage"]);
-                else if (ws === "finance") setSelectedModules(["finance", "reports", "storage"]);
-                else if (ws === "hr") setSelectedModules(["hr", "storage"]);
-                else if (ws === "systems") setSelectedModules(["systems", "users", "forms", "storage"]);
-                else setSelectedModules(["operations", "projects", "storage"]);
+                if (ws === "crm") {
+                  setDepartment("OPERATIONS");
+                  setSelectedModules(["crm", "forms", "storage"]);
+                } else if (ws === "clan") {
+                  setDepartment("OPERATIONS");
+                  setSelectedModules(["clan", "forms", "campaigns", "storage"]);
+                } else if (ws === "finance") {
+                  setDepartment("FINANCE");
+                  setSelectedModules(["finance", "reports", "storage"]);
+                } else if (ws === "hr") {
+                  setDepartment("HR");
+                  setSelectedModules(["hr", "storage"]);
+                } else if (ws === "systems") {
+                  setDepartment("IT");
+                  setSelectedModules(["systems", "users", "forms", "storage"]);
+                } else {
+                  setDepartment("OPERATIONS");
+                  setSelectedModules(["operations", "projects", "storage"]);
+                }
               }}
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 py-2 text-xs font-semibold text-slate-900 dark:text-white"
             >
@@ -542,6 +614,61 @@ export default function UsersPage() {
             ({statusConfirmUser.email})
           </div>
         )}
+      </Modal>
+
+      {/* Permanently Delete User Account Modal */}
+      <Modal
+        isOpen={Boolean(deleteConfirmUser)}
+        onClose={() => !isDeletingUser && setDeleteConfirmUser(null)}
+        title="Permanently Delete Staff Account"
+        description="Removes this account and revokes all active sessions so you can recreate a clean isolated workspace."
+        maxWidth="md"
+        footer={
+          <>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={isDeletingUser}
+              onClick={() => setDeleteConfirmUser(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="danger"
+              isLoading={isDeletingUser}
+              disabled={
+                !deleteConfirmUser ||
+                (deleteConfirmInput.trim().toLowerCase() !== deleteConfirmUser.email.toLowerCase() &&
+                  deleteConfirmInput.trim().toUpperCase() !== "DELETE")
+              }
+              onClick={handleDeleteUser}
+              leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+            >
+              Permanently Delete Account
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3 text-xs">
+          <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-300">
+            <p className="font-bold">{deleteConfirmUser?.fullName}</p>
+            <p className="font-mono text-[11px]">{deleteConfirmUser?.email}</p>
+          </div>
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Type <span className="font-mono text-red-600">{deleteConfirmUser?.email}</span> or{" "}
+              <span className="font-mono text-red-600">DELETE</span> to confirm:
+            </label>
+            <input
+              type="text"
+              value={deleteConfirmInput}
+              onChange={(e) => setDeleteConfirmInput(e.target.value)}
+              placeholder={deleteConfirmUser?.email || "DELETE"}
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#121217] px-3 py-2 text-xs font-mono text-slate-900 dark:text-white"
+            />
+          </div>
+        </div>
       </Modal>
     </div>
   );

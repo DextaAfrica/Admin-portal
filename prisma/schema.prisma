@@ -754,4 +754,169 @@ model ProductionReleaseRequest {
   @@index([createdAt])
 }
 
+// =============================================================================
+// EXECUTIVE DIRECTIVES & GM OPERATIONAL TASK COMMAND (STEALTH MD OVERSIGHT)
+// =============================================================================
+
+model ExecutiveDirective {
+  id               String    @id @default(uuid())
+  reference        String    @unique // e.g. "DIR-2026-4812"
+  title            String
+  instruction      String
+  targetDepartment String    // "FINANCE", "OPERATIONS", "HR", "IT", "EXECUTIVE", "ALL"
+  targetUserId     String?
+  targetUserName   String?
+  priority         String    @default("HIGH") // "CRITICAL", "HIGH", "NORMAL"
+  status           String    @default("ISSUED") // "ISSUED", "ACKNOWLEDGED", "IN_PROGRESS", "COMPLETED"
+  dueDate          DateTime?
+  issuedById       String
+  issuedByName     String
+  issuedByEmail    String
+  acknowledgedBy   String?
+  acknowledgedAt   DateTime?
+  completionNotes  String?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([targetDepartment])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model DepartmentTask {
+  id               String    @id @default(uuid())
+  reference        String    @unique // e.g. "TSK-2026-3091"
+  title            String
+  description      String
+  department       String    // "OPERATIONS", "FINANCE", "HR", "IT", "CRM", "CLAN"
+  assigneeId       String?
+  assigneeName     String?
+  assigneeEmail    String?
+  assignedById     String
+  assignedByName   String
+  assignedByRole   String    // "GM", "MD", "EXECUTIVE", "ADMIN"
+  priority         String    @default("NORMAL") // "URGENT", "HIGH", "NORMAL", "LOW"
+  status           String    @default("PENDING") // "PENDING", "IN_PROGRESS", "COMPLETED", "OVERDUE"
+  dueDate          DateTime?
+  completionNotes  String?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([department])
+  @@index([assigneeId])
+  @@index([status])
+  @@index([assignedByRole])
+  @@index([createdAt])
+}
+
+// =============================================================================
+// VISITOR MANAGEMENT SYSTEM (RECEPTION CHECK-IN / CHECK-OUT)
+// =============================================================================
+
+model VisitorLog {
+  id               String    @id @default(uuid())
+  passCode         String    @unique
+  fullName         String
+  phone            String
+  email            String
+  company          String    @default("")
+  position         String    @default("")
+  purpose          String
+  purposeOther     String    @default("")
+  hostName         String
+  department       String
+  hasAppointment   Boolean   @default(false)
+  invitedBy        String    @default("")
+  visitDescription String    @default("")
+  visitDate        String    // YYYY-MM-DD auto-generated
+  checkInAt        DateTime  @default(now())
+  checkOutAt       DateTime?
+  status           String    @default("checked_in") // "checked_in" | "checked_out"
+  agreedGuidelines Boolean   @default(false)
+  consentedData    Boolean   @default(false)
+  declaredAt       DateTime  @default(now())
+  ipAddress        String    @default("")
+  userAgent        String    @default("")
+  checkedOutBy     String    @default("")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status])
+  @@index([visitDate])
+  @@index([department])
+  @@index([email])
+  @@index([phone])
+  @@index([checkInAt])
+}
+
+// =============================================================================
+// REMOTE WORK TELEMETRY & AUTHENTICITY VERIFICATION
+// =============================================================================
+
+model DailyWorkTelemetry {
+  id                String    @id @default(uuid())
+  userId            String
+  dateKey           String    // "YYYY-MM-DD"
+  activeSeconds     Int       @default(0)
+  idleSeconds       Int       @default(0)
+  verifiedActions   Int       @default(0)
+  heartbeatCount    Int       @default(0)
+  lastRoute         String?
+  lastIpAddress     String?
+  lastHeartbeatAt   DateTime  @default(now())
+  status            String    @default("ONLINE_ACTIVE") // "ONLINE_ACTIVE", "IDLE", "OFFLINE"
+  authenticityScore Int       @default(100) // 0 - 100
+  flagReason        String?   // "LOW_OUTPUT_HIGH_PRESENCE", "EXCESSIVE_IDLE", null
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([userId, dateKey])
+  @@index([dateKey])
+  @@index([userId])
+  @@index([status])
+}
+
+// =============================================================================
+// HIGH-END INTERNAL COMMUNICATION CHANNELS & MESSAGES
+// =============================================================================
+
+model InternalChannel {
+  id             String            @id @default(uuid())
+  slug           String            @unique // e.g. "general", "finance", "operations", "dm-u1-u2"
+  name           String
+  type           String            @default("DEPARTMENT") // "DEPARTMENT", "GENERAL", "DIRECT", "EXECUTIVE"
+  department     String?           // "FINANCE", "OPERATIONS", "HR", "IT", "CRM", "EXECUTIVE"
+  participantIds String            @default("[]") // JSON array of userIds for DIRECT channels
+  description    String?
+  messages       InternalMessage[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([type])
+  @@index([department])
+}
+
+model InternalMessage {
+  id               String          @id @default(uuid())
+  channelId        String
+  channel          InternalChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  senderId         String
+  senderName       String
+  senderDepartment String
+  senderRole       String
+  body             String
+  priority         String          @default("NORMAL") // "NORMAL", "URGENT"
+  readByIds        String          @default("[]") // JSON array of userIds
+  createdAt        DateTime        @default(now())
+
+  @@index([channelId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+
+
 

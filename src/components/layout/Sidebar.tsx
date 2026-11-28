@@ -76,6 +76,8 @@ const OPERATIONS_NAV: NavSection[] = [
     items: [
       { title: "GM Operational Command", href: "/dashboard/gm", icon: Compass, badge: "GM" },
       { title: "Operations Dashboard", href: "/dashboard", tabId: "operations", icon: LayoutDashboard },
+      { title: "Visitor Management", href: "/visitors", icon: UserCheck, badge: "Live" },
+      { title: "Internal Messages", href: "/messages", icon: MessageSquare, badge: "Comms" },
       { title: "Dexta Clan Academy", href: "/clan", icon: GraduationCap, badge: "Cohorts" },
       { title: "Projects & Milestones", href: "/projects", icon: Building2 },
       { title: "Reports & Dossiers", href: "/reports", icon: FileText },
@@ -90,9 +92,11 @@ const SYSTEMS_NAV: NavSection[] = [
     label: "Main",
     items: [
       { title: "Dashboard", href: "/dashboard?tab=systems", tabId: "systems", icon: LayoutDashboard },
+      { title: "Visitor Management", href: "/visitors", icon: UserCheck, badge: "Live" },
       { title: "Team Members", href: "/users", icon: Users },
       { title: "Document Storage", href: "/storage", icon: HardDrive },
       { title: "Clearances & Approvals", href: "/dashboard?tab=approvals", tabId: "approvals", icon: CheckCircle2 },
+      { title: "Internal Messages", href: "/messages", icon: MessageSquare },
     ],
   },
   {
@@ -132,6 +136,7 @@ const EXECUTIVE_NAV: NavSection[] = [
       { title: "MD / CEO Strategic Cockpit", href: "/dashboard/md", icon: Crown, badge: "Fortune 500" },
       { title: "GM Operational Command", href: "/dashboard/gm", icon: Compass, badge: "GM Suite" },
       { title: "MD / CEO Command Suite", href: "/dashboard?tab=overview", tabId: "overview", icon: LayoutDashboard, badge: "CEO" },
+      { title: "Internal Messages", href: "/messages", icon: MessageSquare, badge: "Comms" },
       { title: "Executive Reports & Charts", href: "/reports", icon: BarChart3, badge: "BI" },
     ],
   },
@@ -170,6 +175,7 @@ const HR_NAV: NavSection[] = [
     label: "People Workspace",
     items: [
       { title: "HR Command Overview", href: "/dashboard?tab=overview", tabId: "overview", icon: LayoutDashboard },
+      { title: "Internal Messages", href: "/messages", icon: MessageSquare, badge: "Comms" },
     ],
   },
   {
@@ -197,6 +203,7 @@ const FINANCE_NAV: NavSection[] = [
     label: "Treasury & Capital",
     items: [
       { title: "Treasury Liquidity", href: "/dashboard?tab=treasury", tabId: "treasury", icon: Landmark, badge: "Ledger" },
+      { title: "Internal Messages", href: "/messages", icon: MessageSquare, badge: "Comms" },
       { title: "Financial Reports & Charts", href: "/reports", icon: BarChart3, badge: "Analytics" },
       { title: "Capital & Inflow Ledger", href: "/dashboard?tab=treasury", tabId: "treasury", icon: DollarSign, badge: "Inflow" },
       { title: "Sovereign Deals Pipeline", href: "/crm", icon: Briefcase, badge: "Deals" },
@@ -224,6 +231,7 @@ const CRM_NAV: NavSection[] = [
     label: "CRM Sales & Account Desk",
     items: [
       { title: "My CRM Pipeline", href: "/crm", icon: Briefcase, badge: "Isolated" },
+      { title: "Internal Messages", href: "/messages", icon: MessageSquare, badge: "Comms" },
       { title: "Forms & Lead Intake", href: "/forms", icon: Link2 },
       { title: "My Cloud Storage", href: "/storage", icon: HardDrive },
     ],
@@ -235,6 +243,7 @@ const CLAN_NAV: NavSection[] = [
     label: "Dexta Clan Academy Desk",
     items: [
       { title: "Dexta Clan Cohorts", href: "/clan", icon: GraduationCap, badge: "Academy" },
+      { title: "Internal Messages", href: "/messages", icon: MessageSquare, badge: "Comms" },
       { title: "Registration Forms", href: "/forms", icon: Link2 },
       { title: "Email Campaigns", href: "/marketing/campaigns", icon: Send },
       { title: "My Cloud Storage", href: "/storage", icon: HardDrive },
@@ -333,6 +342,14 @@ export function Sidebar({
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [activeTabSearch, setActiveTabSearch] = React.useState<string>("");
+  // Track current hostname for SUPER_ADMIN portal routing
+  const [currentHost, setCurrentHost] = React.useState<string>("");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCurrentHost(window.location.hostname.toLowerCase());
+    }
+  }, []);
 
   // Determine portal STRICTLY from authenticated account department & role
   // Zero dropdown switcher; zero localStorage manipulation.
@@ -341,8 +358,15 @@ export function Sidebar({
   const workspace = (user?.primaryWorkspace || "").toLowerCase();
 
   const activePortal: PortalType = React.useMemo(() => {
+    const isAdminHost =
+      currentHost.startsWith("admin.") ||
+      currentHost.includes("admin.dextaafrica") ||
+      currentHost.includes("admin.localhost");
+
     if (role === "SUPER_ADMIN" || dept === "EXECUTIVE") {
-      return "executive";
+      // SUPER_ADMIN on admin.* → Systems IT portal (not Executive cockpit)
+      // SUPER_ADMIN on ops.* or root → Executive cockpit
+      return isAdminHost ? "systems" : "executive";
     }
     if (workspace === "crm") return "crm";
     if (workspace === "clan") return "clan";
@@ -357,7 +381,7 @@ export function Sidebar({
     }
     // Operations Manager & Operations Fleet
     return "operations";
-  }, [dept, role, workspace]);
+  }, [dept, role, workspace, currentHost]);
 
   // Sync activeTab from URL search parameters (?tab=...)
   React.useEffect(() => {

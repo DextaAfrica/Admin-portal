@@ -88,12 +88,42 @@ export function SessionInactivityGuard() {
       setWarningModalOpen(false);
     }
 
-    // Send heartbeat to backend every 45s while user is actively working
+    // Send active heartbeat to backend every 45s while user is actively working
     if (now - lastHeartbeatSentRef.current > 45000) {
       lastHeartbeatSentRef.current = now;
-      fetch("/api/auth/heartbeat", { method: "POST" }).catch(() => {});
+      fetch("/api/auth/heartbeat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          activeDeltaSeconds: 45,
+          idleDeltaSeconds: 0,
+          currentPath: typeof window !== "undefined" ? window.location.pathname : "/dashboard",
+        }),
+      }).catch(() => {});
     }
   }, [warningModalOpen]);
+
+  // Periodic background pulse every 60s to record idle time if tab is open with no input
+  React.useEffect(() => {
+    const idleInterval = setInterval(() => {
+      const now = Date.now();
+      const secsSinceInput = (now - lastActivityRef.current) / 1000;
+      const secsSinceHb = (now - lastHeartbeatSentRef.current) / 1000;
+      if (secsSinceInput >= 55 && secsSinceHb >= 55) {
+        lastHeartbeatSentRef.current = now;
+        fetch("/api/auth/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            activeDeltaSeconds: 0,
+            idleDeltaSeconds: 60,
+            currentPath: typeof window !== "undefined" ? window.location.pathname : "/dashboard",
+          }),
+        }).catch(() => {});
+      }
+    }, 60000);
+    return () => clearInterval(idleInterval);
+  }, []);
 
   React.useEffect(() => {
     const events = ["mousemove", "mousedown", "keydown", "scroll", "touchstart", "click"];
