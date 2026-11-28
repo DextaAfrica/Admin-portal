@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { triggerApprovalCreatedWorkflow, ensureInitialEnterpriseData } from "@/lib/automation/engine";
+import { recordVerifiedWorkAction } from "@/lib/telemetry/work-monitor";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,8 @@ export async function POST(req: NextRequest) {
       userAgent: req.headers.get("user-agent"),
       metadata: { ticketNumber, fromDepartment, toDepartment, priority, amount },
     });
+
+    await recordVerifiedWorkAction(user.id, "/dashboard");
 
     return NextResponse.json({ success: true, approval: newApproval }, { status: 201 });
   } catch (error) {

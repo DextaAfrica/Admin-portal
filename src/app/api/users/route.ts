@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { validateCorporateEmail, validatePhoneNumber } from "@/lib/validation/contact";
 import { ensureUserWorkspaceSchema } from "@/lib/auth/user-schema";
+import { sendEmail } from "@/lib/email/dispatcher";
 
 export async function GET() {
   try {
@@ -101,6 +102,8 @@ export async function POST(req: NextRequest) {
       phone,
       primaryWorkspace,
       assignedModules,
+      promptPasswordChoice,
+      sendWelcomeEmail,
     } = await req.json();
 
     if (!email || !fullName || !password) {
@@ -172,10 +175,42 @@ export async function POST(req: NextRequest) {
           : JSON.stringify([workspaceKey, "storage", "personal"]),
         status: "ACTIVE",
         twoFactorEnabled: false,
+        mustChangePassword: promptPasswordChoice !== false,
       },
     });
 
     const createdUser = newUser as any;
+
+    if (sendWelcomeEmail) {
+      const portalUrl = resolvedDepartment === "IT" || role === "SUPER_ADMIN"
+        ? "https://admin.dextaafrica.com/login"
+        : "https://ops.dextaafrica.com/login";
+      try {
+        await sendEmail({
+          to: createdUser.email,
+          subject: "Your Dexta Africa Workspace Account is Ready",
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 580px; margin: 0 auto; padding: 28px; border: 1px solid #e4e4e7; border-radius: 12px; background: #ffffff; color: #09090b;">
+              <h2 style="margin: 0 0 10px 0;">Welcome to Dexta Africa, ${fullName}</h2>
+              <p style="font-size: 14px; color: #52525b; line-height: 1.5;">
+                Your corporate profile has been provisioned by Systems Administration.
+              </p>
+              <div style="background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 14px; font-size: 13px; margin: 16px 0;">
+                <div><strong>Portal:</strong> <a href="${portalUrl}">${portalUrl}</a></div>
+                <div><strong>Email:</strong> ${createdUser.email}</div>
+                <div><strong>Department:</strong> ${resolvedDepartment} (${workspaceKey.toUpperCase()})</div>
+                <div><strong>Assigned Password:</strong> ${password}</div>
+              </div>
+              <p style="font-size: 12px; color: #71717a;">
+                On first sign-in, you may choose to keep your assigned password or set your own personal password.
+              </p>
+            </div>
+          `,
+        });
+      } catch (mailErr) {
+        console.warn("[User welcome email warning]:", mailErr);
+      }
+    }
 
     await logAuditEvent({
       actorId: user.id,

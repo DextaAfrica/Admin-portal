@@ -379,5 +379,44 @@ export const backendApi = {
       }
     },
   },
+
+  visitors: {
+    checkIn: (payload: Record<string, any>) =>
+      backendFetch<{ data: any }>("/visitors/check-in", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        timeoutMs: 6000,
+      }),
+    getByPassCode: (passCode: string) =>
+      backendFetch<{ data: any }>(`/visitors/pass/${encodeURIComponent(passCode)}`, {
+        timeoutMs: 5000,
+      }),
+    selfCheckOut: (identifier: string) =>
+      backendFetch<{ data: any }>("/visitors/check-out", {
+        method: "POST",
+        body: JSON.stringify({ identifier }),
+        timeoutMs: 6000,
+      }),
+    list: (params: Record<string, string | number | undefined> = {}) => {
+      const sp = new URLSearchParams();
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== "") sp.set(k, String(v));
+      });
+      const qs = sp.toString() ? `?${sp.toString()}` : "";
+      return backendFetch<PaginatedResponse<any>>(`/admin/visitors${qs}`, {
+        timeoutMs: 6000,
+      });
+    },
+    adminCheckOut: (id: string, adminEmail?: string) =>
+      backendFetch<{ data: any }>(`/admin/visitors/${encodeURIComponent(id)}/check-out`, {
+        method: "PATCH",
+        adminEmail,
+        timeoutMs: 6000,
+      }),
+    analytics: () =>
+      backendFetch<{ data: any }>("/admin/visitors/analytics", {
+        timeoutMs: 6000,
+      }),
+  },
 };
 

@@ -153,6 +153,41 @@ export function MdExecutiveDashboard({
     dueDate: "",
   });
 
+  // Live Remote Work Telemetry & CRM Sales Follow-Up Intelligence
+  const [remoteTelemetry, setRemoteTelemetry] = React.useState<{
+    summary: { totalMonitored: number; onlineActive: number; idle: number; offline: number; flaggedLowOutput: number };
+    staffTelemetry: any[];
+  } | null>(null);
+  const [crmIntel, setCrmIntel] = React.useState<{
+    totalClients: number;
+    totalFollowUps: number;
+    totalResponsesRecorded: number;
+    overallResponseRatePct: number;
+    staleClientsCount: number;
+    repScorecards: any[];
+    staleClients: any[];
+  } | null>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const loadIntelligence = () => {
+      Promise.all([
+        fetch("/api/executive/remote-telemetry").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+        fetch("/api/crm/intelligence").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      ]).then(([tel, crm]) => {
+        if (!mounted) return;
+        if (tel) setRemoteTelemetry(tel);
+        if (crm) setCrmIntel(crm);
+      });
+    };
+    loadIntelligence();
+    const interval = setInterval(loadIntelligence, 30000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   const formatCurrency = (val: number) => {
     const abs = Math.abs(val);
     const sign = val < 0 ? "-" : "";
@@ -764,6 +799,165 @@ export function MdExecutiveDashboard({
             </table>
           </div>
         )}
+      </div>
+
+      {/* ===================================================================== */}
+      {/* 7.5 REMOTE WORK TELEMETRY & CRM SALES FOLLOW-UP INTELLIGENCE          */}
+      {/* ===================================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Remote Work Authenticity Monitor */}
+        <div className="rounded-3xl bg-white dark:bg-[#0D1017] border border-slate-200/80 dark:border-white/[0.08] p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-emerald-500" />
+                <span>Remote Work &amp; Output Authenticity Monitor</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Correlates active vs. idle presence with verified backend work actions.
+              </p>
+            </div>
+            {remoteTelemetry && (
+              <div className="flex items-center gap-1.5 text-[10px] font-mono font-bold">
+                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500">
+                  {remoteTelemetry.summary.onlineActive} Active
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-500">
+                  {remoteTelemetry.summary.idle} Idle
+                </span>
+              </div>
+            )}
+          </div>
+
+          {!remoteTelemetry || remoteTelemetry.staffTelemetry.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              Telemetry will populate as staff work remotely across workspaces.
+            </div>
+          ) : (
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+              {remoteTelemetry.staffTelemetry.map((s) => (
+                <div
+                  key={s.userId}
+                  className="p-3 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2 h-2 rounded-full shrink-0 ${
+                          s.liveStatus === "ONLINE_ACTIVE"
+                            ? "bg-emerald-500 animate-pulse"
+                            : s.liveStatus === "IDLE"
+                            ? "bg-amber-500"
+                            : "bg-slate-400"
+                        }`}
+                      />
+                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {s.fullName}
+                      </span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-white/10">
+                        {s.department}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                      Active: {s.activeMinutes}m &bull; Idle: {s.idleMinutes}m &bull; Verified Actions: {s.verifiedActions}
+                    </div>
+                    {s.flagReason && (
+                      <div className="text-[10px] font-mono font-bold text-[#ED2618] mt-0.5">
+                        Alert: {s.flagReason.replace(/_/g, " ")}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="text-right shrink-0">
+                    <div className="font-mono text-xs font-black text-slate-900 dark:text-white">
+                      {s.authenticityScore}%
+                    </div>
+                    <div className="text-[10px] text-slate-400">Authenticity</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* CRM Sales Follow-Up & Response Intelligence */}
+        <div className="rounded-3xl bg-white dark:bg-[#0D1017] border border-slate-200/80 dark:border-white/[0.08] p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/[0.06]">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-500" />
+                <span>Sales Follow-Up &amp; Client Response Intelligence</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Backend-collated follow-up cadence, response rates, and neglected leads.
+              </p>
+            </div>
+            {crmIntel && (
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">
+                {crmIntel.overallResponseRatePct}% Response Rate
+              </span>
+            )}
+          </div>
+
+          {!crmIntel || (crmIntel.repScorecards.length === 0 && crmIntel.staleClients.length === 0) ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              No CRM client follow-ups recorded yet. Scorecards populate automatically as Sales logs calls, emails, and outcomes.
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              {crmIntel.repScorecards.map((rep) => (
+                <div
+                  key={rep.userId}
+                  className="p-3 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-100 dark:border-white/[0.05] flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        {rep.fullName}
+                      </span>
+                      <span
+                        className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                          rep.status === "TOP_PERFORMER"
+                            ? "bg-emerald-500/15 text-emerald-500"
+                            : rep.status === "NEEDS_FOLLOWUP"
+                            ? "bg-red-500/15 text-[#ED2618]"
+                            : "bg-blue-500/15 text-blue-500"
+                        }`}
+                      >
+                        {rep.status.replace(/_/g, " ")}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                      Clients: {rep.assignedClientsCount} &bull; Follow-Ups: {rep.followUpsLogged} &bull; Responses: {rep.responsesRecorded} ({rep.responseRatePct}%)
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-mono text-xs font-black text-slate-900 dark:text-white">
+                      {rep.accountabilityScore}%
+                    </div>
+                    <div className="text-[10px] text-slate-400">Score</div>
+                  </div>
+                </div>
+              ))}
+
+              {crmIntel.staleClients.length > 0 && (
+                <div className="pt-2 border-t border-slate-100 dark:border-white/[0.06] space-y-1.5">
+                  <div className="text-[10px] font-mono font-bold uppercase text-amber-500">
+                    Stale Leads (&gt;48h Without Follow-Up): {crmIntel.staleClientsCount}
+                  </div>
+                  {crmIntel.staleClients.slice(0, 3).map((cl) => (
+                    <div key={cl.clientId} className="flex items-center justify-between text-[11px] text-slate-500">
+                      <span className="truncate font-semibold text-slate-700 dark:text-slate-300">
+                        {cl.clientName} ({cl.stage})
+                      </span>
+                      <span className="font-mono text-[#ED2618] shrink-0">{cl.hoursSinceLastTouch}h untouched</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ===================================================================== */}

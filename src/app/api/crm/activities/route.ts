@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { CreateCrmActivitySchema, formatZodError } from "@/lib/validation/schemas";
+import { recordVerifiedWorkAction } from "@/lib/telemetry/work-monitor";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,8 @@ export async function POST(req: NextRequest) {
         activityDate: new Date(activityDate),
       },
     });
+
+    await recordVerifiedWorkAction(user.id, "/crm");
 
     return NextResponse.json({ activity }, { status: 201 });
   } catch (err: unknown) {

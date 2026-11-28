@@ -1,0 +1,828 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import {
+  UserCheck,
+  Users,
+  LogOut,
+  LogIn,
+  Clock,
+  Calendar,
+  Building2,
+  Search,
+  Download,
+  Printer,
+  ExternalLink,
+  Copy,
+  Check,
+  RefreshCw,
+  Plus,
+  Eye,
+  ShieldCheck,
+  BarChart3,
+  CheckCircle2,
+} from "lucide-react";
+import { Modal } from "@/components/ui/Modal";
+import { useToast } from "@/components/ui/Toast";
+import { VISIT_PURPOSES, VISIT_DEPARTMENTS } from "@/lib/visitors/constants";
+import { cn } from "@/lib/utils";
+
+interface VisitorRecord {
+  id: string;
+  passCode: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  company: string;
+  position: string;
+  purpose: string;
+  purposeOther: string;
+  hostName: string;
+  department: string;
+  hasAppointment: boolean;
+  invitedBy: string;
+  visitDescription: string;
+  visitDate: string;
+  checkInAt: string;
+  checkOutAt: string | null;
+  status: "checked_in" | "checked_out";
+  agreedGuidelines: boolean;
+  consentedData: boolean;
+  declaredAt: string;
+  checkedOutBy: string;
+}
+
+interface CountItem {
+  label: string;
+  count: number;
+}
+
+interface VisitorAnalytics {
+  totalToday: number;
+  currentlyOnSite: number;
+  checkedOutToday: number;
+  scheduledToday: number;
+  walkInToday: number;
+  totalAllTime: number;
+  byDepartment: CountItem[];
+  byPurpose: CountItem[];
+  hourlyArrivals: CountItem[];
+}
+
+export default function AdminVisitorsPage() {
+  const { success: toastSuccess, error: toastError } = useToast();
+
+  const [visitors, setVisitors] = React.useState<VisitorRecord[]>([]);
+  const [analytics, setAnalytics] = React.useState<VisitorAnalytics | null>(null);
+  const [loading, setLoading] = React.useState(true);
+
+  const [statusFilter, setStatusFilter] = React.useState<"all" | "checked_in" | "checked_out">("all");
+  const [deptFilter, setDeptFilter] = React.useState<string>("all");
+  const [dateFilter, setDateFilter] = React.useState<string>("");
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [copiedLink, setCopiedLink] = React.useState(false);
+
+  const [selectedVisitor, setSelectedVisitor] = React.useState<VisitorRecord | null>(null);
+  const [checkingOutId, setCheckingOutId] = React.useState<string | null>(null);
+
+  // Assisted Front-Desk Check-In Modal
+  const [addModalOpen, setAddModalOpen] = React.useState(false);
+  const [addSubmitting, setAddSubmitting] = React.useState(false);
+  const [formState, setFormState] = React.useState({
+    fullName: "",
+    phone: "",
+    email: "",
+    company: "",
+    position: "",
+    purpose: "Business Meeting",
+    purposeOther: "",
+    hostName: "",
+    department: "Operations & Administration",
+    hasAppointment: true,
+    invitedBy: "",
+    visitDescription: "",
+    agreedGuidelines: true,
+    consentedData: true,
+  });
+
+  const loadData = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const sp = new URLSearchParams();
+      if (statusFilter !== "all") sp.set("status", statusFilter);
+      if (deptFilter !== "all") sp.set("department", deptFilter);
+      if (dateFilter) sp.set("date", dateFilter);
+      if (searchQuery.trim()) sp.set("q", searchQuery.trim());
+
+      const [listRes, analyticsRes] = await Promise.all([
+        fetch(`/api/visitors?${sp.toString()}`, { cache: "no-store" }),
+        fetch("/api/visitors/analytics", { cache: "no-store" }),
+      ]);
+
+      if (listRes.ok) {
+        const d = await listRes.json();
+        setVisitors(d.visitors || []);
+      }
+      if (analyticsRes.ok) {
+        const a = await analyticsRes.json();
+        setAnalytics(a.analytics || null);
+      }
+    } catch {
+      toastError("Error", "Failed to load visitor records.");
+    } finally {
+      setLoading(false);
+    }
+  }, [statusFilter, deptFilter, dateFilter, searchQuery, toastError]);
+
+  React.useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleAdminCheckOut = async (visitor: VisitorRecord) => {
+    setCheckingOutId(visitor.id);
+    try {
+      const res = await fetch(`/api/visitors/${visitor.id}/check-out`, {
+        method: "PATCH",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toastError("Check-Out Failed", data.error || "Could not check out visitor.");
+        return;
+      }
+      toastSuccess("Checked Out", `${visitor.fullName} has been checked out.`);
+      if (selectedVisitor?.id === visitor.id) {
+        setSelectedVisitor(data.visitor);
+      }
+      await loadData();
+    } catch {
+      toastError("Error", "Network error during check-out.");
+    } finally {
+      setCheckingOutId(null);
+    }
+  };
+
+  const handleAssistedCheckIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddSubmitting(true);
+    try {
+      const res = await fetch("/api/visitors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formState),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toastError("Validation Error", data.error || "Please check visitor details.");
+        return;
+      }
+      toastSuccess("Visitor Checked In", `Pass ${data.visitor.passCode} issued.`);
+      setAddModalOpen(false);
+      setFormState({
+        fullName: "",
+        phone: "",
+        email: "",
+        company: "",
+        position: "",
+        purpose: "Business Meeting",
+        purposeOther: "",
+        hostName: "",
+        department: "Operations & Administration",
+        hasAppointment: true,
+        invitedBy: "",
+        visitDescription: "",
+        agreedGuidelines: true,
+        consentedData: true,
+      });
+      await loadData();
+    } catch {
+      toastError("Error", "Failed to register visitor.");
+    } finally {
+      setAddSubmitting(false);
+    }
+  };
+
+  const handleCopyKioskLink = () => {
+    const url = `${window.location.origin}/visit`;
+    navigator.clipboard.writeText(url);
+    setCopiedLink(true);
+    toastSuccess("Link Copied", "Visitor Check-In Portal URL copied to clipboard.");
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const exportCsvUrl = React.useMemo(() => {
+    const sp = new URLSearchParams();
+    if (statusFilter !== "all") sp.set("status", statusFilter);
+    if (deptFilter !== "all") sp.set("department", deptFilter);
+    if (dateFilter) sp.set("date", dateFilter);
+    if (searchQuery.trim()) sp.set("q", searchQuery.trim());
+    return `/api/visitors/export?${sp.toString()}`;
+  }, [statusFilter, deptFilter, dateFilter, searchQuery]);
+
+  const maxDeptCount = Math.max(
+    1,
+    ...(analytics?.byDepartment.map((d) => d.count) || [1])
+  );
+  const maxPurposeCount = Math.max(
+    1,
+    ...(analytics?.byPurpose.map((p) => p.count) || [1])
+  );
+
+  return (
+    <div className="space-y-6 pb-12">
+      {/* Page Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-[11px] font-bold text-[#ED2618] mb-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#ED2618] animate-pulse" />
+            <span>Reception &amp; Premises Security</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            Visitor Management
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Monitor live on-premises guests, manage check-ins &amp; departures, and export compliance logs.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 print:hidden">
+          <button
+            type="button"
+            onClick={handleCopyKioskLink}
+            className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#111520] text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            {copiedLink ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+            <span>{copiedLink ? "Copied" : "Copy Check-In Link"}</span>
+          </button>
+
+          <Link
+            href="/visit"
+            target="_blank"
+            className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#111520] text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] transition-all flex items-center gap-1.5"
+          >
+            <ExternalLink className="h-3.5 w-3.5 text-[#ED2618]" />
+            <span>Open Kiosk</span>
+          </Link>
+
+          <a
+            href={exportCsvUrl}
+            className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#111520] text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] transition-all flex items-center gap-1.5"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Export CSV</span>
+          </a>
+
+          <button
+            type="button"
+            onClick={() => window.print()}
+            className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#111520] text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            <span>Print PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setAddModalOpen(true)}
+            className="h-10 px-4 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white text-xs font-bold shadow-lg shadow-red-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Check In Visitor</span>
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Currently On-Premises
+            </span>
+            <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+              <UserCheck className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3 text-3xl font-black font-mono text-slate-900 dark:text-white">
+            {analytics?.currentlyOnSite ?? 0}
+          </div>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
+            Active Checked-In Passes
+          </p>
+        </div>
+
+        <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Visitors Today
+            </span>
+            <div className="h-9 w-9 rounded-xl bg-red-500/10 text-[#ED2618] flex items-center justify-center">
+              <Users className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3 text-3xl font-black font-mono text-slate-900 dark:text-white">
+            {analytics?.totalToday ?? 0}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Total arrivals recorded today
+          </p>
+        </div>
+
+        <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Checked Out Today
+            </span>
+            <div className="h-9 w-9 rounded-xl bg-slate-500/10 text-slate-500 flex items-center justify-center">
+              <LogOut className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3 text-3xl font-black font-mono text-slate-900 dark:text-white">
+            {analytics?.checkedOutToday ?? 0}
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Completed departures today
+          </p>
+        </div>
+
+        <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Scheduled vs Walk-In
+            </span>
+            <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+              <Calendar className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3 text-3xl font-black font-mono text-slate-900 dark:text-white">
+            {analytics?.scheduledToday ?? 0}{" "}
+            <span className="text-base font-semibold text-slate-400">
+              / {analytics?.walkInToday ?? 0}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Scheduled appointments vs walk-ins
+          </p>
+        </div>
+      </div>
+
+      {/* Analytics Visuals */}
+      {analytics && (analytics.byDepartment.length > 0 || analytics.byPurpose.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-[#ED2618]" />
+                <span>Visits by Department</span>
+              </h2>
+              <span className="text-[11px] text-slate-400 font-mono">
+                {analytics.totalAllTime} Total
+              </span>
+            </div>
+            <div className="space-y-3">
+              {analytics.byDepartment.slice(0, 6).map((item) => (
+                <div key={item.label} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-slate-700 dark:text-slate-300 truncate">
+                      {item.label}
+                    </span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {item.count}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-white/[0.06] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#ED2618] to-rose-400"
+                      style={{ width: `${Math.round((item.count / maxDeptCount) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-5 rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-emerald-500" />
+                <span>Purpose of Visit Breakdown</span>
+              </h2>
+              <span className="text-[11px] text-slate-400 font-mono">All Visits</span>
+            </div>
+            <div className="space-y-3">
+              {analytics.byPurpose.slice(0, 6).map((item) => (
+                <div key={item.label} className="space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-slate-700 dark:text-slate-300 truncate">
+                      {item.label}
+                    </span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      {item.count}
+                    </span>
+                  </div>
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-white/[0.06] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"
+                      style={{ width: `${Math.round((item.count / maxPurposeCount) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Bar & Visitor Ledger */}
+      <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#0D1017] shadow-sm overflow-hidden">
+        <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-white/[0.06] flex flex-col lg:flex-row lg:items-center justify-between gap-3 print:hidden">
+          <div className="flex flex-wrap items-center gap-2">
+            {(["all", "checked_in", "checked_out"] as const).map((st) => (
+              <button
+                key={st}
+                type="button"
+                onClick={() => setStatusFilter(st)}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer",
+                  statusFilter === st
+                    ? "bg-[#ED2618] text-white"
+                    : "bg-slate-100 dark:bg-white/[0.05] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10"
+                )}
+              >
+                {st === "all"
+                  ? "All Visitors"
+                  : st === "checked_in"
+                  ? "Checked In"
+                  : "Checked Out"}
+              </button>
+            ))}
+
+            <select
+              value={deptFilter}
+              onChange={(e) => setDeptFilter(e.target.value)}
+              className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3 text-xs font-medium text-slate-700 dark:text-slate-200"
+            >
+              <option value="all">All Departments</option>
+              {VISIT_DEPARTMENTS.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3 text-xs font-medium text-slate-700 dark:text-slate-200"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 sm:w-64">
+              <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search name, pass, company, host..."
+                className="w-full h-9 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 pl-9 pr-3 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-[#ED2618]"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={loadData}
+              className="h-9 w-9 rounded-xl border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 hover:text-[#ED2618] cursor-pointer"
+              title="Refresh"
+            >
+              <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-100 dark:border-white/[0.06] text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-50/70 dark:bg-white/[0.02]">
+                <th className="py-3.5 px-4">Pass &amp; Visitor</th>
+                <th className="py-3.5 px-4">Company &amp; Role</th>
+                <th className="py-3.5 px-4">Purpose &amp; Host</th>
+                <th className="py-3.5 px-4">Arrival &amp; Departure</th>
+                <th className="py-3.5 px-4">Status</th>
+                <th className="py-3.5 px-4 text-right print:hidden">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05] text-xs">
+              {visitors.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">
+                    {loading
+                      ? "Loading visitor records..."
+                      : "No visitor records match the current filters."}
+                  </td>
+                </tr>
+              ) : (
+                visitors.map((v) => (
+                  <tr
+                    key={v.id}
+                    className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors"
+                  >
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-2.5">
+                        <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 font-mono font-bold text-[11px] text-slate-800 dark:text-slate-200">
+                          {v.passCode}
+                        </span>
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white">
+                            {v.fullName}
+                          </p>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            {v.phone} &bull; {v.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <p className="font-medium text-slate-800 dark:text-slate-200">
+                        {v.company || "Individual Visitor"}
+                      </p>
+                      {v.position && (
+                        <p className="text-[11px] text-slate-400">{v.position}</p>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-slate-800 dark:text-slate-200">
+                        {v.purpose === "Other" && v.purposeOther
+                          ? v.purposeOther
+                          : v.purpose}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        Seeing: <strong className="text-slate-700 dark:text-slate-300">{v.hostName}</strong> ({v.department})
+                      </p>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-[11px]">
+                      <div className="text-slate-800 dark:text-slate-200 font-semibold">
+                        {v.visitDate}
+                      </div>
+                      <div className="text-emerald-600 dark:text-emerald-400">
+                        In:{" "}
+                        {new Date(v.checkInAt).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                      {v.checkOutAt && (
+                        <div className="text-slate-400">
+                          Out:{" "}
+                          {new Date(v.checkOutAt).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {v.status === "checked_in" ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Checked In
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                          Checked Out
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right print:hidden">
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedVisitor(v)}
+                          className="p-2 rounded-lg border border-slate-200 dark:border-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white cursor-pointer"
+                          title="View Details"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                        </button>
+                        {v.status === "checked_in" && (
+                          <button
+                            type="button"
+                            onClick={() => handleAdminCheckOut(v)}
+                            disabled={checkingOutId === v.id}
+                            className="px-3 py-1.5 rounded-lg bg-[#ED2618] hover:bg-[#d01f12] text-white text-[11px] font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1"
+                          >
+                            <LogOut className="h-3 w-3" />
+                            <span>{checkingOutId === v.id ? "..." : "Check Out"}</span>
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Visitor Detail Modal */}
+      <Modal
+        isOpen={Boolean(selectedVisitor)}
+        onClose={() => setSelectedVisitor(null)}
+        title={selectedVisitor ? `Visitor Pass • ${selectedVisitor.passCode}` : "Visitor Details"}
+      >
+        {selectedVisitor && (
+          <div className="space-y-4 text-xs">
+            <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10">
+              <div>
+                <span className="text-slate-400 block">Full Name</span>
+                <span className="font-bold text-slate-900 dark:text-white text-sm">
+                  {selectedVisitor.fullName}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Visit Status</span>
+                <span className="font-bold text-slate-900 dark:text-white">
+                  {selectedVisitor.status === "checked_in" ? "Checked In" : "Checked Out"}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Phone</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {selectedVisitor.phone}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Email</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {selectedVisitor.email}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Company</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {selectedVisitor.company || "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Position</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {selectedVisitor.position || "—"}
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Seeing / Host</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {selectedVisitor.hostName} ({selectedVisitor.department})
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block">Appointment</span>
+                <span className="font-medium text-slate-800 dark:text-slate-200">
+                  {selectedVisitor.hasAppointment
+                    ? `Scheduled${selectedVisitor.invitedBy ? ` (${selectedVisitor.invitedBy})` : ""}`
+                    : "Walk-In"}
+                </span>
+              </div>
+            </div>
+
+            {selectedVisitor.visitDescription && (
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10">
+                <span className="text-slate-400 block mb-1">Visit Description</span>
+                <p className="text-slate-800 dark:text-slate-200">
+                  {selectedVisitor.visitDescription}
+                </p>
+              </div>
+            )}
+
+            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+                <ShieldCheck className="h-4 w-4" />
+                <span>Guidelines Agreed &amp; Data Consent Confirmed</span>
+              </div>
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            </div>
+
+            {selectedVisitor.status === "checked_in" && (
+              <button
+                type="button"
+                onClick={() => handleAdminCheckOut(selectedVisitor)}
+                disabled={checkingOutId === selectedVisitor.id}
+                className="w-full h-11 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white font-bold flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Record Departure &amp; Check Out</span>
+              </button>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Assisted Front-Desk Check-In Modal */}
+      <Modal
+        isOpen={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        title="Front-Desk Assisted Check-In"
+      >
+        <form onSubmit={handleAssistedCheckIn} className="space-y-3.5 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block font-semibold mb-1">Full Name *</label>
+              <input
+                type="text"
+                required
+                value={formState.fullName}
+                onChange={(e) => setFormState({ ...formState, fullName: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Phone Number *</label>
+              <input
+                type="tel"
+                required
+                value={formState.phone}
+                onChange={(e) => setFormState({ ...formState, phone: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Email Address *</label>
+              <input
+                type="email"
+                required
+                value={formState.email}
+                onChange={(e) => setFormState({ ...formState, email: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Company / Organisation</label>
+              <input
+                type="text"
+                value={formState.company}
+                onChange={(e) => setFormState({ ...formState, company: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Position / Designation</label>
+              <input
+                type="text"
+                value={formState.position}
+                onChange={(e) => setFormState({ ...formState, position: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Purpose of Visit *</label>
+              <select
+                value={formState.purpose}
+                onChange={(e) => setFormState({ ...formState, purpose: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              >
+                {VISIT_PURPOSES.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block font-semibold mb-1">Department *</label>
+              <select
+                value={formState.department}
+                onChange={(e) => setFormState({ ...formState, department: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              >
+                {VISIT_DEPARTMENTS.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block font-semibold mb-1">Who are they here to see? *</label>
+              <input
+                type="text"
+                required
+                value={formState.hostName}
+                onChange={(e) => setFormState({ ...formState, hostName: e.target.value })}
+                className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={addSubmitting}
+            className="w-full h-11 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+          >
+            <LogIn className="h-4 w-4" />
+            <span>{addSubmitting ? "Checking In..." : "Check In Visitor"}</span>
+          </button>
+        </form>
+      </Modal>
+    </div>
+  );
+}

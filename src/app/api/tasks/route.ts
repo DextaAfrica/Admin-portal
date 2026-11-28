@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth/session";
 import { logAuditEvent } from "@/lib/auth/audit";
 import { ensureExecutiveSchema } from "@/lib/executive/schema";
+import { recordVerifiedWorkAction } from "@/lib/telemetry/work-monitor";
 
 export const dynamic = "force-dynamic";
 
@@ -257,6 +258,8 @@ export async function PATCH(req: NextRequest) {
       userAgent: req.headers.get("user-agent"),
       metadata: { reference: existing.reference, status: nextStatus },
     });
+
+    await recordVerifiedWorkAction(user.id, "/dashboard");
 
     return NextResponse.json({ success: true, task: updated });
   } catch (error) {
