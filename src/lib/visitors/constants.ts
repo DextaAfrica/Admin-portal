@@ -79,17 +79,25 @@ export function sanitizeCsvCell(val: unknown): string {
 }
 
 export function validateVisitorPayload(body: Partial<VisitorPayload>): string | null {
-  if (!body.fullName?.trim()) return "Full Name is required.";
-  if (!body.phone?.trim()) return "Phone Number is required.";
-  if (!body.email?.trim() || !body.email.includes("@")) {
+  if (!body || typeof body !== "object") return "Visitor registration details are required.";
+  const text = (value: unknown, max: number) =>
+    typeof value === "string" && value.trim().length > 0 && value.trim().length <= max;
+  if (!text(body.fullName, 120)) return "Enter a name of 1–120 characters.";
+  if (!text(body.phone, 40)) return "Enter a phone number of 1–40 characters.";
+  if (!text(body.email, 254) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) {
     return "A valid Email Address is required.";
   }
-  if (!body.purpose?.trim()) return "Please select the purpose of your visit.";
-  if (body.purpose === "Other" && !body.purposeOther?.trim()) {
+  if (!VISIT_PURPOSES.includes(body.purpose as VisitPurpose)) return "Please select a valid purpose of visit.";
+  if (body.purpose === "Other" && !text(body.purposeOther, 200)) {
     return "Please specify your purpose of visit.";
   }
-  if (!body.hostName?.trim()) return "Please enter who you are here to see.";
-  if (!body.department?.trim()) return "Please select the department you are visiting.";
+  if (!text(body.hostName, 120)) return "Enter the host name (up to 120 characters).";
+  if (!VISIT_DEPARTMENTS.includes(body.department as VisitDepartment)) return "Please select a valid department.";
+  if (body.company && (typeof body.company !== "string" || body.company.length > 160)) return "Company name must be 160 characters or fewer.";
+  if (body.position && (typeof body.position !== "string" || body.position.length > 120)) return "Position must be 120 characters or fewer.";
+  if (body.invitedBy && (typeof body.invitedBy !== "string" || body.invitedBy.length > 120)) return "Inviter name must be 120 characters or fewer.";
+  if (body.visitDescription && (typeof body.visitDescription !== "string" || body.visitDescription.length > 1000)) return "Visit notes must be 1,000 characters or fewer.";
+  if (typeof body.hasAppointment !== "boolean") return "Please indicate whether you have an appointment.";
   if (!body.agreedGuidelines) {
     return "You must agree to comply with the company's visitor guidelines and office regulations to check in.";
   }

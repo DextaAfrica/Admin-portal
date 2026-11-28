@@ -204,8 +204,9 @@ export async function getVisitorByPassCode(passCode: string): Promise<VisitorDTO
 }
 
 export async function selfCheckOutVisitor(identifier: string): Promise<VisitorDTO | null> {
-  const clean = identifier.trim();
+  const clean = identifier.trim().toUpperCase();
   if (!clean) return null;
+  if (!/^DXV-[A-HJ-NP-Z2-9]{6}$/.test(clean)) return null;
 
   let backendRecord: any = null;
   try {
@@ -218,11 +219,7 @@ export async function selfCheckOutVisitor(identifier: string): Promise<VisitorDT
   const existing = await prisma.visitorLog.findFirst({
     where: {
       status: "checked_in",
-      OR: [
-        { passCode: clean.toUpperCase() },
-        { email: clean.toLowerCase() },
-        { phone: clean },
-      ],
+      passCode: clean,
     },
     orderBy: { checkInAt: "desc" },
   });
