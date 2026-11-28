@@ -22,8 +22,13 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { DextaLogo } from "@/components/ui/DextaLogo";
-import { VISIT_PURPOSES, VISIT_DEPARTMENTS } from "@/lib/visitors/constants";
 import { cn } from "@/lib/utils";
+
+interface VisitorFormOptions {
+  purposes: string[];
+  departments: string[];
+  countryCodes: Array<{ code: string; country: string; iso: string }>;
+}
 
 interface VisitorPass {
   id: string;
@@ -51,6 +56,9 @@ export default function PublicVisitorPortalPage() {
   // Keep the server and first browser render identical; the live clock starts after hydration.
   const [nowClock, setNowClock] = React.useState<Date | null>(null);
   const [phoneCountryCode, setPhoneCountryCode] = React.useState("+234");
+  const [visitorOptions, setVisitorOptions] = React.useState<VisitorFormOptions | null>(null);
+  const [optionsError, setOptionsError] = React.useState("");
+  const [validatingStep, setValidatingStep] = React.useState(false);
 
   // Section 1: Visitor Information
   const [fullName, setFullName] = React.useState("");
@@ -89,6 +97,27 @@ export default function PublicVisitorPortalPage() {
     const timer = setInterval(() => setNowClock(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const loadFormOptions = React.useCallback(async () => {
+    setOptionsError("");
+    try {
+      const res = await fetch("/api/visitors/options", { cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok || !Array.isArray(data.purposes) || !Array.isArray(data.departments) || !Array.isArray(data.countryCodes)) {
+        throw new Error("Registration choices could not be loaded.");
+      }
+      setVisitorOptions(data);
+      if (!data.countryCodes.some((item: VisitorFormOptions["countryCodes"][number]) => item.code === "+234")) {
+        setPhoneCountryCode(data.countryCodes[0]?.code || "");
+      }
+      setPurpose((current) => data.purposes.includes(current) ? current : data.purposes[0] || "");
+      setDepartment((current) => data.departments.includes(current) ? current : data.departments[0] || "");
+    } catch {
+      setOptionsError("We could not load the registration choices. Check your connection and retry.");
+    }
+  }, []);
+
+  React.useEffect(() => { void loadFormOptions(); }, [loadFormOptions]);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -133,28 +162,14 @@ export default function PublicVisitorPortalPage() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (agreedGuidelines !== "yes") {
-      setErrorMsg(
-        "To enter the premises, you must agree to comply with Dexta Africa's visitor guidelines and office regulations. Please speak with Front Desk Reception if you need assistance."
-      );
-      return;
-    }
-    if (!consentedData) {
-      setErrorMsg(
-        "Please tick the consent box ('I agree') to allow processing of your registration details for visitor management and security."
-      );
-      return;
-    }
-
     setSubmitting(true);
     try {
-      const nationalPhone = phone.replace(/\D/g, "").replace(/^0(?=\d{7,})/, "");
       const res = await fetch("/api/visitors/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName,
-          phone: `${phoneCountryCode} ${nationalPhone}`,
+          phone: `${phoneCountryCode} ${phone}`,
           email: email.trim().toLowerCase(),
           company,
           position,
@@ -193,13 +208,38 @@ export default function PublicVisitorPortalPage() {
     }
   };
 
+  const handleContinueToVisit = async () => {
+    setErrorMsg("");
+    setValidatingStep(true);
+    try {
+      const res = await fetch("/api/visitors/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fullName,
+          phone: `${phoneCountryCode} ${phone}`,
+          email,
+          company,
+          position,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error || "Please review your personal details.");
+        return;
+      }
+      setFormStep(2);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch {
+      setErrorMsg("We could not validate your details. Check your connection and retry.");
+    } finally {
+      setValidatingStep(false);
+    }
+  };
+
   const handleSelfCheckOut = async (e: React.FormEvent) => {
     e.preventDefault();
     setCheckoutError("");
-    if (!checkoutIdentifier.trim()) {
-      setCheckoutError("Enter the Pass Code shown on your digital visitor pass.");
-      return;
-    }
     setCheckoutSubmitting(true);
     try {
       const res = await fetch("/api/visitors/check-out", {
@@ -444,7 +484,8 @@ export default function PublicVisitorPortalPage() {
         {/* CHECK-IN FORM (SECTIONS 1 - 4)                                   */}
         {/* ================================================================ */}
         {mode === "checkin" && !activePass && (
-          <form onSubmit={handleCheckIn} className="space-y-6">
+          <form noValidate onSubmit={handleCheckIn} className="space-y-5 sm:space-y-6">
+            {optionsError && <div role="alert" className="flex flex-col gap-3 rounded-2xl border border-amber-400/30 bg-amber-400/[0.08] p-4 text-sm text-amber-100 sm:flex-row sm:items-center sm:justify-between"><span>{optionsError}</span><button type="button" onClick={() => void loadFormOptions()} className="min-h-10 rounded-xl border border-amber-200/20 px-4 text-xs font-bold hover:bg-white/5">Retry</button></div>}
             <div className="rounded-2xl border border-white/10 bg-[#0E131D]/80 p-4 sm:p-5">
               <div className="mb-3 flex items-center justify-between text-xs">
                 <span className="font-semibold text-white">Registration progress</span>
@@ -458,6 +499,7 @@ export default function PublicVisitorPortalPage() {
                 <span className={formStep === 2 ? "text-right font-bold text-white" : "text-right text-slate-500"}>02 · Visit &amp; declaration</span>
               </div>
             </div>
+            {errorMsg && <div role="alert" className="flex items-start gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm leading-relaxed text-red-200"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#ED2618]" /><span className="break-words">{errorMsg}</span></div>}
             {/* Section 1: Visitor Information */}
             {formStep === 1 && <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-5 sm:p-8 shadow-xl space-y-5 animate-fade-in">
               <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
@@ -483,7 +525,6 @@ export default function PublicVisitorPortalPage() {
                     <User className="h-4 w-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="text"
-                      required
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="e.g. Chinedu Okafor"
@@ -498,27 +539,15 @@ export default function PublicVisitorPortalPage() {
                   </label>
                   <div className="flex h-11 overflow-hidden rounded-xl border border-white/10 bg-black/40 focus-within:border-[#ED2618]">
                     <Phone className="ml-3.5 h-4 w-4 shrink-0 self-center text-slate-500" />
-                    <select aria-label="Country calling code" value={phoneCountryCode} onChange={(e) => setPhoneCountryCode(e.target.value)} className="ml-2 max-w-[84px] shrink-0 border-r border-white/10 bg-transparent px-1.5 text-sm text-white outline-none">
-                      <option value="+234" className="bg-[#0E131D]">+234 NG</option>
-                      <option value="+1" className="bg-[#0E131D]">+1 US/CA</option>
-                      <option value="+44" className="bg-[#0E131D]">+44 UK</option>
-                      <option value="+27" className="bg-[#0E131D]">+27 ZA</option>
-                      <option value="+233" className="bg-[#0E131D]">+233 GH</option>
-                      <option value="+254" className="bg-[#0E131D]">+254 KE</option>
-                      <option value="+33" className="bg-[#0E131D]">+33 FR</option>
-                      <option value="+49" className="bg-[#0E131D]">+49 DE</option>
-                      <option value="+91" className="bg-[#0E131D]">+91 IN</option>
-                      <option value="+971" className="bg-[#0E131D]">+971 AE</option>
+                    <select aria-label="Country calling code" value={phoneCountryCode} onChange={(e) => setPhoneCountryCode(e.target.value)} disabled={!visitorOptions} className="ml-2 max-w-[102px] shrink-0 border-r border-white/10 bg-transparent px-1.5 text-xs sm:text-sm text-white outline-none disabled:opacity-50">
+                      {(visitorOptions?.countryCodes || []).map((item) => <option key={item.code} value={item.code} className="bg-[#0E131D]">{item.code} {item.iso}</option>)}
                     </select>
                     <input
                       type="tel"
-                      required
                       inputMode="tel"
                       autoComplete="tel-national"
-                      pattern="[0-9 ()-]{7,18}"
-                      maxLength={18}
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/[^0-9 ()-]/g, ""))}
+                      onChange={(e) => setPhone(e.target.value)}
                       placeholder="800 000 0000"
                       className="min-w-0 w-full bg-transparent px-3 text-sm text-white placeholder:text-slate-500 focus:outline-none"
                     />
@@ -533,9 +562,7 @@ export default function PublicVisitorPortalPage() {
                     <Mail className="h-4 w-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
                       type="email"
-                      required
                       autoComplete="email"
-                      maxLength={254}
                       value={email}
                       onChange={(e) => setEmail(e.target.value.trimStart())}
                       placeholder="name@company.com"
@@ -578,14 +605,8 @@ export default function PublicVisitorPortalPage() {
                   </div>
                 </div>
               </div>
-              <button type="button" onClick={(event) => {
-                const form = event.currentTarget.closest("form");
-                const firstStepFields = form?.querySelectorAll< HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement >("section:first-of-type input, section:first-of-type select, section:first-of-type textarea");
-                const invalidField = Array.from(firstStepFields || []).find((field) => !field.checkValidity());
-                if (invalidField) { invalidField.reportValidity(); invalidField.focus(); return; }
-                setErrorMsg(""); setFormStep(2); window.scrollTo({ top: 0, behavior: "smooth" });
-              }} className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ED2618] to-[#c81e12] text-sm font-bold text-white shadow-lg shadow-red-500/20 transition hover:brightness-110">
-                Continue to visit details <ArrowRight className="h-4 w-4" />
+              <button type="button" onClick={handleContinueToVisit} disabled={validatingStep || !visitorOptions} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#ED2618] to-[#c81e12] px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-red-500/20 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60">
+                {validatingStep ? "Checking your details…" : "Continue to visit details"} <ArrowRight className="h-4 w-4" />
               </button>
             </section>}
 
@@ -612,7 +633,7 @@ export default function PublicVisitorPortalPage() {
                   1. What is the purpose of your visit? *
                 </label>
                 <select value={purpose} onChange={(e) => setPurpose(e.target.value)} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3.5 text-sm text-white outline-none transition focus:border-[#ED2618]">
-                  {VISIT_PURPOSES.map((item) => <option key={item} value={item} className="bg-[#0E131D]">{item === "Other" ? "Other (please specify)" : item}</option>)}
+                  {(visitorOptions?.purposes || []).map((item) => <option key={item} value={item} className="bg-[#0E131D]">{item === "Other" ? "Other (please specify)" : item}</option>)}
                 </select>
 
                 {purpose === "Other" && (
@@ -654,7 +675,7 @@ export default function PublicVisitorPortalPage() {
                     onChange={(e) => setDepartment(e.target.value)}
                     className="w-full h-11 rounded-xl bg-black/40 border border-white/10 px-3.5 text-sm text-white focus:outline-none focus:border-[#ED2618]"
                   >
-                    {VISIT_DEPARTMENTS.map((dept) => (
+                    {(visitorOptions?.departments || []).map((dept) => (
                       <option key={dept} value={dept} className="bg-[#0E131D]">
                         {dept}
                       </option>
@@ -815,13 +836,6 @@ export default function PublicVisitorPortalPage() {
                 </label>
               </div>
 
-              {errorMsg && (
-                <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-start gap-3 text-xs text-red-300">
-                  <AlertCircle className="h-4 w-4 text-[#ED2618] shrink-0 mt-0.5" />
-                  <span>{errorMsg}</span>
-                </div>
-              )}
-
               <button
                 type="submit"
                 disabled={submitting}
@@ -910,14 +924,13 @@ export default function PublicVisitorPortalPage() {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSelfCheckOut} className="space-y-4">
+              <form noValidate onSubmit={handleSelfCheckOut} className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                     Visitor Pass Code *
                   </label>
                   <input
                     type="text"
-                    required
                     value={checkoutIdentifier}
                     onChange={(e) => setCheckoutIdentifier(e.target.value)}
                     placeholder="e.g. DXV-8K92PA"

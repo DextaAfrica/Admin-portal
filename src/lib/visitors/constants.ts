@@ -23,6 +23,19 @@ export const VISIT_DEPARTMENTS = [
   "Other",
 ] as const;
 
+export const VISITOR_COUNTRY_CODES = [
+  { code: "+234", country: "Nigeria", iso: "NG" },
+  { code: "+1", country: "United States / Canada", iso: "US/CA" },
+  { code: "+44", country: "United Kingdom", iso: "GB" },
+  { code: "+27", country: "South Africa", iso: "ZA" },
+  { code: "+233", country: "Ghana", iso: "GH" },
+  { code: "+254", country: "Kenya", iso: "KE" },
+  { code: "+33", country: "France", iso: "FR" },
+  { code: "+49", country: "Germany", iso: "DE" },
+  { code: "+91", country: "India", iso: "IN" },
+  { code: "+971", country: "United Arab Emirates", iso: "AE" },
+] as const;
+
 export type VisitPurpose = (typeof VISIT_PURPOSES)[number];
 export type VisitDepartment = (typeof VISIT_DEPARTMENTS)[number];
 
@@ -78,23 +91,32 @@ export function sanitizeCsvCell(val: unknown): string {
   return s;
 }
 
-export function validateVisitorPayload(body: Partial<VisitorPayload>): string | null {
+export function validateVisitorIdentity(body: Partial<VisitorPayload>): string | null {
   if (!body || typeof body !== "object") return "Visitor registration details are required.";
   const text = (value: unknown, max: number) =>
     typeof value === "string" && value.trim().length > 0 && value.trim().length <= max;
   if (!text(body.fullName, 120)) return "Enter a name of 1–120 characters.";
-  if (!text(body.phone, 40) || typeof body.phone !== "string" || body.phone.replace(/\D/g, "").length < 7) return "Enter a valid phone number.";
+  if (!text(body.phone, 40) || typeof body.phone !== "string" || !/^\+\d{1,4}[\d\s()-]+$/.test(body.phone) || body.phone.replace(/\D/g, "").length < 8 || body.phone.replace(/\D/g, "").length > 15) return "Enter a valid international phone number.";
+  if (!VISITOR_COUNTRY_CODES.some(({ code }) => body.phone?.startsWith(code))) return "Select a valid country calling code.";
   if (!text(body.email, 254) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) {
     return "A valid Email Address is required.";
   }
+  if (body.company && (typeof body.company !== "string" || body.company.trim().length > 160)) return "Company name must be 160 characters or fewer.";
+  if (body.position && (typeof body.position !== "string" || body.position.trim().length > 120)) return "Position must be 120 characters or fewer.";
+  return null;
+}
+
+export function validateVisitorPayload(body: Partial<VisitorPayload>): string | null {
+  const identityError = validateVisitorIdentity(body);
+  if (identityError) return identityError;
+  const text = (value: unknown, max: number) =>
+    typeof value === "string" && value.trim().length > 0 && value.trim().length <= max;
   if (!VISIT_PURPOSES.includes(body.purpose as VisitPurpose)) return "Please select a valid purpose of visit.";
   if (body.purpose === "Other" && !text(body.purposeOther, 200)) {
     return "Please specify your purpose of visit.";
   }
   if (!text(body.hostName, 120)) return "Enter the host name (up to 120 characters).";
   if (!VISIT_DEPARTMENTS.includes(body.department as VisitDepartment)) return "Please select a valid department.";
-  if (body.company && (typeof body.company !== "string" || body.company.length > 160)) return "Company name must be 160 characters or fewer.";
-  if (body.position && (typeof body.position !== "string" || body.position.length > 120)) return "Position must be 120 characters or fewer.";
   if (body.invitedBy && (typeof body.invitedBy !== "string" || body.invitedBy.length > 120)) return "Inviter name must be 120 characters or fewer.";
   if (body.visitDescription && (typeof body.visitDescription !== "string" || body.visitDescription.length > 1000)) return "Visit notes must be 1,000 characters or fewer.";
   if (typeof body.hasAppointment !== "boolean") return "Please indicate whether you have an appointment.";
@@ -105,4 +127,14 @@ export function validateVisitorPayload(body: Partial<VisitorPayload>): string | 
     return "You must consent to the collection and processing of your registration information.";
   }
   return null;
+}
+
+export function normalizeVisitorPhone(phone: string): string {
+  const callingCode = VISITOR_COUNTRY_CODES
+    .map(({ code }) => code)
+    .sort((a, b) => b.length - a.length)
+    .find((code) => phone.startsWith(code));
+  if (!callingCode) return phone.replace(/[^\d+]/g, "");
+  const nationalNumber = phone.slice(callingCode.length).replace(/\D/g, "").replace(/^0/, "");
+  return `${callingCode}${nationalNumber}`;
 }

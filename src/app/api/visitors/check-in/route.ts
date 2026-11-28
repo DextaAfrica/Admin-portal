@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { validateVisitorPayload, VisitorPayload } from "@/lib/visitors/constants";
+import { normalizeVisitorPhone, validateVisitorPayload, VisitorPayload } from "@/lib/visitors/constants";
 import { checkInVisitor } from "@/lib/visitors/service";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    const visitor = await checkInVisitor(payload as VisitorPayload, {
+    const validatedPayload = payload as VisitorPayload;
+    const visitor = await checkInVisitor({
+      ...validatedPayload,
+      email: validatedPayload.email.trim().toLowerCase(),
+      phone: normalizeVisitorPhone(validatedPayload.phone),
+    }, {
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent") || "",
     });
