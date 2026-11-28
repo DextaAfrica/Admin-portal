@@ -24,6 +24,12 @@ import {
   BarChart3,
   CheckCircle2,
   QrCode,
+  Mail,
+  Send,
+  FileSpreadsheet,
+  Trash2,
+  CalendarClock,
+  AlertCircle,
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { useToast } from "@/components/ui/Toast";
@@ -72,6 +78,31 @@ interface VisitorAnalytics {
   hourlyArrivals: CountItem[];
 }
 
+interface VisitorReportSchedule {
+  id: string;
+  title: string;
+  cadence: "WEEKLY" | "MONTHLY";
+  recipientEmails: string[];
+  department: string;
+  includeAllDepts: boolean;
+  isActive: boolean;
+  lastRunAt?: string;
+  nextRunAt: string;
+}
+
+interface VisitorReportDelivery {
+  id: string;
+  title: string;
+  cadence: "WEEKLY" | "MONTHLY";
+  recipientEmails: string[];
+  periodStart: string;
+  periodEnd: string;
+  totalVisitors: number;
+  status: "SENT" | "FAILED";
+  errorMessage?: string;
+  sentAt: string;
+}
+
 function formatDuration(checkInAt: string, checkOutAt: string | null): string {
   const start = new Date(checkInAt).getTime();
   const end = checkOutAt ? new Date(checkOutAt).getTime() : Date.now();
@@ -101,6 +132,125 @@ export default function AdminVisitorsPage() {
   // Reception QR Poster Modal
   const [qrModalOpen, setQrModalOpen] = React.useState(false);
   const [kioskQrUrl, setKioskQrUrl] = React.useState("");
+
+  // Automated Report Modal & State
+  const [reportModalOpen, setReportModalOpen] = React.useState(false);
+  const [reportSchedule, setReportSchedule] = React.useState<VisitorReportSchedule>({
+    id: "default",
+    title: "Visitor Check-in Digest",
+    cadence: "WEEKLY",
+    recipientEmails: ["operations@dextaafrica.com"],
+    department: "ALL",
+    includeAllDepts: true,
+    isActive: true,
+    nextRunAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  });
+  const [reportDeliveries, setReportDeliveries] = React.useState<VisitorReportDelivery[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = React.useState(false);
+  const [isSavingSchedule, setIsSavingSchedule] = React.useState(false);
+  const [isTriggeringReport, setIsTriggeringReport] = React.useState(false);
+  const [recipientEmailInput, setRecipientEmailInput] = React.useState("");
+
+  const loadReportScheduleAndHistory = React.useCallback(async () => {
+    setIsLoadingReports(true);
+    try {
+      const [schedRes, delivRes] = await Promise.all([
+        fetch("/api/visitors/report-schedule", { cache: "no-store" }),
+        fetch("/api/visitors/report-deliveries", { cache: "no-store" }),
+      ]);
+      if (schedRes.ok) {
+        const d = await schedRes.json();
+        if (d.schedule) setReportSchedule(d.schedule);
+      }
+      if (delivRes.ok) {
+        const d = await delivRes.json();
+        setReportDeliveries(d.deliveries || []);
+      }
+    } catch {
+      toastError("Error", "Failed to load automated report configuration.");
+    } finally {
+      setIsLoadingReports(false);
+    }
+  }, [toastError]);
+
+  const handleSaveReportSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportSchedule) return;
+    if (reportSchedule.recipientEmails.length === 0) {
+      toastError("Validation Error", "Please assign at least one recipient email address.");
+      return;
+    }
+    setIsSavingSchedule(true);
+    try {
+      const res = await fetch("/api/visitors/report-schedule", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reportSchedule),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toastError("Save Failed", data.error || "Could not save report schedule.");
+        return;
+      }
+      setReportSchedule(data.schedule);
+      toastSuccess("Schedule Saved", "Automated visitor report configuration saved successfully.");
+    } catch {
+      toastError("Error", "Network error updating schedule.");
+    } finally {
+      setIsSavingSchedule(false);
+    }
+  };
+
+  const handleTriggerReportNow = async () => {
+    setIsTriggeringReport(true);
+    try {
+      const res = await fetch("/api/visitors/report-schedule/trigger", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toastError("Dispatch Error", data.error || "Failed to trigger report delivery.");
+        return;
+      }
+      toastSuccess(
+        "Report Dispatched",
+        `Visitor check-in digest dispatched to ${reportSchedule.recipientEmails.join(", ")}.`
+      );
+      await loadReportScheduleAndHistory();
+    } catch {
+      toastError("Error", "Failed to dispatch automated report.");
+    } finally {
+      setIsTriggeringReport(false);
+    }
+  };
+
+  const handleAddRecipient = () => {
+    const email = recipientEmailInput.trim().toLowerCase();
+    if (!email || !email.includes("@")) {
+      toastError("Invalid Email", "Please enter a valid email address.");
+      return;
+    }
+    if (reportSchedule.recipientEmails.includes(email)) {
+      toastError("Duplicate", "This email address is already in the recipient list.");
+      return;
+    }
+    setReportSchedule({
+      ...reportSchedule,
+      recipientEmails: [...reportSchedule.recipientEmails, email],
+    });
+    setRecipientEmailInput("");
+  };
+
+  const handleRemoveRecipient = (emailToRemove: string) => {
+    if (reportSchedule.recipientEmails.length <= 1) {
+      toastError("Minimum Required", "At least one recipient email address must be maintained.");
+      return;
+    }
+    setReportSchedule({
+      ...reportSchedule,
+      recipientEmails: reportSchedule.recipientEmails.filter((e) => e !== emailToRemove),
+    });
+  };
 
   React.useEffect(() => {
     if (!qrModalOpen || typeof window === "undefined") return;
@@ -312,6 +462,18 @@ export default function AdminVisitorsPage() {
             <Download className="h-3.5 w-3.5" />
             <span>Export CSV</span>
           </a>
+
+          <button
+            type="button"
+            onClick={() => {
+              setReportModalOpen(true);
+              void loadReportScheduleAndHistory();
+            }}
+            className="h-10 px-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#111520] text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-[#ED2618] transition-all flex items-center gap-1.5 cursor-pointer"
+          >
+            <Mail className="h-3.5 w-3.5 text-[#ED2618]" />
+            <span>Automated Reports</span>
+          </button>
 
           <button
             type="button"
@@ -978,6 +1140,256 @@ export default function AdminVisitorsPage() {
             >
               Copy Kiosk Link
             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Automated Visitor Check-In Reports Modal */}
+      <Modal
+        isOpen={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        title="Automated Visitor Check-In Reports"
+      >
+        <div className="space-y-6 text-xs max-h-[75vh] overflow-y-auto p-1 pr-2">
+          {/* Status Banner */}
+          <div className="p-4 rounded-xl border border-slate-200 dark:border-white/[0.08] bg-slate-50 dark:bg-white/[0.02] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    reportSchedule.isActive ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
+                  )}
+                />
+                <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
+                  {reportSchedule.isActive ? "Recurring Cron Active" : "Schedule Paused"}
+                </span>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#ED2618]/10 text-[#ED2618]">
+                  {reportSchedule.cadence}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                Next automated delivery:{" "}
+                <span className="font-mono text-slate-700 dark:text-slate-200 font-semibold">
+                  {new Date(reportSchedule.nextRunAt).toLocaleString()}
+                </span>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={isTriggeringReport}
+              onClick={handleTriggerReportNow}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-900 font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-60 whitespace-nowrap"
+            >
+              <Send className={cn("h-3.5 w-3.5", isTriggeringReport && "animate-spin")} />
+              <span>{isTriggeringReport ? "Sending Digest..." : "Send Report Now"}</span>
+            </button>
+          </div>
+
+          {/* Schedule Configuration Form */}
+          <form onSubmit={handleSaveReportSchedule} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div>
+                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                  Report Cadence *
+                </label>
+                <select
+                  value={reportSchedule.cadence}
+                  onChange={(e) =>
+                    setReportSchedule({
+                      ...reportSchedule,
+                      cadence: e.target.value as "WEEKLY" | "MONTHLY",
+                    })
+                  }
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3 text-xs"
+                >
+                  <option value="WEEKLY">Weekly Digest (Past 7 Days)</option>
+                  <option value="MONTHLY">Monthly Digest (Past 30 Days)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                  Automation Status *
+                </label>
+                <select
+                  value={reportSchedule.isActive ? "active" : "paused"}
+                  onChange={(e) =>
+                    setReportSchedule({
+                      ...reportSchedule,
+                      isActive: e.target.value === "active",
+                    })
+                  }
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3 text-xs"
+                >
+                  <option value="active">Active (Automated dispatch enabled)</option>
+                  <option value="paused">Paused (Manual triggers only)</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="block font-semibold mb-1 text-slate-700 dark:text-slate-300">
+                  Department Scope *
+                </label>
+                <select
+                  value={reportSchedule.includeAllDepts ? "ALL" : reportSchedule.department}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "ALL") {
+                      setReportSchedule({
+                        ...reportSchedule,
+                        includeAllDepts: true,
+                        department: "ALL",
+                      });
+                    } else {
+                      setReportSchedule({
+                        ...reportSchedule,
+                        includeAllDepts: false,
+                        department: val,
+                      });
+                    }
+                  }}
+                  className="w-full h-10 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3 text-xs"
+                >
+                  <option value="ALL">All Departments (Comprehensive Facility Log)</option>
+                  {VISIT_DEPARTMENTS.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept} only
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Recipient Emails */}
+            <div>
+              <label className="block font-semibold mb-1.5 text-slate-700 dark:text-slate-300">
+                Assigned Recipient Emails ({reportSchedule.recipientEmails.length}) *
+              </label>
+              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 mb-2 min-h-11">
+                {reportSchedule.recipientEmails.map((email) => (
+                  <span
+                    key={email}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-[11px] font-mono text-slate-800 dark:text-slate-200"
+                  >
+                    <Mail className="h-3 w-3 text-[#ED2618]" />
+                    <span>{email}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveRecipient(email)}
+                      className="text-slate-400 hover:text-red-500 cursor-pointer ml-1"
+                      title="Remove recipient"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="email"
+                  value={recipientEmailInput}
+                  onChange={(e) => setRecipientEmailInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddRecipient();
+                    }
+                  }}
+                  placeholder="Enter email address (e.g. security@dextaafrica.com)..."
+                  className="flex-1 h-9 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-black/40 px-3 text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddRecipient}
+                  className="h-9 px-3.5 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 font-bold hover:border-[#ED2618] transition-all cursor-pointer"
+                >
+                  + Add Email
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSavingSchedule}
+              className="w-full h-11 rounded-xl bg-[#ED2618] hover:bg-[#d01f12] text-white font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 transition-all shadow-md shadow-red-500/20"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              <span>{isSavingSchedule ? "Saving Settings..." : "Save Report Schedule"}</span>
+            </button>
+          </form>
+
+          {/* Deliveries Audit Log */}
+          <div className="border-t border-slate-200 dark:border-white/10 pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-xs">
+                <CalendarClock className="h-4 w-4 text-[#ED2618]" />
+                <span>Recent Report Deliveries Ledger</span>
+              </h3>
+              <button
+                type="button"
+                onClick={loadReportScheduleAndHistory}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                title="Refresh delivery logs"
+              >
+                <RefreshCw className={cn("h-3.5 w-3.5", isLoadingReports && "animate-spin")} />
+              </button>
+            </div>
+
+            {reportDeliveries.length === 0 ? (
+              <div className="p-6 rounded-xl border border-dashed border-slate-200 dark:border-white/10 text-center text-slate-400 text-xs">
+                No reports delivered yet. Use &quot;Send Report Now&quot; above to trigger an initial check-in digest.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-200 dark:border-white/10 overflow-hidden">
+                <table className="w-full text-left border-collapse text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-50 dark:bg-white/[0.02] border-b border-slate-200 dark:border-white/10 text-slate-500">
+                      <th className="py-2.5 px-3">Date Sent</th>
+                      <th className="py-2.5 px-3">Cadence</th>
+                      <th className="py-2.5 px-3">Visitors</th>
+                      <th className="py-2.5 px-3">Recipients</th>
+                      <th className="py-2.5 px-3 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
+                    {reportDeliveries.slice(0, 5).map((d) => (
+                      <tr key={d.id}>
+                        <td className="py-2 px-3 font-mono">
+                          {new Date(d.sentAt).toLocaleDateString()} {new Date(d.sentAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </td>
+                        <td className="py-2 px-3 font-semibold">{d.cadence}</td>
+                        <td className="py-2 px-3 font-mono font-bold text-slate-900 dark:text-white">
+                          {d.totalVisitors}
+                        </td>
+                        <td className="py-2 px-3 text-slate-500 truncate max-w-[140px]">
+                          {d.recipientEmails.join(", ")}
+                        </td>
+                        <td className="py-2 px-3 text-right">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase",
+                              d.status === "SENT"
+                                ? "bg-emerald-500/10 text-emerald-500"
+                                : "bg-red-500/10 text-red-500"
+                            )}
+                          >
+                            {d.status === "SENT" ? (
+                              <Check className="h-2.5 w-2.5" />
+                            ) : (
+                              <AlertCircle className="h-2.5 w-2.5" />
+                            )}
+                            <span>{d.status}</span>
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </Modal>
