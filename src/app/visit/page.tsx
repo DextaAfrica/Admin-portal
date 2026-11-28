@@ -48,7 +48,9 @@ interface VisitorPass {
 export default function PublicVisitorPortalPage() {
   const [mode, setMode] = React.useState<"checkin" | "checkout">("checkin");
   const [formStep, setFormStep] = React.useState<1 | 2>(1);
-  const [nowClock, setNowClock] = React.useState<Date>(() => new Date());
+  // Keep the server and first browser render identical; the live clock starts after hydration.
+  const [nowClock, setNowClock] = React.useState<Date | null>(null);
+  const [phoneCountryCode, setPhoneCountryCode] = React.useState("+234");
 
   // Section 1: Visitor Information
   const [fullName, setFullName] = React.useState("");
@@ -83,6 +85,7 @@ export default function PublicVisitorPortalPage() {
   const [passQrUrl, setPassQrUrl] = React.useState<string>("");
 
   React.useEffect(() => {
+    setNowClock(new Date());
     const timer = setInterval(() => setNowClock(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -112,17 +115,19 @@ export default function PublicVisitorPortalPage() {
       .catch(() => setPassQrUrl(""));
   }, [activePass]);
 
-  const formattedDate = nowClock.toLocaleDateString("en-GB", {
+  const formattedDate = nowClock?.toLocaleDateString("en-GB", {
     weekday: "short",
     day: "2-digit",
     month: "short",
     year: "numeric",
-  });
-  const formattedTime = nowClock.toLocaleTimeString("en-US", {
+    timeZone: "Africa/Lagos",
+  }) ?? "Loading date…";
+  const formattedTime = nowClock?.toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-  });
+    timeZone: "Africa/Lagos",
+  }) ?? "--:--:--";
 
   const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,13 +148,14 @@ export default function PublicVisitorPortalPage() {
 
     setSubmitting(true);
     try {
+      const nationalPhone = phone.replace(/\D/g, "").replace(/^0(?=\d{7,})/, "");
       const res = await fetch("/api/visitors/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fullName,
-          phone,
-          email,
+          phone: `${phoneCountryCode} ${nationalPhone}`,
+          email: email.trim().toLowerCase(),
           company,
           position,
           purpose,
@@ -163,16 +169,25 @@ export default function PublicVisitorPortalPage() {
           consentedData,
         }),
       });
-      const data = await res.json();
+      const responseText = await res.text();
+      let data: any = {};
+      try { data = responseText ? JSON.parse(responseText) : {}; } catch { /* handled below */ }
       if (!res.ok) {
-        setErrorMsg(data.error || "Unable to complete check-in. Please verify your details.");
+        const serverError = res.status >= 500;
+        setErrorMsg(serverError
+          ? `${data.error || "The registration service is unavailable."}${data.referenceId ? ` Reference: ${data.referenceId}` : " Please ask reception to assist."}`
+          : data.error || "Unable to complete check-in. Please verify your details.");
         setSubmitting(false);
         return;
       }
+      if (!data.visitor?.passCode) throw new Error("The check-in service returned an incomplete visitor pass.");
       setActivePass(data.visitor);
       setCheckoutIdentifier(data.visitor.passCode);
-    } catch {
-      setErrorMsg("Network error. Please try again or notify Front Desk Reception.");
+    } catch (error) {
+      console.error("Visitor check-in request failed:", error);
+      setErrorMsg(error instanceof Error && error.message.includes("incomplete visitor pass")
+        ? "Check-in could not be confirmed. Please contact Front Desk Reception before submitting again."
+        : "Unable to reach the check-in service. Check your connection and try again.");
     } finally {
       setSubmitting(false);
     }
@@ -215,6 +230,7 @@ export default function PublicVisitorPortalPage() {
     setCheckedOutPass(null);
     setFullName("");
     setPhone("");
+    setPhoneCountryCode("+234");
     setEmail("");
     setCompany("");
     setPosition("");
@@ -269,7 +285,7 @@ export default function PublicVisitorPortalPage() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 py-6 sm:py-10 space-y-6">
+      <main className="relative z-10 mx-auto w-full max-w-4xl px-3 sm:px-6 py-5 sm:py-10 space-y-5 sm:space-y-6">
         {/* Mode Switcher: Check In vs Check Out */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -283,7 +299,7 @@ export default function PublicVisitorPortalPage() {
             </p>
           </div>
 
-          <div className="inline-flex p-1 rounded-2xl bg-[#111622] border border-white/10 self-start">
+          <div className="inline-flex max-w-full p-1 rounded-2xl bg-[#111622] border border-white/10 self-start sm:self-auto shrink-0">
             <button
               type="button"
               onClick={() => {
@@ -291,7 +307,7 @@ export default function PublicVisitorPortalPage() {
                 setCheckedOutPass(null);
               }}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
+                "flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold whitespace-nowrap transition-all cursor-pointer",
                 mode === "checkin"
                   ? "bg-[#ED2618] text-white shadow-lg shadow-red-500/25"
                   : "text-slate-400 hover:text-white"
@@ -304,7 +320,7 @@ export default function PublicVisitorPortalPage() {
               type="button"
               onClick={() => setMode("checkout")}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer",
+                "flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-xl text-[11px] sm:text-xs font-bold whitespace-nowrap transition-all cursor-pointer",
                 mode === "checkout"
                   ? "bg-[#ED2618] text-white shadow-lg shadow-red-500/25"
                   : "text-slate-400 hover:text-white"
@@ -320,9 +336,9 @@ export default function PublicVisitorPortalPage() {
         {/* CHECK-IN SUCCESS: DIGITAL VISITOR PASS                           */}
         {/* ================================================================ */}
         {mode === "checkin" && activePass && (
-          <div className="rounded-3xl border border-emerald-500/30 bg-[#0F141F] p-6 sm:p-8 shadow-2xl space-y-6 animate-fade-in">
+          <div className="rounded-3xl border border-emerald-500/30 bg-[#0F141F] p-4 sm:p-8 shadow-2xl space-y-5 sm:space-y-6 animate-fade-in">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-5">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <div className="h-12 w-12 rounded-2xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
                   <CheckCircle2 className="h-6 w-6" />
                 </div>
@@ -337,7 +353,7 @@ export default function PublicVisitorPortalPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 w-full sm:w-auto">
                 {passQrUrl && (
                   <div className="rounded-2xl bg-white p-2 shadow-lg shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -348,7 +364,7 @@ export default function PublicVisitorPortalPage() {
                     />
                   </div>
                 )}
-                <div className="rounded-2xl border border-white/15 bg-black/40 px-5 py-3 text-center">
+                <div className="w-full sm:w-auto rounded-2xl border border-white/15 bg-black/40 px-4 sm:px-5 py-3 text-center">
                   <span className="block text-[10px] uppercase tracking-widest text-slate-400 font-bold">
                     Visitor Pass Code
                   </span>
@@ -363,7 +379,7 @@ export default function PublicVisitorPortalPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
+                <div className="p-3 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
                 <span className="text-slate-400 block">Visitor</span>
                 <span className="text-sm font-bold text-white mt-0.5 block">
                   {activePass.fullName}
@@ -376,7 +392,7 @@ export default function PublicVisitorPortalPage() {
                 )}
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
+                <div className="p-3 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
                 <span className="text-slate-400 block">Host &amp; Department</span>
                 <span className="text-sm font-bold text-white mt-0.5 block">
                   {activePass.hostName}
@@ -384,7 +400,7 @@ export default function PublicVisitorPortalPage() {
                 <span className="text-slate-400 mt-0.5 block">{activePass.department}</span>
               </div>
 
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
+                <div className="p-3 sm:p-4 rounded-2xl bg-white/[0.03] border border-white/[0.07]">
                 <span className="text-slate-400 block">Date &amp; Time of Arrival</span>
                 <span className="text-sm font-bold text-white mt-0.5 block">
                   {activePass.visitDate}
@@ -480,15 +496,31 @@ export default function PublicVisitorPortalPage() {
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5">
                     Phone Number *
                   </label>
-                  <div className="relative">
-                    <Phone className="h-4 w-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <div className="flex h-11 overflow-hidden rounded-xl border border-white/10 bg-black/40 focus-within:border-[#ED2618]">
+                    <Phone className="ml-3.5 h-4 w-4 shrink-0 self-center text-slate-500" />
+                    <select aria-label="Country calling code" value={phoneCountryCode} onChange={(e) => setPhoneCountryCode(e.target.value)} className="ml-2 max-w-[84px] shrink-0 border-r border-white/10 bg-transparent px-1.5 text-sm text-white outline-none">
+                      <option value="+234" className="bg-[#0E131D]">+234 NG</option>
+                      <option value="+1" className="bg-[#0E131D]">+1 US/CA</option>
+                      <option value="+44" className="bg-[#0E131D]">+44 UK</option>
+                      <option value="+27" className="bg-[#0E131D]">+27 ZA</option>
+                      <option value="+233" className="bg-[#0E131D]">+233 GH</option>
+                      <option value="+254" className="bg-[#0E131D]">+254 KE</option>
+                      <option value="+33" className="bg-[#0E131D]">+33 FR</option>
+                      <option value="+49" className="bg-[#0E131D]">+49 DE</option>
+                      <option value="+91" className="bg-[#0E131D]">+91 IN</option>
+                      <option value="+971" className="bg-[#0E131D]">+971 AE</option>
+                    </select>
                     <input
                       type="tel"
                       required
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                      pattern="[0-9 ()-]{7,18}"
+                      maxLength={18}
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+234 800 000 0000"
-                      className="w-full h-11 rounded-xl bg-black/40 border border-white/10 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#ED2618]"
+                      onChange={(e) => setPhone(e.target.value.replace(/[^0-9 ()-]/g, ""))}
+                      placeholder="800 000 0000"
+                      className="min-w-0 w-full bg-transparent px-3 text-sm text-white placeholder:text-slate-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -502,8 +534,10 @@ export default function PublicVisitorPortalPage() {
                     <input
                       type="email"
                       required
+                      autoComplete="email"
+                      maxLength={254}
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => setEmail(e.target.value.trimStart())}
                       placeholder="name@company.com"
                       className="w-full h-11 rounded-xl bg-black/40 border border-white/10 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#ED2618]"
                     />
@@ -558,7 +592,7 @@ export default function PublicVisitorPortalPage() {
             {formStep === 2 && <div className="space-y-6 animate-fade-in">
             <button type="button" onClick={() => { setFormStep(1); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/[0.08]">← Back to your details</button>
             {/* Section 2: Purpose of Visit */}
-            <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-6 sm:p-8 shadow-xl space-y-5">
+            <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-4 sm:p-8 shadow-xl space-y-5">
               <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
                 <span className="h-8 w-8 rounded-xl bg-[#ED2618]/15 text-[#ED2618] flex items-center justify-center text-xs font-black">
                   02
@@ -577,23 +611,9 @@ export default function PublicVisitorPortalPage() {
                 <label className="block text-xs font-semibold text-slate-300 mb-2">
                   1. What is the purpose of your visit? *
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {VISIT_PURPOSES.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => setPurpose(p)}
-                      className={cn(
-                        "text-left px-3.5 py-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer",
-                        purpose === p
-                          ? "border-[#ED2618] bg-[#ED2618]/15 text-white shadow-sm"
-                          : "border-white/10 bg-black/30 text-slate-300 hover:border-white/25"
-                      )}
-                    >
-                      {p === "Other" ? "Other (Please specify)" : p}
-                    </button>
-                  ))}
-                </div>
+                <select value={purpose} onChange={(e) => setPurpose(e.target.value)} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3.5 text-sm text-white outline-none transition focus:border-[#ED2618]">
+                  {VISIT_PURPOSES.map((item) => <option key={item} value={item} className="bg-[#0E131D]">{item === "Other" ? "Other (please specify)" : item}</option>)}
+                </select>
 
                 {purpose === "Other" && (
                   <input
@@ -648,32 +668,10 @@ export default function PublicVisitorPortalPage() {
                   <label className="block text-xs font-semibold text-slate-300 mb-2">
                     Do you have a scheduled appointment? *
                   </label>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setHasAppointment(true)}
-                      className={cn(
-                        "h-11 rounded-xl border text-xs font-bold transition-all cursor-pointer",
-                        hasAppointment
-                          ? "border-[#ED2618] bg-[#ED2618]/15 text-white"
-                          : "border-white/10 bg-black/30 text-slate-400 hover:border-white/25"
-                      )}
-                    >
-                      Yes, Scheduled
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setHasAppointment(false)}
-                      className={cn(
-                        "h-11 rounded-xl border text-xs font-bold transition-all cursor-pointer",
-                        !hasAppointment
-                          ? "border-[#ED2618] bg-[#ED2618]/15 text-white"
-                          : "border-white/10 bg-black/30 text-slate-400 hover:border-white/25"
-                      )}
-                    >
-                      No (Walk-In)
-                    </button>
-                  </div>
+                  <select value={hasAppointment ? "yes" : "no"} onChange={(e) => setHasAppointment(e.target.value === "yes")} className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-3 text-sm text-white outline-none focus:border-[#ED2618]">
+                    <option value="yes" className="bg-[#0E131D]">Yes, scheduled</option>
+                    <option value="no" className="bg-[#0E131D]">No, walk-in</option>
+                  </select>
                 </div>
 
                 <div>
@@ -710,7 +708,7 @@ export default function PublicVisitorPortalPage() {
             </section>
 
             {/* Section 3: Visit Details (Auto-Generated) */}
-            <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-6 sm:p-8 shadow-xl space-y-4">
+            <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-4 sm:p-8 shadow-xl space-y-4">
               <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
                 <span className="h-8 w-8 rounded-xl bg-[#ED2618]/15 text-[#ED2618] flex items-center justify-center text-xs font-black">
                   03
@@ -753,7 +751,7 @@ export default function PublicVisitorPortalPage() {
             </section>
 
             {/* Section 4: Visitor Declaration */}
-            <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-6 sm:p-8 shadow-xl space-y-5">
+            <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-4 sm:p-8 shadow-xl space-y-5">
               <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
                 <span className="h-8 w-8 rounded-xl bg-[#ED2618]/15 text-[#ED2618] flex items-center justify-center text-xs font-black">
                   04
@@ -773,7 +771,7 @@ export default function PublicVisitorPortalPage() {
                   <label className="block text-xs font-semibold text-slate-200 mb-2">
                     1. Do you agree to comply with the company&apos;s visitor guidelines and office regulations? *
                   </label>
-                  <div className="grid grid-cols-2 gap-3 max-w-xs">
+                <div className="grid grid-cols-2 gap-2 max-w-[15rem]">
                     <button
                       type="button"
                       onClick={() => setAgreedGuidelines("yes")}
@@ -827,7 +825,7 @@ export default function PublicVisitorPortalPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-[#ED2618] to-[#c81e12] text-white font-bold text-sm shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                className="w-full min-h-11 rounded-xl bg-gradient-to-r from-[#ED2618] to-[#c81e12] px-3 py-2.5 text-center text-white font-bold text-xs sm:text-sm leading-tight shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
                 <ShieldCheck className="h-4 w-4" />
                 <span>{submitting ? "Completing Check-In..." : "Complete Check-In & Issue Pass"}</span>
@@ -842,7 +840,7 @@ export default function PublicVisitorPortalPage() {
         {/* SECTION 5: VISITOR SELF CHECK-OUT                                */}
         {/* ================================================================ */}
         {mode === "checkout" && (
-          <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-6 sm:p-8 shadow-xl space-y-6">
+          <section className="rounded-3xl border border-white/10 bg-[#0E131D]/95 p-4 sm:p-8 shadow-xl space-y-5 sm:space-y-6">
             <div className="flex items-center gap-3 border-b border-white/[0.08] pb-4">
               <span className="h-8 w-8 rounded-xl bg-[#ED2618]/15 text-[#ED2618] flex items-center justify-center text-xs font-black">
                 05

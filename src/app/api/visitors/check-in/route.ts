@@ -1,28 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { validateVisitorPayload } from "@/lib/visitors/constants";
+import { randomUUID } from "crypto";
+import { validateVisitorPayload, VisitorPayload } from "@/lib/visitors/constants";
 import { checkInVisitor } from "@/lib/visitors/service";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  const referenceId = randomUUID();
   try {
-    const body = await req.json();
-    const validationError = validateVisitorPayload(body);
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Please submit valid registration details." }, { status: 400 });
+    }
+    const payload = body as Partial<VisitorPayload>;
+    const validationError = validateVisitorPayload(payload);
     if (validationError) {
       return NextResponse.json({ error: validationError }, { status: 400 });
     }
 
-    const visitor = await checkInVisitor(body, {
+    const visitor = await checkInVisitor(payload as VisitorPayload, {
       ipAddress: req.headers.get("x-forwarded-for") || "127.0.0.1",
       userAgent: req.headers.get("user-agent") || "",
     });
 
-    return NextResponse.json({ visitor }, { status: 201 });
-  } catch (err: any) {
-    console.error("Visitor check-in error:", err);
     return NextResponse.json(
-      { error: err?.message || "Failed to complete visitor check-in." },
-      { status: 500 }
+      { visitor },
+      { status: 201, headers: { "Cache-Control": "no-store" } }
+    );
+  } catch (err: any) {
+    console.error(`[Visitor check-in ${referenceId}]`, err);
+    return NextResponse.json(
+      { error: "We could not save this registration. Please ask Front Desk Reception to assist.", referenceId },
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }

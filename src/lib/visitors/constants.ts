@@ -83,7 +83,7 @@ export function validateVisitorPayload(body: Partial<VisitorPayload>): string | 
   const text = (value: unknown, max: number) =>
     typeof value === "string" && value.trim().length > 0 && value.trim().length <= max;
   if (!text(body.fullName, 120)) return "Enter a name of 1–120 characters.";
-  if (!text(body.phone, 40)) return "Enter a phone number of 1–40 characters.";
+  if (!text(body.phone, 40) || typeof body.phone !== "string" || body.phone.replace(/\D/g, "").length < 7) return "Enter a valid phone number.";
   if (!text(body.email, 254) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email!.trim())) {
     return "A valid Email Address is required.";
   }
