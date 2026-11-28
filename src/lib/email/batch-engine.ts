@@ -287,6 +287,15 @@ export async function startBatchedCampaign(
  * jitter throttling, and automatic transient retry.
  */
 export async function executeBatch(batchId: string) {
+  // Atomic claim: prevents duplicate execution under concurrent polling or cron workers
+  const claimed = await prisma.emailCampaignBatch.updateMany({
+    where: { id: batchId, status: "PENDING" },
+    data: { status: "SENDING", startedAt: new Date() },
+  });
+  if (claimed.count === 0) {
+    return null;
+  }
+
   const batch = await prisma.emailCampaignBatch.findUnique({
     where: { id: batchId },
     include: {
@@ -303,10 +312,13 @@ export async function executeBatch(batchId: string) {
     return batch;
   }
 
-  await prisma.emailCampaignBatch.update({
-    where: { id: batch.id },
-    data: { status: "SENDING", startedAt: batch.startedAt || new Date() },
-  });
+  const escapeVar = (s: string) =>
+    s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
 
   const portalUrl = process.env.NEXT_PUBLIC_APP_URL || "https://admin.dextaafrica.com";
   let batchSent = 0;
@@ -317,11 +329,11 @@ export async function executeBatch(batchId: string) {
     const rec = batch.recipients[i];
     const unsubscribeLink = `${portalUrl}/unsubscribe?email=${encodeURIComponent(rec.email)}`;
     const personalizedHtml = compileTemplate(batch.campaign.contentHtml, {
-      firstName: rec.firstName || "Valued Partner",
-      lastName: rec.lastName || "",
-      fullName: rec.fullName || "Valued Partner",
-      company: rec.company || "Partner",
-      category: rec.category || "General",
+      firstName: escapeVar(rec.firstName || "Valued Partner"),
+      lastName: escapeVar(rec.lastName || ""),
+      fullName: escapeVar(rec.fullName || "Valued Partner"),
+      company: escapeVar(rec.company || "Partner"),
+      category: escapeVar(rec.category || "General"),
       portalUrl,
       unsubscribeLink,
     });

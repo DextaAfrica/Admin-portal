@@ -110,6 +110,8 @@ export function middleware(req: NextRequest) {
     pathname.startsWith("/register") ||
     pathname === "/visit" ||
     pathname.startsWith("/visit/") ||
+    pathname === "/unsubscribe" ||
+    pathname.startsWith("/unsubscribe/") ||
     pathname.startsWith("/events/") ||
     pathname.startsWith("/onboarding/") ||
     pathname.startsWith("/academy/") ||
